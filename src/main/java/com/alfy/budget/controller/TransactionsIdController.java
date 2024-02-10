@@ -70,7 +70,7 @@ public class TransactionsIdController {
                 printWriter.print("<hr>");
 
                 String description = resultSet.getString("description");
-                String descriptionLink = "/description/edit?transactionId=" + transactionId;
+                String descriptionLink = "/transactions/" + transactionId + "/description";
                 printWriter.print("<a class=\"plain_link\" href=\"" + descriptionLink + "\">");
                 printWriter.print("<div class=\"selection_title\">Description</div>");
                 printWriter.print("<div class=\"selection_value\">" + description + "</div>");
@@ -82,7 +82,7 @@ public class TransactionsIdController {
                 if (savedCategory == null) {
                     savedCategory = "Select Category";
                 }
-                String categoryLink = "/category/select?transactionId=" + transactionId;
+                String categoryLink = "/transactions/" + transactionId + "/category";
                 printWriter.print("<a class=\"plain_link\" href=\"" + categoryLink + "\">");
                 printWriter.print("<div class=\"selection_title\">Category</div>");
                 printWriter.print("<div class=\"selection_value\">" + savedCategory + "</div>");
@@ -94,7 +94,7 @@ public class TransactionsIdController {
                 if (savedTags == null || savedTags.isEmpty()) {
                     savedTags = "Add Tags";
                 }
-                String tagLink = "/tags/select?transactionId=" + transactionId;
+                String tagLink = "/transactions/" + transactionId + "/tags";
                 printWriter.print("<a class=\"plain_link\" href=\"" + tagLink + "\">");
                 printWriter.print("<div class=\"selection_title\">Tags</div>");
                 printWriter.print("<div class=\"selection_value\">" + savedTags + "</div>");
@@ -106,7 +106,7 @@ public class TransactionsIdController {
                 if (notes == null) {
                     notes = "Add Notes";
                 }
-                String notesLink = "/notes/enter?transactionId=" + transactionId;
+                String notesLink = "/transactions/" + transactionId + "/notes";
                 printWriter.print("<a class=\"plain_link\" href=\"" + notesLink + "\">");
                 printWriter.print("<div class=\"selection_title\">Notes</div>");
                 printWriter.print("<div class=\"selection_value\">" + notes + "</div>");

@@ -3,30 +3,30 @@ package com.alfy.budget.controller;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.ResultSet;
 import java.util.*;
 
 @RestController
-@RequestMapping(path = "/notes")
-public class NotesController {
+@RequestMapping(path = "/transactions/{transactionId}/notes")
+public class TransactionsIdNotesController {
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    public NotesController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    public TransactionsIdNotesController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
-    @GetMapping(path = "/enter")
-    public void selectCategory(
-            @RequestParam(name = "transactionId") int transactionId,
+    @GetMapping
+    public void showSelection(
+            @PathVariable(name = "transactionId") int transactionId,
             HttpServletResponse response
     ) throws IOException {
+        final String postUrl = "/transactions/" + transactionId + "/notes";
+
         response.setContentType("text/html");
         try (PrintWriter printWriter = response.getWriter()) {
             printWriter.print("<html lang=\"en-US\">");
@@ -45,7 +45,6 @@ public class NotesController {
                 notes = "";
             }
 
-            String postUrl = "/notes/update";
             printWriter.print("<form method=\"POST\" action=\"" + postUrl + "\" enctype=\"application/x-www-form-urlencoded\">");
             printWriter.print("<input type=\"hidden\" name=\"transactionId\" value=\"" + transactionId + "\"/>");
             printWriter.print("<textarea name=\"note\" style=\"width: 100%; height: 200px;\">" + notes + "</textarea>");
@@ -59,9 +58,9 @@ public class NotesController {
         }
     }
 
-    @PostMapping(path = "/update")
-    public void updateNote(
-            @RequestParam("transactionId") int transactionId,
+    @PostMapping
+    public void update(
+            @PathVariable("transactionId") int transactionId,
             @RequestParam(name = "note", required = false) String note,
             HttpServletResponse response
     ) throws IOException {

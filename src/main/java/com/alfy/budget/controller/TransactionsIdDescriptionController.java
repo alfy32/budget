@@ -11,21 +11,22 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping(path = "/description")
-public class DescriptionController {
+@RequestMapping(path = "/transactions/{transactionId}/description")
+public class TransactionsIdDescriptionController {
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    public DescriptionController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    public TransactionsIdDescriptionController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
-    @GetMapping(path = "/edit")
-    public void selectCategory(
-            @RequestParam(name = "transactionId") int transactionId,
+    @GetMapping
+    public void showSelection(
+            @PathVariable(name = "transactionId") int transactionId,
             HttpServletResponse response
     ) throws IOException {
+        final String postUrl = "/transactions/" + transactionId + "/description";
 
         response.setContentType("text/html");
         try (PrintWriter printWriter = response.getWriter()) {
@@ -57,7 +58,6 @@ public class DescriptionController {
                 decription = "";
             }
 
-            String postUrl = "/description/update";
             printWriter.print("<form method=\"POST\" action=\"" + postUrl + "\" enctype=\"application/x-www-form-urlencoded\">");
             printWriter.print("<input type=\"hidden\" name=\"transactionId\" value=\"" + transactionId + "\"/>");
             printWriter.print("<input type=\"text\" name=\"description\" style=\"width: 100%;\" value=\"" + decription + "\"/>");
@@ -71,9 +71,9 @@ public class DescriptionController {
         }
     }
 
-    @PostMapping(path = "/update")
-    public void updateDescription(
-            @RequestParam(name = "transactionId") int transactionId,
+    @PostMapping
+    public void update(
+            @PathVariable(name = "transactionId") int transactionId,
             @RequestParam(name = "description", required = false) String description,
             HttpServletResponse response
     ) throws IOException {

@@ -1,6 +1,5 @@
 package com.alfy.budget.controller;
 
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -8,27 +7,25 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 @RestController
-@RequestMapping(path = "/tags")
-public class TagsController {
+@RequestMapping(path = "/transactions/{transactionId}/tags")
+public class TransactionsIdTagsController {
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    public TagsController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    public TransactionsIdTagsController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
-    @GetMapping(path = "/select")
-    public void selectTags(
-            @RequestParam(name = "transactionId") int transactionId,
+    @GetMapping
+    public void showSelection(
+            @PathVariable(name = "transactionId") int transactionId,
             HttpServletResponse response
     ) throws IOException {
+        final String postUrl = "/transactions/" + transactionId + "/tags";
 
         // TODO read this from the database
         String[] tags = {
@@ -55,7 +52,6 @@ public class TagsController {
             String selectedTags = namedParameterJdbcTemplate.queryForObject(query, paramMap, String.class);
             Set<String> tagSet = getTagSet(selectedTags);
 
-            String postUrl = "/tags/update";
             printWriter.print("<form method=\"POST\" action=\"" + postUrl + "\" enctype=\"application/x-www-form-urlencoded\">");
             printWriter.print("<input type=\"hidden\" name=\"transactionId\" value=\"" + transactionId + "\">");
             for (String tag : tags) {
@@ -72,9 +68,9 @@ public class TagsController {
         }
     }
 
-    @PostMapping(path = "/update")
+    @PostMapping
     public void updateTags(
-            @RequestParam(name = "transactionId") int transactionId,
+            @PathVariable(name = "transactionId") int transactionId,
             @RequestParam(name = "tag", required = false) List<String> tags,
             HttpServletResponse response
     ) throws IOException {
