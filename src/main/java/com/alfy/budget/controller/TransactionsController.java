@@ -56,15 +56,27 @@ public class TransactionsController {
             namedParameterJdbcTemplate.query(query, (ResultSet resultSet) -> {
                 printWriter.print("<a class=\"transaction_link\" href=\"/transactions/" + resultSet.getString("id") + "\">");
                 printWriter.print("  <div class=\"transaction_block\">");
+
                 printWriter.print("    <div class=\"transaction_description\">");
                 printWriter.print(resultSet.getString("description"));
                 printWriter.print("    </div>");
+
+                String category = resultSet.getString("category");
+                if (category == null) {
+                    category = "Needs Categorized";
+                }
+                printWriter.print("    <div class=\"transaction_category\">");
+                printWriter.print(category);
+                printWriter.print("    </div>");
+
                 printWriter.print("    <div class=\"transaction_date\">");
                 printWriter.print(TRANSACTIONS_PAGE_DATE_FORMATTER.format(LocalDate.parse(resultSet.getString("transaction_date"))));
                 printWriter.print("    </div>");
+
                 printWriter.print("    <div class=\"transaction_amount\">");
                 printWriter.print(NumberFormat.getCurrencyInstance().format(resultSet.getInt("amount") / 100d));
                 printWriter.print("    </div>");
+
                 printWriter.print("  </div>");
                 printWriter.print("</a>");
                 printWriter.print("<hr>");

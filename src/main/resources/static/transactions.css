@@ -17,6 +17,10 @@ div.transaction_description {
     margin-bottom: 10px;
 }
 
+div.transaction_category {
+    margin-bottom: 5px;
+}
+
 div.transaction_date {
     margin-bottom: 5px;
 }
