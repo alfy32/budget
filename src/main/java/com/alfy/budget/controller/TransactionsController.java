@@ -48,7 +48,7 @@ public class TransactionsController {
 
             printWriter.print("<div class=\"list\">");
             printWriter.print("<hr>");
-            List<Transaction> transactions = transactionsService.getTransactionsByDate();
+            List<Transaction> transactions = transactionsService.getTransactionsOrderedByDate();
             for (Transaction transaction : transactions) {
                 String category = transaction.category == null ? "Needs Categorized" : transaction.category;
 

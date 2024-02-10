@@ -3,8 +3,10 @@ package com.alfy.budget.service;
 import com.alfy.budget.model.Transaction;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 
@@ -26,7 +28,7 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.queryForObject(query, paramMap, TransactionsService::mapTransaction);
     }
 
-    public List<Transaction> getTransactionsByDate() {
+    public List<Transaction> getTransactionsOrderedByDate() {
         String query = "SELECT *" +
                 " FROM transactions" +
                 " ORDER By transaction_date DESC";
@@ -35,14 +37,14 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.query(query, paramMap, TransactionsService::mapTransaction);
     }
 
-    public List<Transaction> getTransactions(long start, long end) {
+    public List<Transaction> getTransactions(LocalDate start, LocalDate end) {
         String query = "SELECT * FROM transactions" +
-                " WHERE date >= :start" +
-                "   AND date <= :end";
+                " WHERE transaction_date >= :start" +
+                "   AND transaction_date <= :end";
 
         HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("start", start);
-        paramMap.put("end", end);
+        paramMap.put("start", Date.valueOf(start));
+        paramMap.put("end", Date.valueOf(end));
 
         return namedParameterJdbcTemplate.query(query, paramMap, TransactionsService::mapTransaction);
     }
