@@ -1,7 +1,8 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.model.Transaction;
+import com.alfy.budget.service.TransactionsService;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,11 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.ResultSet;
-import java.text.NumberFormat;
-import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.UUID;
 
 @RestController
@@ -22,10 +19,10 @@ public class TransactionsIdController {
 
     private static final DateTimeFormatter TRANSACTION_DATE_FORMATTER = DateTimeFormatter.ofPattern("EEEE, MMMM dd, yyyy");
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final TransactionsService transactionsService;
 
-    public TransactionsIdController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    public TransactionsIdController(TransactionsService transactionsService) {
+        this.transactionsService = transactionsService;
     }
 
     @GetMapping(path = "/{transactionId}")
@@ -47,74 +44,51 @@ public class TransactionsIdController {
             printWriter.print("</head>");
             printWriter.print("<body>");
 
+            Transaction transaction = transactionsService.getTransaction(transactionId);
+
             printWriter.print("<a href=\"/transactions\">Back</a>");
-            printWriter.print("<div class=\"list\">");
-            String query = "SELECT * FROM transactions" +
-                    " WHERE id=:id";
-            HashMap<String, Object> paramMap = new HashMap<>();
-            paramMap.put("id", transactionId);
-            namedParameterJdbcTemplate.query(query, paramMap, (ResultSet resultSet) -> {
-                printWriter.print("<div class=\"transaction_amount\">");
-                printWriter.print(NumberFormat.getCurrencyInstance().format(resultSet.getInt("amount") / 100d));
-                printWriter.print("</div>");
-                printWriter.print("<div class=\"transaction_description\">");
-                printWriter.print(resultSet.getString("description"));
-                printWriter.print("</div>");
-                printWriter.print("<div class=\"transaction_date\">");
-                printWriter.print(TRANSACTION_DATE_FORMATTER.format(LocalDate.parse(resultSet.getString("transaction_date"))));
-                printWriter.print("</div>");
-                printWriter.print("<div class=\"transaction_account\">");
-                printWriter.print(resultSet.getString("account"));
-                printWriter.print("</div>");
 
-                printWriter.print("<hr>");
+            printWriter.print("<div class=\"transaction_amount\">" + transaction.getFormattedAmount() + "</div>");
+            printWriter.print("<div class=\"transaction_description\">" + transaction.description + "</div>");
+            printWriter.print("<div class=\"transaction_date\">" + TRANSACTION_DATE_FORMATTER.format(transaction.date) + "</div>");
+            printWriter.print("<div class=\"transaction_account\">" + transaction.account + "</div>");
 
-                String description = resultSet.getString("description");
-                String descriptionLink = "/transactions/" + transactionId + "/description";
-                printWriter.print("<a class=\"plain_link\" href=\"" + descriptionLink + "\">");
-                printWriter.print("<div class=\"selection_title\">Description</div>");
-                printWriter.print("<div class=\"selection_value\">" + description + "</div>");
-                printWriter.print("</a>");
+            printWriter.print("<hr>");
 
-                printWriter.print("<hr>");
+            String descriptionLink = "/transactions/" + transactionId + "/description";
+            printWriter.print("<a class=\"plain_link\" href=\"" + descriptionLink + "\">");
+            printWriter.print("<div class=\"selection_title\">Description</div>");
+            printWriter.print("<div class=\"selection_value\">" + transaction.description + "</div>");
+            printWriter.print("</a>");
 
-                String savedCategory = resultSet.getString("category");
-                if (savedCategory == null) {
-                    savedCategory = "Select Category";
-                }
-                String categoryLink = "/transactions/" + transactionId + "/category";
-                printWriter.print("<a class=\"plain_link\" href=\"" + categoryLink + "\">");
-                printWriter.print("<div class=\"selection_title\">Category</div>");
-                printWriter.print("<div class=\"selection_value\">" + savedCategory + "</div>");
-                printWriter.print("</a>");
+            printWriter.print("<hr>");
 
-                printWriter.print("<hr>");
+            String savedCategory = transaction.category == null ? "Select Category" : transaction.category;
+            String categoryLink = "/transactions/" + transactionId + "/category";
+            printWriter.print("<a class=\"plain_link\" href=\"" + categoryLink + "\">");
+            printWriter.print("<div class=\"selection_title\">Category</div>");
+            printWriter.print("<div class=\"selection_value\">" + savedCategory + "</div>");
+            printWriter.print("</a>");
 
-                String savedTags = resultSet.getString("tags");
-                if (savedTags == null || savedTags.isEmpty()) {
-                    savedTags = "Add Tags";
-                }
-                String tagLink = "/transactions/" + transactionId + "/tags";
-                printWriter.print("<a class=\"plain_link\" href=\"" + tagLink + "\">");
-                printWriter.print("<div class=\"selection_title\">Tags</div>");
-                printWriter.print("<div class=\"selection_value\">" + savedTags + "</div>");
-                printWriter.print("</a>");
+            printWriter.print("<hr>");
 
-                printWriter.print("<hr>");
+            String savedTags = transaction.tags == null || transaction.tags.isEmpty() ? "Add Tags" : transaction.tags;
+            String tagLink = "/transactions/" + transactionId + "/tags";
+            printWriter.print("<a class=\"plain_link\" href=\"" + tagLink + "\">");
+            printWriter.print("<div class=\"selection_title\">Tags</div>");
+            printWriter.print("<div class=\"selection_value\">" + savedTags + "</div>");
+            printWriter.print("</a>");
 
-                String notes = resultSet.getString("notes");
-                if (notes == null) {
-                    notes = "Add Notes";
-                }
-                String notesLink = "/transactions/" + transactionId + "/notes";
-                printWriter.print("<a class=\"plain_link\" href=\"" + notesLink + "\">");
-                printWriter.print("<div class=\"selection_title\">Notes</div>");
-                printWriter.print("<div class=\"selection_value\">" + notes + "</div>");
-                printWriter.print("</a>");
+            printWriter.print("<hr>");
 
-                printWriter.print("<hr>");
-            });
-            printWriter.print("</div>");
+            String notes = transaction.notes == null ? "Add Notes" : transaction.notes;
+            String notesLink = "/transactions/" + transactionId + "/notes";
+            printWriter.print("<a class=\"plain_link\" href=\"" + notesLink + "\">");
+            printWriter.print("<div class=\"selection_title\">Notes</div>");
+            printWriter.print("<div class=\"selection_value\">" + notes + "</div>");
+            printWriter.print("</a>");
+
+            printWriter.print("<hr>");
 
             printWriter.print("</body>");
             printWriter.print("</html>");
