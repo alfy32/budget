@@ -1,6 +1,8 @@
 package com.alfy.budget.controller;
 
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,12 +15,15 @@ import java.sql.ResultSet;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.DoubleSummaryStatistics;
 import java.util.HashMap;
 import java.util.UUID;
 
 @RestController
 @RequestMapping(path = "/transactions")
 public class TransactionsController {
+
+    final Logger logger = LoggerFactory.getLogger(TransactionsUploadController.class);
 
     private static final DateTimeFormatter TRANSACTIONS_PAGE_DATE_FORMATTER = DateTimeFormatter.ofPattern("MMMM dd");
 
@@ -32,6 +37,8 @@ public class TransactionsController {
     public void getTransactions(
             HttpServletResponse response
     ) throws IOException {
+
+        long start = System.currentTimeMillis();
 
         String cacheBusterString = UUID.randomUUID().toString();
 
@@ -86,6 +93,9 @@ public class TransactionsController {
             printWriter.print("</body>");
             printWriter.print("</html>");
         }
+
+        long end = System.currentTimeMillis();
+        logger.info("Request timing: " + (end - start));
     }
 
 }

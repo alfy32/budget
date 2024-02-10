@@ -43,7 +43,6 @@ public class CategoryController {
             printWriter.print("<head>");
             printWriter.print("  <title>Select Category</title>");
             printWriter.print("  <meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"/>");
-            printWriter.print("  <link rel=\"stylesheet\" href=\"/transactions.css?cache-buster=" + new Random().nextInt() + "\">");
             printWriter.print("</head>");
             printWriter.print("<body>");
 

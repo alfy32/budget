@@ -66,12 +66,15 @@ public class TransactionsIdController {
                 printWriter.print("<div class=\"transaction_account\">");
                 printWriter.print(resultSet.getString("account"));
                 printWriter.print("</div>");
-                printWriter.print("<br>");
+
                 printWriter.print("<hr>");
-                printWriter.print("<div class=\"selection_title\">Merchant</div>");
-                printWriter.print("<div class=\"selection_value\">");
-                printWriter.print(resultSet.getString("description"));
-                printWriter.print("</div>");
+
+                String description = resultSet.getString("description");
+                String descriptionLink = "/description/edit?transactionId=" + transactionId;
+                printWriter.print("<a class=\"plain_link\" href=\"" + descriptionLink + "\">");
+                printWriter.print("<div class=\"selection_title\">Description</div>");
+                printWriter.print("<div class=\"selection_value\">" + description + "</div>");
+                printWriter.print("</a>");
 
                 printWriter.print("<hr>");
 
