@@ -1,12 +1,18 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.model.TransactionUploadResults;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.jdbc.support.rowset.SqlRowSet;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,8 +27,41 @@ import java.util.HashMap;
 public class TransactionsUploadController {
 
     final Logger logger = LoggerFactory.getLogger(TransactionsUploadController.class);
-    public static final String SQL = "INSERT INTO transactions (account, transaction_date, description, comments, check_number, amount)" +
-            "VALUES (:account, :date, :description, :comments, :check_number, :amount)";
+    public static final String SQL_INSERT_INTO_BANK_TRANSACTIONS = "INSERT INTO bank_transactions (" +
+            "  account," +
+            "  transaction_date," +
+            "  description," +
+            "  comments," +
+            "  check_number," +
+            "  amount" +
+            ")" +
+            "VALUES (" +
+            "  :account," +
+            "  :date," +
+            "  :description," +
+            "  :comments," +
+            "  :check_number," +
+            "  :amount" +
+            ")";
+
+    public static final String SQL_INSERT_INTO_TRANSACTIONS = "INSERT INTO transactions (" +
+            "  bank_transaction_id," +
+            "  account," +
+            "  transaction_date," +
+            "  description," +
+            "  comments," +
+            "  check_number," +
+            "  amount" +
+            ")" +
+            "VALUES (" +
+            "  :bank_transaction_id," +
+            "  :account," +
+            "  :date," +
+            "  :description," +
+            "  :comments," +
+            "  :check_number," +
+            "  :amount" +
+            ")";
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
@@ -32,28 +71,54 @@ public class TransactionsUploadController {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
+    @Transactional
+    private boolean addTransactionToDatabase(HashMap<String, Object> paramMap) {
+        // TODO figure out how to avoid duplicates if I upload the same transaction from the same bank.
+
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        int rowsAdded = namedParameterJdbcTemplate.update(SQL_INSERT_INTO_BANK_TRANSACTIONS, new MapSqlParameterSource(paramMap), keyHolder);
+        if (rowsAdded != 1) {
+            logger.info("Failed to add to bank_transactions table");
+            return false;
+        }
+
+        int transactionId = (int) keyHolder.getKeys().get("id");
+        logger.info("Added new transaction: transactionId=" + transactionId);
+
+        paramMap.put("bank_transaction_id", transactionId);
+        rowsAdded = namedParameterJdbcTemplate.update(SQL_INSERT_INTO_TRANSACTIONS, paramMap);
+        if (rowsAdded != 1) {
+            logger.info("Failed to add to transactions table");
+            return false;
+        }
+
+        return true;
+    }
+
     @PostMapping()
     public ResponseEntity<String> uploadTransactions(
             @RequestParam("file") MultipartFile file,
             @RequestParam("account") String account
     ) throws IOException, CsvValidationException {
-        int rowsAdded = 0;
 
         try (CSVReader csvReader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
             if ("Gunnison Checking".equals(account)) {
-                rowsAdded = parseStateBankData(csvReader, account);
+                TransactionUploadResults results = parseStateBankData(csvReader, account);
+                return ResponseEntity.ok(results.toString());
             } else if ("Zions All".equals(account)) {
-               rowsAdded = parseZionsData(csvReader, csvReader.readNext());
+                TransactionUploadResults results = parseZionsData(csvReader, csvReader.readNext());
+                return ResponseEntity.ok(results.toString());
             } else {
-
+                return ResponseEntity.ok("Unknown account type");
             }
         }
 
-        return ResponseEntity.ok("Got it");
     }
 
-    private int parseStateBankData(CSVReader csvReader, String account) throws IOException, CsvValidationException {
-        int rowsAdded = 0;
+    private TransactionUploadResults parseStateBankData(CSVReader csvReader, String account) throws IOException, CsvValidationException {
+        int existingTransactions = 0;
+        int newTransactions = 0;
+
         HashMap<String, Object> paramMap = new HashMap<>();
 
         String[] headers = csvReader.readNext();
@@ -91,28 +156,36 @@ public class TransactionsUploadController {
                 paramMap.putIfAbsent("description", null);
                 paramMap.putIfAbsent("comments", null);
                 paramMap.putIfAbsent("check_number", null);
-                namedParameterJdbcTemplate.update(SQL, paramMap);
-                rowsAdded++;
+                if (addTransactionToDatabase(paramMap)) {
+                    newTransactions++;
+                } else {
+                    existingTransactions++;
+                }
             } catch (Throwable throwable) {
                 logger.error("Failed", throwable);
             }
         }
 
-        return rowsAdded;
+        return new TransactionUploadResults(newTransactions, existingTransactions);
     }
 
-    private int parseZionsData(CSVReader csvReader, String[] accountHeaders) throws CsvValidationException, IOException {
+    private TransactionUploadResults parseZionsData(CSVReader csvReader, String[] accountHeaders) throws CsvValidationException, IOException {
         String[] accountValues = csvReader.readNext();
 
         String[] headers = csvReader.readNext();
 
-        int rowsAdded = 0;
+        int existingTransactions = 0;
+        int newTransactions = 0;
         HashMap<String, Object> paramMap = new HashMap<>();
 
         String[] rowValues;
         while ((rowValues = csvReader.readNext()) != null) {
             if ("Account Number".equals(rowValues[0])) {
-                return rowsAdded + parseZionsData(csvReader, rowValues);
+                TransactionUploadResults transactionUploadResults = parseZionsData(csvReader, rowValues);
+                return new TransactionUploadResults(
+                        newTransactions + transactionUploadResults.getNewTransactions(),
+                        existingTransactions + transactionUploadResults.getExistingTransactions()
+                );
             }
 
             paramMap.clear();
@@ -152,14 +225,20 @@ public class TransactionsUploadController {
                 paramMap.putIfAbsent("description", null);
                 paramMap.putIfAbsent("comments", null);
                 paramMap.putIfAbsent("check_number", null);
-                namedParameterJdbcTemplate.update(SQL, paramMap);
-                rowsAdded++;
+                if (addTransactionToDatabase(paramMap)) {
+                    newTransactions++;
+                } else {
+                    existingTransactions++;
+                }
             } catch (Throwable throwable) {
                 logger.error("Failed", throwable);
             }
         }
 
-        return rowsAdded;
+        return new TransactionUploadResults(
+                newTransactions,
+                existingTransactions
+        );
     }
 
     private static int parseMoney(String string) {
