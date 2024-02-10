@@ -1,0 +1,39 @@
+
+body {
+    font-family: arial;
+}
+
+div.transaction_amount {
+    text-align: center;
+    font-size: xxx-large;
+    margin: 5px;
+}
+
+div.transaction_description {
+    text-align: center;
+    font-size: x-large;
+    margin-bottom: 10px;
+}
+
+div.transaction_date {
+    text-align: center;
+    font-size: large;
+}
+
+div.transaction_account {
+    text-align: center;
+    font-size: large;
+}
+
+a.plain_link {
+    color: #444444;
+    text-decoration: none;
+}
+
+div.selection_title {
+
+}
+
+div.selection_value {
+    font-size: x-large;
+}

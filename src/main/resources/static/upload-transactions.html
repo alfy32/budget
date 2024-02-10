@@ -1,0 +1,22 @@
+<html lang="en-US">
+<head>
+    <title>Budget</title>
+</head>
+<body>
+<div>
+    <p>Select Downloaded Transactions to upload</p>
+    <form method="POST" action="/transactions/upload" enctype="multipart/form-data">
+        <select name="account">
+            <option value="Gunnison Checking">Gunnison Checking</option>
+            <option value="Zions All">Zions All</option>
+        </select>
+        <br>
+        <br>
+        <input type="file" name="file" />
+        <br>
+        <br>
+        <input type="submit"/>
+    </form>
+</div>
+</body>
+</html>
