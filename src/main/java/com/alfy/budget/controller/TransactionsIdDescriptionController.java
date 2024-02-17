@@ -1,5 +1,6 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.service.TransactionsService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -14,10 +15,15 @@ import java.util.Map;
 @RequestMapping(path = "/transactions/{transactionId}/description")
 public class TransactionsIdDescriptionController {
 
+    private final TransactionsService transactionsService;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    public TransactionsIdDescriptionController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    public TransactionsIdDescriptionController(
+            TransactionsService transactionsService,
+            NamedParameterJdbcTemplate namedParameterJdbcTemplate
+    ) {
+        this.transactionsService = transactionsService;
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
@@ -81,15 +87,7 @@ public class TransactionsIdDescriptionController {
             description = null;
         }
 
-        String s = "UPDATE transactions"
-                + " SET description = :description"
-                + " WHERE id = :transactionId";
-
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("transactionId", transactionId);
-        paramMap.put("description", description);
-        namedParameterJdbcTemplate.update(s, paramMap);
-
+        transactionsService.updateDescription(transactionId, description);
         response.sendRedirect("/transactions/" + transactionId);
     }
 

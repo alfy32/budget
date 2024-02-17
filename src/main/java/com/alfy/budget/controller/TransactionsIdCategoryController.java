@@ -2,30 +2,29 @@ package com.alfy.budget.controller;
 
 import com.alfy.budget.model.Category;
 import com.alfy.budget.service.CategoriesService;
+import com.alfy.budget.service.TransactionsService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.HashMap;
 import java.util.List;
 
 @RestController
 @RequestMapping(path = "/transactions/{transactionId}/category")
 public class TransactionsIdCategoryController {
 
+    private final TransactionsService transactionsService;
     private final CategoriesService categoriesService;
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
     public TransactionsIdCategoryController(
-            CategoriesService categoriesService,
-            NamedParameterJdbcTemplate namedParameterJdbcTemplate
+            TransactionsService transactionsService,
+            CategoriesService categoriesService
     ) {
+        this.transactionsService = transactionsService;
         this.categoriesService = categoriesService;
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
     @GetMapping
@@ -66,16 +65,8 @@ public class TransactionsIdCategoryController {
             HttpServletResponse response
     ) throws IOException {
         if (category != null && !category.isEmpty()) {
-            String s = "UPDATE transactions"
-                    + " SET category = :category"
-                    + " WHERE id = :id";
-
-            HashMap<String, Object> paramMap = new HashMap<>();
-            paramMap.put("id", transactionId);
-            paramMap.put("category", category);
-            namedParameterJdbcTemplate.update(s, paramMap);
+            transactionsService.updateCategory(transactionId, category);
         }
-
         response.sendRedirect("/transactions/" + transactionId);
     }
 

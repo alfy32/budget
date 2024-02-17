@@ -1,23 +1,23 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.model.Transaction;
+import com.alfy.budget.service.TransactionsService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
 
 @RestController
 @RequestMapping(path = "/transactions/{transactionId}/notes")
 public class TransactionsIdNotesController {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final TransactionsService transactionsService;
 
     @Autowired
-    public TransactionsIdNotesController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    public TransactionsIdNotesController(TransactionsService transactionsService) {
+        this.transactionsService = transactionsService;
     }
 
     @GetMapping
@@ -36,11 +36,8 @@ public class TransactionsIdNotesController {
             printWriter.print("</head>");
             printWriter.print("<body>");
 
-            String query = "SELECT notes FROM transactions" +
-                    " WHERE id=:id";
-            HashMap<String, Object> paramMap = new HashMap<>();
-            paramMap.put("id", transactionId);
-            String notes = namedParameterJdbcTemplate.queryForObject(query, paramMap, String.class);
+            Transaction transaction = transactionsService.getTransaction(transactionId);
+            String notes = transaction.notes;
             if (notes == null) {
                 notes = "";
             }
@@ -68,15 +65,7 @@ public class TransactionsIdNotesController {
             note = null;
         }
 
-        String s = "UPDATE transactions"
-                + " SET notes = :notes"
-                + " WHERE id = :id";
-
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", transactionId);
-        paramMap.put("notes", note);
-        namedParameterJdbcTemplate.update(s, paramMap);
-
+        transactionsService.updateNotes(transactionId, note);
         response.sendRedirect("/transactions/" + transactionId);
     }
 

@@ -1,23 +1,26 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.model.Transaction;
+import com.alfy.budget.service.TransactionsService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping(path = "/transactions/{transactionId}/tags")
 public class TransactionsIdTagsController {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final TransactionsService transactionsService;
 
     @Autowired
-    public TransactionsIdTagsController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    public TransactionsIdTagsController(TransactionsService transactionsService) {
+        this.transactionsService = transactionsService;
     }
 
     @GetMapping
@@ -45,12 +48,8 @@ public class TransactionsIdTagsController {
             printWriter.print("</head>");
             printWriter.print("<body>");
 
-            String query = "SELECT tags FROM transactions" +
-                    " WHERE id=:id";
-            HashMap<String, Object> paramMap = new HashMap<>();
-            paramMap.put("id", transactionId);
-            String selectedTags = namedParameterJdbcTemplate.queryForObject(query, paramMap, String.class);
-            Set<String> tagSet = getTagSet(selectedTags);
+            Transaction transaction = transactionsService.getTransaction(transactionId);
+            Set<String> tagSet = getTagSet(transaction.tags);
 
             printWriter.print("<form method=\"POST\" action=\"" + postUrl + "\" enctype=\"application/x-www-form-urlencoded\">");
             printWriter.print("<input type=\"hidden\" name=\"transactionId\" value=\"" + transactionId + "\">");
@@ -75,16 +74,7 @@ public class TransactionsIdTagsController {
             HttpServletResponse response
     ) throws IOException {
         String tagsValue = tags == null ? null : String.join(", ", tags);
-
-        String s = "UPDATE transactions"
-                + " SET tags = :tags"
-                + " WHERE id = :id";
-
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", transactionId);
-        paramMap.put("tags", tagsValue);
-        namedParameterJdbcTemplate.update(s, paramMap);
-
+        transactionsService.updateTags(transactionId, tagsValue);
         response.sendRedirect("/transactions/" + transactionId);
     }
 

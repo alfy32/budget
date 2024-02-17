@@ -49,6 +49,50 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.query(query, paramMap, TransactionsService::mapTransaction);
     }
 
+    public void updateCategory(int transactionId, String category) {
+        String s = "UPDATE transactions"
+                + " SET category = :category"
+                + " WHERE id = :id";
+
+        HashMap<String, Object> paramMap = new HashMap<>();
+        paramMap.put("id", transactionId);
+        paramMap.put("category", category);
+        namedParameterJdbcTemplate.update(s, paramMap);
+    }
+
+    public void updateDescription(int transactionId, String description) {
+        String s = "UPDATE transactions"
+                + " SET description = :description"
+                + " WHERE id = :transactionId";
+
+        HashMap<String, Object> paramMap = new HashMap<>();
+        paramMap.put("transactionId", transactionId);
+        paramMap.put("description", description);
+        namedParameterJdbcTemplate.update(s, paramMap);
+    }
+
+    public void updateNotes(int transactionId, String notes) {
+        String s = "UPDATE transactions"
+                + " SET notes = :notes"
+                + " WHERE id = :id";
+
+        HashMap<String, Object> paramMap = new HashMap<>();
+        paramMap.put("id", transactionId);
+        paramMap.put("notes", notes);
+        namedParameterJdbcTemplate.update(s, paramMap);
+    }
+
+    public void updateTags(int transactionId, String tags) {
+        String s = "UPDATE transactions"
+                + " SET tags = :tags"
+                + " WHERE id = :id";
+
+        HashMap<String, Object> paramMap = new HashMap<>();
+        paramMap.put("id", transactionId);
+        paramMap.put("tags", tags);
+        namedParameterJdbcTemplate.update(s, paramMap);
+    }
+
     private static Transaction mapTransaction(ResultSet resultSet, int rowNum) throws SQLException {
         Transaction transaction = new Transaction();
         transaction.id = resultSet.getInt("id");
