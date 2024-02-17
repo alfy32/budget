@@ -47,6 +47,12 @@ public class BudgetsController {
             }
             LocalDate start = date.withDayOfMonth(1);
             LocalDate end = date.withDayOfMonth(date.getMonth().length(date.isLeapYear()));
+
+            printWriter.print("<h2>" + date.getMonth() + "</h2>");
+
+            printWriter.print("<a href=\"/budgets?date=" + start.minusMonths(1) + "\">Previous</a> ");
+            printWriter.print("<a href=\"/budgets?date=" + start.plusMonths(1) + "\">Next</a>");
+
             List<Transaction> transactions = transactionsService.getTransactions(start, end);
 
             Map<String, Integer> totalsPerCategory = new HashMap<>();
@@ -59,9 +65,6 @@ public class BudgetsController {
             totalsPerCategory.forEach((String category, Integer amount) -> {
                 printWriter.print("<p>" + category + ": " + NumberFormat.getCurrencyInstance().format(amount / 100d) + "</p>");
             });
-
-            printWriter.print("<a href=\"/budgets?date="+ start.minusMonths(1) +"\">Previous</a> ");
-            printWriter.print("<a href=\"/budgets?date="+ start.plusMonths(1) +"\">Next</a>");
 
             printWriter.print("</body>");
             printWriter.print("</html>");
