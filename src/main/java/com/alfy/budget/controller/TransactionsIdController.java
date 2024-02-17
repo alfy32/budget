@@ -3,10 +3,7 @@ package com.alfy.budget.controller;
 import com.alfy.budget.model.Transaction;
 import com.alfy.budget.service.TransactionsService;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -28,6 +25,7 @@ public class TransactionsIdController {
     @GetMapping(path = "/{transactionId}")
     public void getTransaction(
             @PathVariable("transactionId") int transactionId,
+            @RequestParam(name = "needsCategorized", required = false) boolean needsCategorized,
             HttpServletResponse response
     ) throws IOException {
 
@@ -46,7 +44,7 @@ public class TransactionsIdController {
 
             Transaction transaction = transactionsService.getTransaction(transactionId);
 
-            printWriter.print("<a href=\"/transactions\">Back</a>");
+            printWriter.print("<a href=\"/transactions?needsCategorized=" + needsCategorized + "\">Back</a>");
 
             printWriter.print("<div class=\"transaction_amount\">" + transaction.getFormattedAmount() + "</div>");
             printWriter.print("<div class=\"transaction_description\">" + transaction.description + "</div>");
@@ -64,7 +62,7 @@ public class TransactionsIdController {
             printWriter.print("<hr>");
 
             String savedCategory = transaction.category == null ? "Select Category" : transaction.category;
-            String categoryLink = "/transactions/" + transactionId + "/category";
+            String categoryLink = "/transactions/" + transactionId + "/category?needsCategorized=" + needsCategorized;
             printWriter.print("<a class=\"plain_link\" href=\"" + categoryLink + "\">");
             printWriter.print("<div class=\"selection_title\">Category</div>");
             printWriter.print("<div class=\"selection_value\">" + savedCategory + "</div>");

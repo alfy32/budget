@@ -7,12 +7,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @RestController
@@ -31,6 +33,7 @@ public class TransactionsController {
 
     @GetMapping
     public void getTransactions(
+            @RequestParam(name = "needsCategorized", required = false) boolean needsCategorized,
             HttpServletResponse response
     ) throws IOException {
 
@@ -52,7 +55,14 @@ public class TransactionsController {
             for (Transaction transaction : transactions) {
                 String category = transaction.category == null ? "Needs Categorized" : transaction.category;
 
-                printWriter.print("<a class=\"transaction_link\" href=\"/transactions/" + transaction.id + "\">");
+                if (needsCategorized) {
+                    if (!Objects.equals(category, "Needs Categorized")) {
+                        continue;
+                    }
+                }
+
+                String linkUrl = "/transactions/" + transaction.id + "?needsCategorized=" + needsCategorized;
+                printWriter.print("<a class=\"transaction_link\" href=\"" + linkUrl + "\">");
                 printWriter.print("  <div class=\"transaction_block\">");
                 printWriter.print("    <div class=\"transaction_description\">" + transaction.description + "</div>");
                 printWriter.print("    <div class=\"transaction_category\">" + category + "</div>");

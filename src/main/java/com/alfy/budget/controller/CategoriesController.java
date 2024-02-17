@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,6 +40,7 @@ public class CategoriesController {
 
             printWriter.print("<ul>");
             List<Category> categories = categoriesService.getCategories();
+            categories.sort(Comparator.comparing(category -> category.name));
             for (Category category : categories) {
                 printWriter.print("<li>");
                 printWriter.print("<form method=\"POST\" action=\"/categories/" + category.id + "\" enctype=\"application/x-www-form-urlencoded\">");
