@@ -60,6 +60,9 @@ public class BudgetsController {
                 printWriter.print("<p>" + category + ": " + NumberFormat.getCurrencyInstance().format(amount / 100d) + "</p>");
             });
 
+            printWriter.print("<a href=\"/budgets?date="+ start.minusMonths(1) +"\">Previous</a> ");
+            printWriter.print("<a href=\"/budgets?date="+ start.plusMonths(1) +"\">Next</a>");
+
             printWriter.print("</body>");
             printWriter.print("</html>");
         }

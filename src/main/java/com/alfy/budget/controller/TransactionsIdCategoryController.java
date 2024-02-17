@@ -1,5 +1,7 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.model.Category;
+import com.alfy.budget.service.CategoriesService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -8,15 +10,21 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.List;
 
 @RestController
 @RequestMapping(path = "/transactions/{transactionId}/category")
 public class TransactionsIdCategoryController {
 
+    private final CategoriesService categoriesService;
     private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
 
     @Autowired
-    public TransactionsIdCategoryController(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+    public TransactionsIdCategoryController(
+            CategoriesService categoriesService,
+            NamedParameterJdbcTemplate namedParameterJdbcTemplate
+    ) {
+        this.categoriesService = categoriesService;
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
@@ -26,14 +34,7 @@ public class TransactionsIdCategoryController {
             HttpServletResponse response
     ) throws IOException {
 
-        // TODO read this from the database
-        String[] categories = {
-                "Eat Out",
-                "Gas",
-                "Utilities",
-                "Vacation",
-                "Other Regular",
-        };
+        List<Category> categories = categoriesService.getCategories();
 
         response.setContentType("text/html");
         try (PrintWriter printWriter = response.getWriter()) {
@@ -46,8 +47,8 @@ public class TransactionsIdCategoryController {
 
             String postUrl = "/transactions/" + transactionId + "/category";
             printWriter.print("<form method=\"POST\" action=\"" + postUrl + "\" enctype=\"application/x-www-form-urlencoded\">");
-            for (String category : categories) {
-                printWriter.print("<input type=\"submit\" name=\"category\" value=\"" + category + "\">");
+            for (Category category : categories) {
+                printWriter.print("<input type=\"submit\" name=\"category\" value=\"" + category.name + "\">");
                 printWriter.print("<br>");
                 printWriter.print("<br>");
             }
