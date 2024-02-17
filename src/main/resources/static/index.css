@@ -1,0 +1,39 @@
+
+body {
+    font-family: arial;
+}
+
+ul.vertical {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    font-size: large;
+    width: 95%;
+}
+
+ul.vertical li {
+    background-color: #f1f1f1;
+    color: black;
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin-top: 2px;
+}
+
+ul.vertical li:hover {
+    background-color: #555;
+    color: white;
+}
+
+ul.vertical li {
+    color: black;
+    width: 100%;
+}
+
+ul.vertical a {
+    text-decoration: none;
+}
+
+ul.vertical li:hover {
+    color: white;
+}
