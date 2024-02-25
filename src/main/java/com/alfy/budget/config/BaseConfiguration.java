@@ -1,4 +1,4 @@
-package com.alfy.budget;
+package com.alfy.budget.config;
 
 import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;

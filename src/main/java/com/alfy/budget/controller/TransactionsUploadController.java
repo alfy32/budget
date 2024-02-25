@@ -11,9 +11,11 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -23,7 +25,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping(path = "/transactions/upload")
+@RequestMapping(path = "/rest/transactions/upload")
 public class TransactionsUploadController {
 
     final Logger logger = LoggerFactory.getLogger(TransactionsUploadController.class);

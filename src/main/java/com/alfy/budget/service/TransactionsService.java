@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TransactionsService {
 
@@ -26,6 +27,33 @@ public class TransactionsService {
         paramMap.put("id", id);
 
         return namedParameterJdbcTemplate.queryForObject(query, paramMap, TransactionsService::mapTransaction);
+    }
+
+    public Map<String, Object> getTransactionDescription(int id) {
+        String query = "SELECT transactions.description, bank_transactions.description AS original_description "
+                + " FROM transactions"
+                + " INNER JOIN bank_transactions "
+                + "    ON transactions.bank_transaction_id = bank_transactions.id"
+                + " WHERE transactions.id=:transactionId";
+        HashMap<String, Object> paramMap = new HashMap<>();
+        paramMap.put("transactionId", id);
+        Map<String, Object> stringObjectMap = namedParameterJdbcTemplate.queryForMap(query, paramMap);
+
+
+        String originalDescription = (String) stringObjectMap.get("original_description");
+        if (originalDescription == null) {
+            originalDescription = "";
+        }
+
+        String decription = (String) stringObjectMap.get("description");
+        if (decription == null) {
+            decription = "";
+        }
+
+        HashMap<String, Object> json = new HashMap<>();
+        json.put("description", decription);
+        json.put("originalDescription", originalDescription);
+        return json;
     }
 
     public List<Transaction> getTransactionsOrderedByDate() {
