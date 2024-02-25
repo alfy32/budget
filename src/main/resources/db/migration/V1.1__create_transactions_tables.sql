@@ -1,5 +1,6 @@
 CREATE TABLE bank_transactions (
   id SERIAL PRIMARY KEY,
+  csv VARCHAR(255),
   account VARCHAR(255) NOT NULL,
   transaction_date date NOT NULL,
   description VARCHAR(255),
