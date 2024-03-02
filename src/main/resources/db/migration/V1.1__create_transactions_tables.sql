@@ -1,24 +1,22 @@
 CREATE TABLE bank_transactions (
-  id SERIAL PRIMARY KEY,
+  id UUID PRIMARY KEY,
   csv VARCHAR(255),
   account VARCHAR(255) NOT NULL,
-  transaction_date date NOT NULL,
+  transactionDate DATE NOT NULL,
   description VARCHAR(255),
   comments VARCHAR(255),
-  check_number VARCHAR(255),
-  amount int NOT NULL
+  checkNumber VARCHAR(255),
+  amount INTEGER NOT NULL
 );
 
 CREATE TABLE transactions (
-  id SERIAL PRIMARY KEY,
-  bank_transaction_id int references bank_transactions(id),
+  id UUID PRIMARY KEY,
+  bankTransactionId UUID NOT NULL,
   account VARCHAR(255) NOT NULL,
-  transaction_date date NOT NULL,
+  transactionDate DATE NOT NULL,
   description VARCHAR(255),
-  comments VARCHAR(255),
-  check_number VARCHAR(255),
-  amount int NOT NULL,
-  category VARCHAR(255),
+  amount INTEGER NOT NULL,
+  categoryId UUID,
   tags VARCHAR(255),
   notes VARCHAR(255)
 );

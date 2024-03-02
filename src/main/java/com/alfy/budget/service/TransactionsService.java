@@ -1,15 +1,22 @@
 package com.alfy.budget.service;
 
+import com.alfy.budget.model.BankTransaction;
+import com.alfy.budget.model.Category;
 import com.alfy.budget.model.Transaction;
+import org.apache.logging.log4j.util.Strings;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class TransactionsService {
 
@@ -19,21 +26,46 @@ public class TransactionsService {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
-    public Transaction getTransaction(int id) {
-        String query = "SELECT * FROM transactions" +
-                " WHERE id = :id";
+    public boolean addFrom(BankTransaction bankTransaction) {
+        String query = "INSERT INTO transactions (" +
+                "  id," +
+                "  bankTransactionId," +
+                "  account," +
+                "  transactionDate," +
+                "  description," +
+                "  amount" +
+                ")" +
+                "VALUES (" +
+                "  :id," +
+                "  :bankTransactionId," +
+                "  :account," +
+                "  :transactionDate," +
+                "  :description," +
+                "  :amount" +
+                ")";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", id);
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", UUID.randomUUID())
+                .addValue("bankTransactionId", bankTransaction.id)
+                .addValue("account", bankTransaction.account, Types.VARCHAR)
+                .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
+                .addValue("description", bankTransaction.description, Types.VARCHAR)
+                .addValue("amount", bankTransaction.amount, Types.INTEGER);
 
-        return namedParameterJdbcTemplate.queryForObject(query, paramMap, TransactionsService::mapTransaction);
+        return namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1;
     }
 
-    public Map<String, Object> getTransactionDescription(int id) {
+    public Transaction get(UUID id) {
+        String query = "SELECT * FROM transactions WHERE id = :id";
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
+        return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, TransactionsService::mapTransaction);
+    }
+
+    public Map<String, Object> getTransactionDescription(UUID id) {
         String query = "SELECT transactions.description, bank_transactions.description AS original_description "
                 + " FROM transactions"
                 + " INNER JOIN bank_transactions "
-                + "    ON transactions.bank_transaction_id = bank_transactions.id"
+                + "    ON transactions.bankTransactionId = bank_transactions.id"
                 + " WHERE transactions.id=:transactionId";
         HashMap<String, Object> paramMap = new HashMap<>();
         paramMap.put("transactionId", id);
@@ -57,84 +89,91 @@ public class TransactionsService {
     }
 
     public List<Transaction> getTransactionsOrderedByDate() {
-        String query = "SELECT *" +
-                " FROM transactions" +
-                " ORDER By transaction_date DESC";
+        String query = "SELECT * FROM transactions" +
+                " ORDER By transactionDate DESC, description";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        return namedParameterJdbcTemplate.query(query, paramMap, TransactionsService::mapTransaction);
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource();
+        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
 
     public List<Transaction> getTransactions(LocalDate start, LocalDate end) {
         String query = "SELECT * FROM transactions" +
-                " WHERE transaction_date >= :start" +
-                "   AND transaction_date <= :end";
+                " WHERE transactionDate >= :start" +
+                "   AND transactionDate <= :end";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("start", Date.valueOf(start));
-        paramMap.put("end", Date.valueOf(end));
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("start", Date.valueOf(start))
+                .addValue("end", Date.valueOf(end));
 
-        return namedParameterJdbcTemplate.query(query, paramMap, TransactionsService::mapTransaction);
+        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
 
-    public void updateCategory(int transactionId, String category) {
-        String s = "UPDATE transactions"
-                + " SET category = :category"
+    public void updateCategory(UUID transactionId, UUID categoryId) {
+        String query = "UPDATE transactions"
+                + " SET categoryId = :categoryId"
                 + " WHERE id = :id";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", transactionId);
-        paramMap.put("category", category);
-        namedParameterJdbcTemplate.update(s, paramMap);
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", transactionId)
+                .addValue("categoryId", categoryId);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
-    public void updateDescription(int transactionId, String description) {
-        String s = "UPDATE transactions"
+    public void updateDescription(UUID transactionId, String description) {
+        String query = "UPDATE transactions"
                 + " SET description = :description"
                 + " WHERE id = :transactionId";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("transactionId", transactionId);
-        paramMap.put("description", description);
-        namedParameterJdbcTemplate.update(s, paramMap);
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", transactionId)
+                .addValue("description", description, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
-    public void updateNotes(int transactionId, String notes) {
-        String s = "UPDATE transactions"
+    public void updateNotes(UUID transactionId, String notes) {
+        String query = "UPDATE transactions"
                 + " SET notes = :notes"
                 + " WHERE id = :id";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", transactionId);
-        paramMap.put("notes", notes);
-        namedParameterJdbcTemplate.update(s, paramMap);
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", transactionId)
+                .addValue("notes", notes, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
-    public void updateTags(int transactionId, String tags) {
-        String s = "UPDATE transactions"
+    public void updateTags(UUID transactionId, String tags) {
+        String query = "UPDATE transactions"
                 + " SET tags = :tags"
                 + " WHERE id = :id";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", transactionId);
-        paramMap.put("tags", tags);
-        namedParameterJdbcTemplate.update(s, paramMap);
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", transactionId)
+                .addValue("tags", tags, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
     private static Transaction mapTransaction(ResultSet resultSet, int rowNum) throws SQLException {
         Transaction transaction = new Transaction();
-        transaction.id = resultSet.getInt("id");
-        transaction.bankTransactionId = resultSet.getInt("bank_transaction_id");
+        transaction.id = UUID.fromString(resultSet.getString("id"));
+        transaction.bankTransaction = new BankTransaction();
+        transaction.bankTransaction.id = UUID.fromString(resultSet.getString("bankTransactionId"));
         transaction.account = resultSet.getString("account");
-        transaction.date = resultSet.getDate("transaction_date").toLocalDate();
+        transaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
         transaction.description = resultSet.getString("description");
-        transaction.comments = resultSet.getString("comments");
-        transaction.checkNumber = resultSet.getString("check_number");
         transaction.amount = resultSet.getInt("amount");
-        transaction.category = resultSet.getString("category");
+
+        String categoryId = resultSet.getString("categoryId");
+        if (Strings.isNotBlank(categoryId)) {
+            transaction.category = new Category();
+            transaction.category.id = UUID.fromString(categoryId);
+        }
+
         transaction.tags = resultSet.getString("tags");
         transaction.notes = resultSet.getString("notes");
         return transaction;
     }
-
 }

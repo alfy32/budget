@@ -1,13 +1,18 @@
 package com.alfy.budget.service;
 
 import com.alfy.budget.model.Category;
+import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public class CategoriesService {
 
@@ -18,46 +23,68 @@ public class CategoriesService {
     }
 
     public List<Category> getCategories() {
-        String query = "SELECT * FROM category";
+        String query = "SELECT id, name FROM categories";
         HashMap<String, Object> paramMap = new HashMap<>();
-        return namedParameterJdbcTemplate.query(query, paramMap, CategoriesService::mapCategory);
+        return namedParameterJdbcTemplate.query(query, paramMap, CategoriesService::map);
     }
 
-    public boolean addCategory(String name) {
-        String query = "INSERT INTO category (name)" +
-                "VALUES (:name)";
-
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("name", name);
-        int rowsAdded = namedParameterJdbcTemplate.update(query, new MapSqlParameterSource(paramMap));
-        return rowsAdded == 1;
+    public Map<UUID, Category> getCategoriesById() {
+        HashMap<UUID, Category> categoriesById = new HashMap<>();
+        for (Category category : getCategories()) {
+            categoriesById.put(category.id, category);
+        }
+        return categoriesById;
     }
 
-    public void updateCategory(Category category) {
-        String query = "UPDATE category" +
+    public Category get(UUID id) {
+        String query = "SELECT id, name FROM categories WHERE id=:id";
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
+        return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, CategoriesService::map);
+    }
+
+    public void add(Category category) {
+        if (category == null || Strings.isBlank(category.name)) {
+            return;
+        }
+
+        category.id = UUID.randomUUID();
+
+        String query = "INSERT INTO categories (id, name)" +
+                "VALUES (:id, :name)";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", category.id)
+                .addValue("name", category.name, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
+    public void update(Category category) {
+        if (category == null || category.id == null || Strings.isBlank(category.name)) {
+            return;
+        }
+
+        String query = "UPDATE categories" +
                 " SET name=:name" +
                 " WHERE id=:id";
 
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", category.id);
-        paramMap.put("name", category.name);
-        namedParameterJdbcTemplate.update(query, new MapSqlParameterSource(paramMap));
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", category.id)
+                .addValue("name", category.name, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
-    public void deleteCategory(int id) {
-        String query = "DELETE FROM category" +
-                " WHERE id=:id";
-
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("id", id);
-        namedParameterJdbcTemplate.update(query, new MapSqlParameterSource(paramMap));
+    public void delete(UUID id) {
+        String query = "DELETE FROM categories WHERE id=:id";
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
-    private static Category mapCategory(ResultSet resultSet, int rowNum) throws SQLException {
+    private static Category map(ResultSet resultSet, int rowNum) throws SQLException {
         Category category = new Category();
-        category.id = resultSet.getInt("id");
+        category.id = UUID.fromString(resultSet.getString("id"));
         category.name = resultSet.getString("name");
         return category;
     }
-
 }
