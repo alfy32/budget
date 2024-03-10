@@ -2,6 +2,7 @@ package com.alfy.budget.service;
 
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Category;
+import com.alfy.budget.model.SplitTransaction;
 import com.alfy.budget.model.Transaction;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -61,6 +62,12 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
 
+    public void delete(UUID id) {
+        String query = "DELETE FROM transactions WHERE id = :id";
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     public Map<String, Object> getTransactionDescription(UUID id) {
         String query = "SELECT transactions.description, bank_transactions.description AS original_description "
                 + " FROM transactions"
@@ -88,7 +95,7 @@ public class TransactionsService {
         return json;
     }
 
-    public List<Transaction> getTransactionsOrderedByDate() {
+    public List<Transaction> listOrderedByDate() {
         String query = "SELECT * FROM transactions" +
                 " ORDER By transactionDate DESC, description";
 
@@ -96,7 +103,7 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
 
-    public List<Transaction> getTransactions(LocalDate start, LocalDate end) {
+    public List<Transaction> listByDate(LocalDate start, LocalDate end) {
         String query = "SELECT * FROM transactions" +
                 " WHERE transactionDate >= :start" +
                 "   AND transactionDate <= :end";
@@ -104,6 +111,16 @@ public class TransactionsService {
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("start", Date.valueOf(start))
                 .addValue("end", Date.valueOf(end));
+
+        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+    }
+
+    public List<Transaction> listWithBankTransactionId(UUID bankTransactionId) {
+        String query = "SELECT * FROM transactions" +
+                " WHERE bankTransactionId = :bankTransactionId";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("bankTransactionId", bankTransactionId);
 
         return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
@@ -126,7 +143,7 @@ public class TransactionsService {
                 + " WHERE id = :transactionId";
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
+                .addValue("transactionId", transactionId)
                 .addValue("description", description, Types.VARCHAR);
 
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
@@ -156,11 +173,65 @@ public class TransactionsService {
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
+    public void updateTransaction(SplitTransaction splitTransaction) {
+        String query = "UPDATE transactions" +
+                " SET description = :description" +
+                "   , categoryId = :categoryId" +
+                "   , amount = :amount" +
+                "   , splitIndex = :splitIndex" +
+                " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", splitTransaction.id)
+                .addValue("description", splitTransaction.description, Types.VARCHAR)
+                .addValue("amount", splitTransaction.amount * 100, Types.INTEGER)
+                .addValue("splitIndex", splitTransaction.index, Types.INTEGER)
+                .addValue("categoryId", splitTransaction.categoryId);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
+    public void addSplitTransaction(BankTransaction bankTransaction, SplitTransaction splitTransaction) {
+        String query = "INSERT INTO transactions (" +
+                "  id," +
+                "  bankTransactionId," +
+                "  splitIndex," +
+                "  account," +
+                "  transactionDate," +
+                "  description," +
+                "  amount," +
+                "  categoryId" +
+                ")" +
+                "VALUES (" +
+                "  :id," +
+                "  :bankTransactionId," +
+                "  :splitIndex," +
+                "  :account," +
+                "  :transactionDate," +
+                "  :description," +
+                "  :amount," +
+                "  :categoryId" +
+                ")";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", UUID.randomUUID())
+                .addValue("bankTransactionId", bankTransaction.id)
+                .addValue("splitIndex", splitTransaction.index)
+                .addValue("account", bankTransaction.account, Types.VARCHAR)
+                .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
+                .addValue("description", splitTransaction.description, Types.VARCHAR)
+                .addValue("amount", splitTransaction.amount * 100, Types.INTEGER)
+                .addValue("categoryId", splitTransaction.categoryId);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     private static Transaction mapTransaction(ResultSet resultSet, int rowNum) throws SQLException {
         Transaction transaction = new Transaction();
         transaction.id = UUID.fromString(resultSet.getString("id"));
         transaction.bankTransaction = new BankTransaction();
         transaction.bankTransaction.id = UUID.fromString(resultSet.getString("bankTransactionId"));
+        transaction.splitIndex = resultSet.getInt("splitIndex");
         transaction.account = resultSet.getString("account");
         transaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
         transaction.description = resultSet.getString("description");
@@ -176,4 +247,5 @@ public class TransactionsService {
         transaction.notes = resultSet.getString("notes");
         return transaction;
     }
+
 }

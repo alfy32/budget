@@ -2,6 +2,7 @@ package com.alfy.budget.controller;
 
 import com.alfy.budget.model.Category;
 import com.alfy.budget.model.Transaction;
+import com.alfy.budget.service.BankTransactionsService;
 import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;
 import org.springframework.web.bind.annotation.*;
@@ -16,20 +17,23 @@ public class TransactionsController {
 
     private final CategoriesService categoriesService;
     private final TransactionsService transactionsService;
+    private final BankTransactionsService bankTransactionsService;
 
     public TransactionsController(
             CategoriesService categoriesService,
-            TransactionsService transactionsService
+            TransactionsService transactionsService,
+            BankTransactionsService bankTransactionsService
     ) {
         this.categoriesService = categoriesService;
         this.transactionsService = transactionsService;
+        this.bankTransactionsService = bankTransactionsService;
     }
 
     @GetMapping
     public List<Transaction> getTransactions(
             @RequestParam(name = "needsCategorized", required = false) boolean needsCategorized
     ) {
-        List<Transaction> transactionsOrderedByDate = transactionsService.getTransactionsOrderedByDate();
+        List<Transaction> transactionsOrderedByDate = transactionsService.listOrderedByDate();
         if (needsCategorized) {
             transactionsOrderedByDate.removeIf(transaction -> transaction.category != null);
         }
@@ -52,6 +56,11 @@ public class TransactionsController {
         if (transaction.category != null && transaction.category.id != null) {
             transaction.category = categoriesService.get(transaction.category.id);
         }
+
+        if (transaction.bankTransaction != null && transaction.bankTransaction.id != null) {
+            transaction.bankTransaction = bankTransactionsService.get(transaction.bankTransaction.id);
+        }
+
         return transaction;
     }
 
@@ -81,7 +90,7 @@ public class TransactionsController {
     @PostMapping(path = "/{id}/tags")
     public void updateTags(
             @PathVariable(name = "id") UUID transactionId,
-            @RequestBody List<String> tags
+            @RequestBody(required = false) List<String> tags
     ) {
         String tagsValue = tags == null ? null : String.join(", ", tags);
         transactionsService.updateTags(transactionId, tagsValue);
@@ -90,7 +99,7 @@ public class TransactionsController {
     @PostMapping(path = "/{id}/notes")
     public void update(
             @PathVariable("id") UUID transactionId,
-            @RequestBody String note
+            @RequestBody(required = false) String note
     ) {
         if (note == null || note.isEmpty()) {
             note = null;

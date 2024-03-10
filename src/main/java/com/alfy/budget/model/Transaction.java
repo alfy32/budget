@@ -7,6 +7,7 @@ public class Transaction {
 
     public UUID id;
     public BankTransaction bankTransaction;
+    public int splitIndex;
     public String account;
     public LocalDate transactionDate;
     public String description;

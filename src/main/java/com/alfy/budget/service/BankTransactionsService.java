@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Types;
 import java.util.UUID;
 
@@ -36,6 +38,13 @@ public class BankTransactionsService {
 
         SqlRowSet sqlRowSet = namedParameterJdbcTemplate.queryForRowSet(query, sqlParameterSource);
         return sqlRowSet.next();
+    }
+
+    public BankTransaction get(UUID id) {
+        String query = "SELECT * FROM bank_transactions WHERE id = :id";
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
+        return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, BankTransactionsService::map);
+
     }
 
     public boolean add(BankTransaction bankTransaction) {
@@ -76,4 +85,18 @@ public class BankTransactionsService {
 
         return namedParameterJdbcTemplate.update(sql, sqlParameterSource) == 1;
     }
+
+    private static BankTransaction map(ResultSet resultSet, int i) throws SQLException {
+        BankTransaction bankTransaction = new BankTransaction();
+        bankTransaction.id = UUID.fromString(resultSet.getString("id"));
+        bankTransaction.csv = resultSet.getString("csv");
+        bankTransaction.account = resultSet.getString("account");
+        bankTransaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
+        bankTransaction.description = resultSet.getString("description");
+        bankTransaction.comments = resultSet.getString("comments");
+        bankTransaction.checkNumber = resultSet.getString("checkNumber");
+        bankTransaction.amount = resultSet.getInt("amount");
+        return bankTransaction;
+    }
+
 }

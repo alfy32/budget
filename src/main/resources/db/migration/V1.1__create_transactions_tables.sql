@@ -12,6 +12,7 @@ CREATE TABLE bank_transactions (
 CREATE TABLE transactions (
   id UUID PRIMARY KEY,
   bankTransactionId UUID NOT NULL,
+  splitIndex INTEGER DEFAULT -1,
   account VARCHAR(255) NOT NULL,
   transactionDate DATE NOT NULL,
   description VARCHAR(255),

@@ -42,7 +42,7 @@ public class BudgetsController {
         LocalDate end = date.withDayOfMonth(date.getMonth().length(date.isLeapYear()));
 
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
-        List<Transaction> transactions = transactionsService.getTransactions(start, end);
+        List<Transaction> transactions = transactionsService.listByDate(start, end);
 
         Map<String, Budget> totalsPerCategory = new HashMap<>();
         Budget notCategorized = new Budget();
