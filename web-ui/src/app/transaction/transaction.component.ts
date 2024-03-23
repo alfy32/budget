@@ -56,6 +56,15 @@ export class TransactionComponent implements OnInit {
     }
   }
 
+  onClickCancelEditDescription(): void {
+    if (this.editingDescription) {
+      this.transactionService.getTransaction(this.transaction.id).subscribe(transaction => {
+        this.editingDescription = false;
+        this.transaction = transaction;
+      });
+    }
+  }
+
   onClickEditNotes(): void {
     if (!this.editingNotes) {
       this.editingNotes = true;
