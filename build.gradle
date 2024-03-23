@@ -28,6 +28,15 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
+tasks.register('copyUi', Copy) {
+    group 'build'
+
+    from 'web-ui/dist/budget-ui/browser'
+    into 'src/main/resources/static'
+}
+
+processResources.dependsOn copyUi
+
 tasks.named("bootBuildImage") {
     imageName = 'alfy32/' + project.name
 }
