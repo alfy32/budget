@@ -1,5 +1,5 @@
 import {Component, OnInit} from '@angular/core';
-import {FormGroup, ReactiveFormsModule} from '@angular/forms';
+import {ReactiveFormsModule} from '@angular/forms';
 import {CategoriesService} from '../categories.service';
 import {Category} from '../category';
 import {CommonModule} from '@angular/common';
@@ -16,7 +16,6 @@ import {TransactionService} from '../transaction.service';
 export class TransactionCategoryComponent implements OnInit {
   transactionId: string;
   needsCategorized: boolean = false;
-  categoryForm: FormGroup = new FormGroup({});
   categories: Category[] = [];
 
   constructor(

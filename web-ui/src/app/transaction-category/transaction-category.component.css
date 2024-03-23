@@ -1,11 +1,11 @@
 button {
-    display: block;
-    margin: 2px;
-    border: none;
-    padding: 10px;
-    width: 100%;
-    max-width: 600px;
-    background-color: #04AA6D;
-    color: #f2f2f2;
-    font-size: x-large;
+  display: block;
+  margin: 2px;
+  border: none;
+  padding: 10px;
+  width: 100%;
+  max-width: 600px;
+  background-color: #04AA6D;
+  color: #f2f2f2;
+  font-size: x-large;
 }
