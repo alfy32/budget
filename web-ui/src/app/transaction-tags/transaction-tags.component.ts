@@ -14,7 +14,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 export class TransactionTagsComponent implements OnInit {
   transactionId: string;
   needsCategorized: boolean;
-  formArray: FormArray<any>;
+  formArray: FormArray;
   formGroup: FormGroup;
 
   tags: string[] = [
@@ -49,14 +49,14 @@ export class TransactionTagsComponent implements OnInit {
 
   ngOnInit(): void {
     this.transactionService.getTransaction(this.transactionId).subscribe(transaction => {
+      let tagSet: string[] = [];
       if (transaction.tags) {
-        const tagSet = this.getTagSet(transaction.tags);
-        console.log("tags:" + tagSet);
-
-        this.tags.forEach(tag => {
-          this.formArray.push(new FormControl(tagSet.includes(tag)));
-        })
+        tagSet = this.getTagSet(transaction.tags);
       }
+
+      this.tags.forEach(tag => {
+        this.formArray.push(new FormControl(tagSet.includes(tag)));
+      })
     });
   }
 
