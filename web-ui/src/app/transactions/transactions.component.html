@@ -1,0 +1,14 @@
+<div class="list">
+    <div *ngFor="let transaction of transactions">
+        <a class="transaction_link" [routerLink]="['/transactions/'+ transaction.id]" [queryParams]="{needsCategorized:needsCategorized}">
+            <div class="transaction_block">
+                <div class="transaction_description">{{ transaction.description }}</div>
+                <div class="transaction_category">{{ transaction.category ? transaction.category.name : null || 'Needs Categorized' }}</div>
+                <div class="transaction_date">{{transaction.transactionDate | date:'MMM d' }}</div>
+                <div class="transaction_amount">{{ transaction.amount/100 | currency }}</div>
+                <div class="transaction_split">{{ transaction.splitIndex > 0 ? "Split" : "" }}</div>
+            </div>
+        </a>
+        <hr>
+    </div>
+</div>

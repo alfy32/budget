@@ -1,0 +1,8 @@
+<form [formGroup]="formGroup" (ngSubmit)="updateTags()">
+    <div formArrayName="tags" *ngFor="let tag of formArray.controls; let i = index">
+        <input type="checkbox" [formControlName]="i">{{tags[i]}}
+        <br>
+        <br>
+    </div>
+    <input type="submit">
+</form>

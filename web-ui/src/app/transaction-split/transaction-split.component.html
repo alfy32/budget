@@ -1,0 +1,39 @@
+<div class="title">Original Transaction</div>
+<div class="orignal_transaction_amount">{{ getOriginalAmount() | currency }}</div>
+<div class="orignal_transaction_description"> {{ split?.bankTransaction?.description }}</div>
+<div class="orignal_transaction_date"> {{ split?.bankTransaction?.transactionDate | date }}</div>
+<div class="orignal_transaction_account">{{ split?.bankTransaction?.account }}</div>
+
+<br>
+<div class="title">Split Transactions</div>
+
+<table>
+    <tbody>
+        <tr *ngFor="let splitTransaction of split?.transactions; let i = index">
+            <td style="min-width: 100px;width: 50%;">
+                <select [(ngModel)]="splitTransaction.categoryId">
+                    <option *ngFor="let category of categories" [value]="category.id"
+                        [selected]="splitTransaction.categoryId == category.id">{{category.name}}</option>
+                </select>
+            </td>
+            <td style="width: 60px;">
+                <input currencyMask [readOnly]="i == 0" [(ngModel)]="splitTransaction.amount" (focusout)="updateTotals()">
+            </td>
+            <td style="width: 10%">
+                <div class="fake_button" (click)="removeTransaction(i)" *ngIf="i != 0">Delete</div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div class="fake_button" (click)="saveSplit()">Save</div>
+            </td>
+            <td></td>
+            <td>
+                <div class="fake_button" (click)="addTransaction()">Add</div>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<hr>
+
+<div class="fake_button" (click)="onClickDone()">Done</div>

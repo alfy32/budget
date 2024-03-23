@@ -1,0 +1,9 @@
+<h2>{{date.toLocaleString('default', {month:'long'}) }}</h2>
+
+<a [routerLink]="['/budgets']" [queryParams]="{date:previousDate}">Previous</a>
+-
+<a [routerLink]="['/budgets']" [queryParams]="">This Month</a>
+-
+<a [routerLink]="['/budgets']" [queryParams]="{date:nextDate}">Next</a>
+
+<p *ngFor="let budget of budgets">{{budget.name}}: {{budget.total/100 | currency}}</p>

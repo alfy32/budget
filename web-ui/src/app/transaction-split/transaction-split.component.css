@@ -1,0 +1,79 @@
+div.title {
+    background-color: #cccccc;
+    text-align: center;
+    font-size: large;
+}
+
+div.orignal_transaction_amount {
+    text-align: center;
+    font-size: xxx-large;
+    margin: 5px;
+}
+
+div.orignal_transaction_description {
+    text-align: center;
+    font-size: x-large;
+    margin-bottom: 10px;
+}
+
+div.orignal_transaction_date {
+    text-align: center;
+    font-size: large;
+}
+
+div.orignal_transaction_account {
+    text-align: center;
+    font-size: large;
+}
+
+a.plain_link {
+    color: #444444;
+    text-decoration: none;
+}
+
+div.selection_value {
+    font-size: x-large;
+}
+
+div.split_container {
+    display: flex;
+}
+
+div.split_container div {
+    padding-left: 100px;
+}
+
+th {
+    font-size: large;
+}
+
+td input {
+    width: 85%;
+    display: inline;
+    padding: 20px 8px;
+    font-size: large;
+}
+
+td select {
+    width: 100%;
+    padding: 20px 8px;
+    font-size: large;
+}
+
+td div.fake_button {
+    width: 100%;
+}
+
+td button.save_button {
+    width: 100%;
+    margin: 0px;
+}
+
+.fake_button {
+    padding: 20px 8px;
+    font-size: large;
+    background-color: #04AA6D;
+    color: #f2f2f2;
+    max-width: 800px;
+}
+

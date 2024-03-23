@@ -1,0 +1,16 @@
+<a [routerLink]="['/']">Back to Main Page</a>
+
+<ul>
+    <li *ngFor="let category of categories">
+        <form [formGroup]="category.form" (ngSubmit)="updateCategory(category)">
+            <input type="text" formControlName="name" />
+            <input type="submit" value="Update Category" />
+        </form>
+        <input type="submit" value="Delete Category" (click)="deleteCategory(category.object.id)" />
+    </li>
+</ul>
+
+<form [formGroup]="categoryForm" (ngSubmit)="addCategory()">
+    <input type="text" formControlName="name" />
+    <input type="submit" value="Add Category" />
+</form>

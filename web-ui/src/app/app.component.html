@@ -1,0 +1,8 @@
+<div class="topnav">
+    <a [routerLink]="['/']">Home</a>
+    <a [routerLink]="['/transactions']"[queryParams]="{needsCategorized:true}">Categorize</a>
+    <a [routerLink]="['/budgets']">Budgets</a>
+</div>
+<main>
+    <router-outlet />
+</main>

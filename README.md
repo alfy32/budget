@@ -1,3 +1,5 @@
-This is the backend for my budget app. 
+# Budget
 
-The front end can be found at https://github.com/alfy32/budget-ui
+This is my budget application started in early 2024. I plan to use it in place of Mint.com since it no longer exists.
+
+

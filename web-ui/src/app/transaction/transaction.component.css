@@ -1,0 +1,55 @@
+div.transaction_amount {
+    text-align: center;
+    font-size: xxx-large;
+    margin: 5px;
+}
+
+div.transaction_description {
+    text-align: center;
+    font-size: x-large;
+    margin-bottom: 10px;
+}
+
+div.transaction_date {
+    text-align: center;
+    font-size: large;
+}
+
+div.transaction_account {
+    text-align: center;
+    font-size: large;
+}
+
+a.plain_link {
+    color: #444444;
+    text-decoration: none;
+}
+
+div.selection_value {
+    font-size: x-large;
+}
+
+input.description {
+    font-size: large;
+    margin-top: 10px;
+    padding: 10px 0px;
+    width: 90%;
+    max-width: 600px;
+}
+
+button.description {
+    font-size: large;
+    margin-top: 10px;
+    padding: 10px 10px;
+    width: 90%;
+    max-width: 600px;
+}
+
+.fake_button {
+    text-decoration: none;
+    background-color: #04AA6D;
+    color: #f2f2f2;
+    font-size: x-large;
+    padding: 10px;
+    max-width: 600px;
+}
