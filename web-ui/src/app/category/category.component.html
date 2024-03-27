@@ -1,0 +1,28 @@
+<h2>Edit Category</h2>
+
+<div class="title">Name:</div>
+<input [(ngModel)]="categoryName" (keyup.enter)="updateCategoryName()" (focusout)="updateCategoryName()"/>
+
+<div class="title">Budget:</div>
+<select [(ngModel)]="selectedBudgetId" (change)="budgetSelected()">
+  <option>No Budget</option>
+  <option *ngFor="let budget of budgets" [value]="budget.id"
+          [selected]="category?.budget?.id == budget.id">{{ budget.name }}
+  </option>
+</select>
+
+<br>
+<br>
+<br>
+
+<div class="green_button" (click)="done()">Done</div>
+
+
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+
+<div class="red_button" (click)="deleteCategory()">Delete Category</div>

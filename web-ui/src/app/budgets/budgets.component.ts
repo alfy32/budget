@@ -2,7 +2,7 @@ import {CommonModule} from '@angular/common';
 import {Component, OnInit} from '@angular/core';
 import {ActivatedRoute, RouterModule} from '@angular/router';
 import {TransactionService} from '../transaction.service';
-import {Budget} from '../budget';
+import {BudgetInfo} from "../budgetInfo";
 
 @Component({
   selector: 'app-budgets',
@@ -15,12 +15,13 @@ export class BudgetsComponent implements OnInit {
   date: Date = new Date();
   previousDate: string = '';
   nextDate: string = '';
-  budgets: Budget[] = [];
+  budgets: BudgetInfo[] = [];
 
   constructor(
     private route: ActivatedRoute,
     private transactionService: TransactionService
-  ) { }
+  ) {
+  }
 
   ngOnInit(): void {
     this.updateDates();

@@ -191,6 +191,7 @@ public class TransactionsUploadController {
                     existingTransactions++;
                 } else {
                     if (bankTransactionsService.add(bankTransaction)) {
+                        bankTransaction.description = cleanZionsDescription(bankTransaction.description);
                         if (transactionsService.addFrom(bankTransaction)) {
                             newTransactions++;
                         } else {
@@ -211,6 +212,20 @@ public class TransactionsUploadController {
                 newTransactions,
                 existingTransactions,
                 failedTransactions);
+    }
+
+    public static String cleanZionsDescription(String description) {
+        if (description != null) {
+            int openParen = description.indexOf("(");
+            if (openParen != -1) {
+                int closingParen = description.indexOf(")", openParen);
+                if (closingParen != -1) {
+                    return description.substring(openParen + 1, closingParen);
+                }
+            }
+        }
+
+        return description;
     }
 
     private static int parseMoney(String string) {

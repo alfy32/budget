@@ -2,8 +2,8 @@ import {HttpClient} from "@angular/common/http";
 import {Injectable} from "@angular/core";
 import {Observable} from "rxjs";
 import {Transaction} from "./transaction";
-import {Budget} from "./budget";
 import {Split} from "./split";
+import {BudgetInfo} from "./budgetInfo";
 
 @Injectable({ providedIn: 'root' })
 export class TransactionService {
@@ -79,9 +79,9 @@ export class TransactionService {
         );
     }
 
-    getBudgets(date: Date): Observable<Budget[]> {
+    getBudgets(date: Date): Observable<BudgetInfo[]> {
         const dateString = date.toISOString().split('T')[0];
-        return this.http.get<Budget[]>('/rest/budgets?date=' + dateString);
+        return this.http.get<BudgetInfo[]>('/rest/budgets?date=' + dateString);
     }
 
 }

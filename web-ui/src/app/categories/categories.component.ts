@@ -1,23 +1,20 @@
 import {CommonModule} from '@angular/common';
 import {Component, OnInit} from '@angular/core';
 import {CategoriesService} from '../categories.service';
-import {FormControl, FormGroup, ReactiveFormsModule} from '@angular/forms';
 import {RouterModule} from '@angular/router';
+import {Category} from "../category";
+import {FormsModule} from "@angular/forms";
 
 @Component({
   selector: 'app-categories',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './categories.component.html',
   styleUrl: './categories.component.css'
 })
 export class CategoriesComponent implements OnInit {
-  categories: any[] = [];
-
-  categoryForm: FormGroup = new FormGroup({
-    name: new FormControl('')
-  });
-
+  categories: Category[] = [];
+  newCategory: string = '';
 
   constructor(private categoriesService: CategoriesService) { }
 
@@ -27,28 +24,15 @@ export class CategoriesComponent implements OnInit {
 
   getCategories(): void {
     this.categoriesService.getCategories().subscribe(categories => {
-      this.categories = [];
-      for (let i = 0; i < categories.length; i++) {
-        this.categories.push({
-          object: categories[i],
-          form: new FormGroup({
-            name: new FormControl(categories[i].name)
-          })
-        })
-      }
+      this.categories = categories;
     });
   }
 
-  addCategory(): void {
-    this.categoriesService.addCategory(this.categoryForm.value.name).subscribe(() => this.getCategories());
-  }
-
-  updateCategory(category: any): void {
-    this.categoriesService.updateCategory(category.object.id, category.form.value.name).subscribe(() => this.getCategories());
-  }
-
-  deleteCategory(id: number): void {
-    this.categoriesService.deleteCategory(id).subscribe(() => this.getCategories());
+  addNewCategory(): void {
+    this.categoriesService.addCategory(this.newCategory).subscribe(() => {
+      this.newCategory = '';
+      this.getCategories();
+    });
   }
 
 }

@@ -1,16 +1,14 @@
-<a [routerLink]="['/']">Back to Main Page</a>
+<div class="container">
+  <input type="text" [(ngModel)]="newCategory" (keyup.enter)="addNewCategory()"/>
+  <br>
+  <br>
+  <div class="fake_button" (click)="addNewCategory()">Add Category</div>
+  <br>
+  <br>
 
-<ul>
-    <li *ngFor="let category of categories">
-        <form [formGroup]="category.form" (ngSubmit)="updateCategory(category)">
-            <input type="text" formControlName="name" />
-            <input type="submit" value="Update Category" />
-        </form>
-        <input type="submit" value="Delete Category" (click)="deleteCategory(category.object.id)" />
-    </li>
-</ul>
-
-<form [formGroup]="categoryForm" (ngSubmit)="addCategory()">
-    <input type="text" formControlName="name" />
-    <input type="submit" value="Add Category" />
-</form>
+  <div *ngFor="let category of categories">
+    <div class="category" [routerLink]="['/categories/'+category.id]">
+      {{ category.name }}
+    </div>
+  </div>
+</div>

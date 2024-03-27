@@ -1,5 +1,6 @@
 package com.alfy.budget.service;
 
+import com.alfy.budget.model.Budget;
 import com.alfy.budget.model.Category;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -22,22 +23,22 @@ public class CategoriesService {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
-    public List<Category> getCategories() {
-        String query = "SELECT id, name FROM categories";
+    public List<Category> list() {
+        String query = "SELECT * FROM categories";
         HashMap<String, Object> paramMap = new HashMap<>();
         return namedParameterJdbcTemplate.query(query, paramMap, CategoriesService::map);
     }
 
     public Map<UUID, Category> getCategoriesById() {
         HashMap<UUID, Category> categoriesById = new HashMap<>();
-        for (Category category : getCategories()) {
+        for (Category category : list()) {
             categoriesById.put(category.id, category);
         }
         return categoriesById;
     }
 
     public Category get(UUID id) {
-        String query = "SELECT id, name FROM categories WHERE id=:id";
+        String query = "SELECT * FROM categories WHERE id=:id";
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
         return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, CategoriesService::map);
     }
@@ -65,12 +66,16 @@ public class CategoriesService {
         }
 
         String query = "UPDATE categories" +
-                " SET name=:name" +
+                " SET name=:name, budgetid=:budgetId" +
                 " WHERE id=:id";
+
+        UUID budgetId = category.budget == null ? null : category.budget.id;
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("id", category.id)
-                .addValue("name", category.name, Types.VARCHAR);
+                .addValue("name", category.name, Types.VARCHAR)
+                .addValue("budgetId", budgetId)
+                ;
 
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
@@ -85,6 +90,13 @@ public class CategoriesService {
         Category category = new Category();
         category.id = UUID.fromString(resultSet.getString("id"));
         category.name = resultSet.getString("name");
+
+        String budgetId = resultSet.getString("budgetId");
+        if (Strings.isNotBlank(budgetId)) {
+            category.budget = new Budget();
+            category.budget.id = UUID.fromString(budgetId);
+        }
+
         return category;
     }
 }

@@ -1,6 +1,7 @@
 package com.alfy.budget.controller;
 
 import com.alfy.budget.model.Category;
+import com.alfy.budget.service.BudgetsService;
 import com.alfy.budget.service.CategoriesService;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,15 +14,20 @@ import java.util.UUID;
 @RequestMapping(path = "/rest/categories")
 public class CategoriesController {
 
+    private final BudgetsService budgetsService;
     private final CategoriesService categoriesService;
 
-    public CategoriesController(CategoriesService categoriesService) {
+    public CategoriesController(
+            BudgetsService budgetsService,
+            CategoriesService categoriesService
+    ) {
+        this.budgetsService = budgetsService;
         this.categoriesService = categoriesService;
     }
 
     @GetMapping
     public List<Category> getCategories() {
-        List<Category> categories = categoriesService.getCategories();
+        List<Category> categories = categoriesService.list();
         categories.sort(Comparator.comparing(category -> category.name.toLowerCase()));
         return categories;
     }
@@ -31,6 +37,17 @@ public class CategoriesController {
             @RequestBody Category category
     ) {
         categoriesService.add(category);
+    }
+
+    @GetMapping(path = "/{id}")
+    public Category getCategory(
+            @PathVariable(name = "id") UUID id
+    ) {
+        Category category = categoriesService.get(id);
+        if (category.budget != null && category.budget.id != null) {
+            category.budget = budgetsService.get(category.budget.id);
+        }
+        return category;
     }
 
     @PostMapping(path = "/{id}")

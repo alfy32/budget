@@ -1,7 +1,9 @@
 package com.alfy.budget.config;
 
+import com.alfy.budget.model.Budget;
 import com.alfy.budget.model.Category;
 import com.alfy.budget.service.BankTransactionsService;
+import com.alfy.budget.service.BudgetsService;
 import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;
 import org.springframework.context.annotation.Bean;
@@ -12,9 +14,33 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 public class BaseConfiguration {
 
     @Bean
+    public BankTransactionsService bankTransactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+        return new BankTransactionsService(namedParameterJdbcTemplate);
+    }
+
+    @Bean
+    public BudgetsService budgetsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
+        BudgetsService budgetsService = new BudgetsService(namedParameterJdbcTemplate);
+        if (budgetsService.list().isEmpty()) {
+            budgetsService.add(Budget.create("Bills & Utilities", 700));
+            budgetsService.add(Budget.create("Groceries", 700));
+            budgetsService.add(Budget.create("School Lunch", 100));
+            budgetsService.add(Budget.create("Gas", 200));
+            budgetsService.add(Budget.create("Eating Out", 100));
+            budgetsService.add(Budget.create("Food on Vacation", 30));
+            budgetsService.add(Budget.create("Hotel", 60));
+            budgetsService.add(Budget.create("Kid's Activities", 250));
+            budgetsService.add(Budget.create("Clothing", 137.83));
+            budgetsService.add(Budget.create("Pet Food", 50));
+            budgetsService.add(Budget.create("Other Regular", 500));
+        }
+        return budgetsService;
+    }
+
+    @Bean
     public CategoriesService categoriesService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         CategoriesService categoriesService = new CategoriesService(namedParameterJdbcTemplate);
-        if (categoriesService.getCategories().isEmpty()) {
+        if (categoriesService.list().isEmpty()) {
             categoriesService.add(Category.create("Car Bills"));
             categoriesService.add(Category.create("Credit Card Payment"));
             categoriesService.add(Category.create("Donations"));
@@ -34,11 +60,6 @@ public class BaseConfiguration {
             categoriesService.add(Category.create("Utilities"));
         }
         return categoriesService;
-    }
-
-    @Bean
-    public BankTransactionsService bankTransactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        return new BankTransactionsService(namedParameterJdbcTemplate);
     }
 
     @Bean

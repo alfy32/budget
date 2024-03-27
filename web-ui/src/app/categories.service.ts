@@ -4,36 +4,40 @@ import {Observable} from "rxjs";
 
 import {Category} from "./category";
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class CategoriesService {
 
-    constructor(
-        private http: HttpClient
-    ) { }
+  constructor(
+    private http: HttpClient
+  ) {
+  }
 
-    getCategories(): Observable<Category[]> {
-        return this.http.get<Category[]>('/rest/categories');
-    }
+  getCategories(): Observable<Category[]> {
+    return this.http.get<Category[]>('/rest/categories');
+  }
 
-    addCategory(name: string): Observable<void> {
-        const formData = new URLSearchParams();
-        formData.set('name', name);
-        return this.http.post<void>(
-            '/rest/categories',
-            { name: name }
-        );
-    }
+  getCategory(id: string): Observable<Category> {
+    return this.http.get<Category>('/rest/categories/' + id);
+  }
 
-    updateCategory(id: number, name: string): Observable<void> {
-        console.log(id + " " + name);
-        return this.http.post<void>(
-            '/rest/categories/' + id,
-            { name: name }
-        )
-    }
+  addCategory(name: string): Observable<void> {
+    const formData = new URLSearchParams();
+    formData.set('name', name);
+    return this.http.post<void>(
+      '/rest/categories',
+      {name: name}
+    );
+  }
 
-    deleteCategory(id: number): Observable<void> {
-        return this.http.delete<void>('/rest/categories/' + id);
-    }
+  updateCategory(category: Category): Observable<void> {
+    return this.http.post<void>(
+      '/rest/categories/' + category.id,
+      category
+    )
+  }
+
+  deleteCategory(id: string): Observable<void> {
+    return this.http.delete<void>('/rest/categories/' + id);
+  }
 
 }

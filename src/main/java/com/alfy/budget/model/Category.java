@@ -6,6 +6,7 @@ public class Category {
 
     public UUID id;
     public String name;
+    public Budget budget;
 
     public static Category create(String name) {
         Category category = new Category();

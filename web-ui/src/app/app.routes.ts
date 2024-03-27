@@ -10,6 +10,7 @@ import {TransactionsUploadComponent} from './transactions-upload/transactions-up
 import {TransactionCategoryComponent} from './transaction-category/transaction-category.component';
 import {TransactionTagsComponent} from './transaction-tags/transaction-tags.component';
 import {TransactionSplitComponent} from './transaction-split/transaction-split.component';
+import {CategoryComponent} from "./category/category.component";
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -22,6 +23,7 @@ export const routes: Routes = [
 
     { path: 'budgets', component: BudgetsComponent },
     { path: 'categories', component: CategoriesComponent },
+    { path: 'categories/:id', component: CategoryComponent },
 
     { path: 'transactions-upload', component: TransactionsUploadComponent },
 ];
