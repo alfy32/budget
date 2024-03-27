@@ -28,6 +28,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }
 
+tasks.register('cleanUi', Delete) {
+    group 'build'
+    delete 'src/main/resources/static'
+}
+
 tasks.register('copyUi', Copy) {
     group 'build'
 
@@ -35,6 +40,7 @@ tasks.register('copyUi', Copy) {
     into 'src/main/resources/static'
 }
 
+copyUi.dependsOn cleanUi
 processResources.dependsOn copyUi
 
 tasks.named("bootBuildImage") {

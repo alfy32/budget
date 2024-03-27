@@ -81,7 +81,7 @@ export class TransactionService {
 
     getBudgets(date: Date): Observable<BudgetInfo[]> {
         const dateString = date.toISOString().split('T')[0];
-        return this.http.get<BudgetInfo[]>('/rest/budgets?date=' + dateString);
+        return this.http.get<BudgetInfo[]>('/rest/budgets/query?date=' + dateString);
     }
 
 }
