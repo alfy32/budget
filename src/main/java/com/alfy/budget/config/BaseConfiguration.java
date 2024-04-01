@@ -42,18 +42,21 @@ public class BaseConfiguration {
         CategoriesService categoriesService = new CategoriesService(namedParameterJdbcTemplate);
         if (categoriesService.list().isEmpty()) {
             categoriesService.add(Category.create("Car Bills"));
+            categoriesService.add(Category.create("Cell Phone"));
             categoriesService.add(Category.create("Credit Card Payment"));
             categoriesService.add(Category.create("Donations"));
             categoriesService.add(Category.create("Eat Out"));
             categoriesService.add(Category.create("Family Activities"));
-            categoriesService.add(Category.create("Gas"));
+            categoriesService.add(Category.create("Gas & Fuel"));
             categoriesService.add(Category.create("Groceries"));
+            categoriesService.add(Category.create("Gunnison City"));
             categoriesService.add(Category.create("Interest"));
             categoriesService.add(Category.create("Internet"));
             categoriesService.add(Category.create("Investments"));
             categoriesService.add(Category.create("Kid Activity/Sport"));
             categoriesService.add(Category.create("Other Regular"));
             categoriesService.add(Category.create("Paycheck"));
+            categoriesService.add(Category.create("Pharmacy"));
             categoriesService.add(Category.create("Registration"));
             categoriesService.add(Category.create("School Lunch"));
             categoriesService.add(Category.create("Transfer"));
