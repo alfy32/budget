@@ -9,6 +9,7 @@ public class BankTransaction {
     public String csv;
     public String account;
     public LocalDate transactionDate;
+    public LocalDate postDate;
     public String description;
     public String comments;
     public String checkNumber;

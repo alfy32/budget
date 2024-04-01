@@ -57,6 +57,7 @@ public class BankTransactionsService {
                 "  csv," +
                 "  account," +
                 "  transactionDate," +
+                "  postDate," +
                 "  description," +
                 "  comments," +
                 "  checkNumber," +
@@ -67,6 +68,7 @@ public class BankTransactionsService {
                 "  :csv," +
                 "  :account," +
                 "  :transactionDate," +
+                "  :postDate," +
                 "  :description," +
                 "  :comments," +
                 "  :checkNumber," +
@@ -78,6 +80,7 @@ public class BankTransactionsService {
                 .addValue("csv", bankTransaction.csv, Types.VARCHAR)
                 .addValue("account", bankTransaction.account, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
+                .addValue("postDate", bankTransaction.postDate, Types.DATE)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
                 .addValue("comments", bankTransaction.comments, Types.VARCHAR)
                 .addValue("checkNumber", bankTransaction.checkNumber, Types.VARCHAR)
@@ -92,6 +95,7 @@ public class BankTransactionsService {
         bankTransaction.csv = resultSet.getString("csv");
         bankTransaction.account = resultSet.getString("account");
         bankTransaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
+        bankTransaction.postDate = resultSet.getDate("postDate").toLocalDate();
         bankTransaction.description = resultSet.getString("description");
         bankTransaction.comments = resultSet.getString("comments");
         bankTransaction.checkNumber = resultSet.getString("checkNumber");

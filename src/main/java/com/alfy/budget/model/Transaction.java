@@ -16,4 +16,8 @@ public class Transaction {
     public String tags;
     public String notes;
 
+    public double getAmount() {
+        return amount / 100d;
+    }
+
 }

@@ -165,7 +165,7 @@ public class TransactionsUploadController {
                                 bankTransaction.transactionDate = LocalDate.parse(rowValues[i]);
                                 break;
                             case "Post Date":
-                                bankTransaction.comments = "Post Date: " + rowValues[i];
+                                bankTransaction.postDate = LocalDate.parse(rowValues[i]);
                                 break;
                             case "Transaction Detail":
                                 bankTransaction.description = rowValues[i];

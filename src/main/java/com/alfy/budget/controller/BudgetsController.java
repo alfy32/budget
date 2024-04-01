@@ -90,7 +90,7 @@ public class BudgetsController {
             if (transaction.category != null && transaction.category.id != null) {
                 CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
                 if (categoryInfo != null) {
-                    categoryInfo.total += (double) transaction.amount / 100;
+                    categoryInfo.total += transaction.getAmount();
                     if (categoryInfo.transactions == null) {
                         categoryInfo.transactions = new ArrayList<>();
                     }
@@ -99,7 +99,7 @@ public class BudgetsController {
                 }
             }
 
-            noCategoryInfo.total += (double) transaction.amount / 100;
+            noCategoryInfo.total += transaction.getAmount();
             if (noCategoryInfo.transactions == null) {
                 noCategoryInfo.transactions = new ArrayList<>();
             }
