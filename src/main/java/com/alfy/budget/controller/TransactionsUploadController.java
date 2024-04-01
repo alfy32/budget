@@ -9,6 +9,7 @@ import com.opencsv.exceptions.CsvValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,8 +44,10 @@ public class TransactionsUploadController {
         this.transactionsService = transactionsService;
     }
 
-    @PostMapping
-    public ResponseEntity<String> uploadTransactions(
+    @PostMapping(
+            produces = MediaType.APPLICATION_JSON_VALUE
+    )
+    public ResponseEntity<Object> uploadTransactions(
             @RequestParam("file") MultipartFile file,
             @RequestParam("account") String account
     ) throws IOException, CsvValidationException {
@@ -52,10 +55,13 @@ public class TransactionsUploadController {
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             if ("Gunnison Checking".equals(account)) {
                 TransactionUploadResults results = parseStateBankData(bufferedReader, account);
-                return ResponseEntity.ok(results.toString());
+                return ResponseEntity.ok(results);
+            } else if ("Zions Cash Back Visa".equals(account)) {
+                TransactionUploadResults results = parseZionsCreditCard(bufferedReader, "Cash Back Visa");
+                return ResponseEntity.ok(results);
             } else if ("Zions All".equals(account)) {
                 TransactionUploadResults results = parseZionsData(bufferedReader, parseCsvLine(bufferedReader.readLine()));
-                return ResponseEntity.ok(results.toString());
+                return ResponseEntity.ok(results);
             } else {
                 return ResponseEntity.ok("Unknown account type");
             }
@@ -101,6 +107,68 @@ public class TransactionsUploadController {
                                 break;
                             case "Check Number":
                                 bankTransaction.checkNumber = rowValues[i];
+                                break;
+                            case "Amount":
+                                bankTransaction.amount = parseMoney(rowValues[i]);
+                                break;
+                        }
+                    }
+                }
+
+                if (bankTransactionsService.add(bankTransaction)) {
+                    if (transactionsService.addFrom(bankTransaction)) {
+                        newTransactions++;
+                    } else {
+                        logger.info("Failed to add to transactions table");
+                        failedTransactions++;
+                    }
+                } else {
+                    logger.info("Failed to add to bank_transactions table");
+                    failedTransactions++;
+                }
+            } catch (Throwable throwable) {
+                logger.error("Failed", throwable);
+            }
+        }
+
+        return new TransactionUploadResults(newTransactions, existingTransactions, failedTransactions);
+    }
+
+    private TransactionUploadResults parseZionsCreditCard(BufferedReader bufferedReader, String account) throws IOException, CsvValidationException {
+        int existingTransactions = 0;
+        int newTransactions = 0;
+        int failedTransactions = 0;
+
+        String[] headers = parseCsvLine(bufferedReader.readLine());
+
+        String line;
+        String[] rowValues;
+        BankTransaction bankTransaction;
+        while ((line = bufferedReader.readLine()) != null) {
+            rowValues = parseCsvLine(line);
+            if (bankTransactionsService.exists(account, line)) {
+                existingTransactions++;
+                continue;
+            }
+
+            bankTransaction = new BankTransaction();
+            bankTransaction.csv = line;
+            bankTransaction.account = account;
+
+            try {
+                for (int i = 0; i < rowValues.length; i++) {
+                    String column = headers[i];
+
+                    if (column != null) {
+                        switch (column) {
+                            case "Transaction Date":
+                                bankTransaction.transactionDate = LocalDate.parse(rowValues[i]);
+                                break;
+                            case "Post Date":
+                                bankTransaction.comments = "Post Date: " + rowValues[i];
+                                break;
+                            case "Transaction Detail":
+                                bankTransaction.description = rowValues[i];
                                 break;
                             case "Amount":
                                 bankTransaction.amount = parseMoney(rowValues[i]);
