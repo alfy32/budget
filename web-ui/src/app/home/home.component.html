@@ -1,8 +1,7 @@
-<h2>Budget</h2>
-<ul class="vertical">
-    <li><a [routerLink]="['/transactions']">All Transactions</a></li>
-    <li><a [routerLink]="['/transactions']" [queryParams]="{needsCategorized:true}">Needs Categorized Transactions</a></li>
-    <li><a [routerLink]="['/budgets']">Show Budgets</a></li>
-    <li><a [routerLink]="['/categories']">Categories</a></li>
-    <li><a [routerLink]="['/transactions-upload']">Upload Transactions CSV</a></li>
-</ul>
+<h2>Budget App</h2>
+
+<a class="fake_button" [routerLink]="['/transactions']">All Transactions</a>
+<a class="fake_button" [routerLink]="['/transactions']" [queryParams]="{needsCategorized:true}">Needs Categorized Transactions</a>
+<a class="fake_button" [routerLink]="['/budgets']">Show Budgets</a>
+<a class="fake_button" [routerLink]="['/categories']">Categories</a>
+<a class="fake_button" [routerLink]="['/transactions-upload']">Upload Transactions CSV</a>
