@@ -6,6 +6,7 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 
+import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -95,7 +96,10 @@ public class BankTransactionsService {
         bankTransaction.csv = resultSet.getString("csv");
         bankTransaction.account = resultSet.getString("account");
         bankTransaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
-        bankTransaction.postDate = resultSet.getDate("postDate").toLocalDate();
+        Date postDate = resultSet.getDate("postDate");
+        if (postDate != null) {
+            bankTransaction.postDate = postDate.toLocalDate();
+        }
         bankTransaction.description = resultSet.getString("description");
         bankTransaction.comments = resultSet.getString("comments");
         bankTransaction.checkNumber = resultSet.getString("checkNumber");

@@ -40,7 +40,7 @@ public class SplitController {
                     splitTransaction.index = transaction.splitIndex;
                     splitTransaction.description = transaction.description;
                     splitTransaction.categoryId = transaction.category == null ? null : transaction.category.id;
-                    splitTransaction.amount = Math.abs(transaction.getAmount());
+                    splitTransaction.amount = Math.abs(transaction.amountAsDouble());
                     return splitTransaction;
                 })
                 .sorted(Comparator.comparing(transaction -> transaction.index))

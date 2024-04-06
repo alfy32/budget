@@ -27,7 +27,9 @@ public class TransactionsService {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
     }
 
-    public boolean addFrom(BankTransaction bankTransaction) {
+    public UUID addFrom(BankTransaction bankTransaction) {
+        UUID id = UUID.randomUUID();
+
         String query = "INSERT INTO transactions (" +
                 "  id," +
                 "  bankTransactionId," +
@@ -46,14 +48,18 @@ public class TransactionsService {
                 ")";
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", UUID.randomUUID())
+                .addValue("id", id)
                 .addValue("bankTransactionId", bankTransaction.id)
                 .addValue("account", bankTransaction.account, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
                 .addValue("amount", bankTransaction.amount, Types.INTEGER);
 
-        return namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1;
+        if (namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1) {
+            return id;
+        } else {
+            return null;
+        }
     }
 
     public Transaction get(UUID id) {

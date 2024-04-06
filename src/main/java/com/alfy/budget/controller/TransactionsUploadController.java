@@ -1,8 +1,10 @@
 package com.alfy.budget.controller;
 
 import com.alfy.budget.model.BankTransaction;
+import com.alfy.budget.model.Category;
 import com.alfy.budget.model.TransactionUploadResults;
 import com.alfy.budget.service.BankTransactionsService;
+import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
@@ -23,6 +25,9 @@ import java.io.InputStreamReader;
 import java.io.StringReader;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping(path = "/rest/transactions/upload")
@@ -32,14 +37,17 @@ public class TransactionsUploadController {
 
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
 
+    private final CategoriesService categoriesService;
     private final BankTransactionsService bankTransactionsService;
     private final TransactionsService transactionsService;
 
     @Autowired
     public TransactionsUploadController(
+            CategoriesService categoriesService,
             BankTransactionsService bankTransactionsService,
             TransactionsService transactionsService
     ) {
+        this.categoriesService = categoriesService;
         this.bankTransactionsService = bankTransactionsService;
         this.transactionsService = transactionsService;
     }
@@ -52,15 +60,20 @@ public class TransactionsUploadController {
             @RequestParam("account") String account
     ) throws IOException, CsvValidationException {
 
+        Map<String, Category> categoriesByName = new HashMap<>();
+        for (Category category : categoriesService.list()) {
+            categoriesByName.put(category.name, category);
+        }
+
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             if ("Gunnison Checking".equals(account)) {
-                TransactionUploadResults results = parseStateBankData(bufferedReader, account);
+                TransactionUploadResults results = parseStateBankData(bufferedReader, account, categoriesByName);
                 return ResponseEntity.ok(results);
             } else if ("Zions Cash Back Visa".equals(account)) {
-                TransactionUploadResults results = parseZionsCreditCard(bufferedReader, "Cash Back Visa");
+                TransactionUploadResults results = parseZionsCreditCard(bufferedReader, "Cash Back Visa", categoriesByName);
                 return ResponseEntity.ok(results);
             } else if ("Zions All".equals(account)) {
-                TransactionUploadResults results = parseZionsData(bufferedReader, parseCsvLine(bufferedReader.readLine()));
+                TransactionUploadResults results = parseZionsData(bufferedReader, parseCsvLine(bufferedReader.readLine()), categoriesByName);
                 return ResponseEntity.ok(results);
             } else {
                 return ResponseEntity.ok("Unknown account type");
@@ -69,7 +82,11 @@ public class TransactionsUploadController {
 
     }
 
-    private TransactionUploadResults parseStateBankData(BufferedReader bufferedReader, String account) throws IOException, CsvValidationException {
+    private TransactionUploadResults parseStateBankData(
+            BufferedReader bufferedReader,
+            String account,
+            Map<String, Category> categoriesByName
+    ) throws IOException, CsvValidationException {
         int existingTransactions = 0;
         int newTransactions = 0;
         int failedTransactions = 0;
@@ -116,8 +133,10 @@ public class TransactionsUploadController {
                 }
 
                 if (bankTransactionsService.add(bankTransaction)) {
-                    if (transactionsService.addFrom(bankTransaction)) {
+                    UUID transactionId = transactionsService.addFrom(bankTransaction);
+                    if (transactionId != null) {
                         newTransactions++;
+                        autoCategorize(bankTransaction, transactionId, categoriesByName);
                     } else {
                         logger.info("Failed to add to transactions table");
                         failedTransactions++;
@@ -134,7 +153,11 @@ public class TransactionsUploadController {
         return new TransactionUploadResults(newTransactions, existingTransactions, failedTransactions);
     }
 
-    private TransactionUploadResults parseZionsCreditCard(BufferedReader bufferedReader, String account) throws IOException, CsvValidationException {
+    private TransactionUploadResults parseZionsCreditCard(
+            BufferedReader bufferedReader,
+            String account,
+            Map<String, Category> categoriesByName
+    ) throws IOException, CsvValidationException {
         int existingTransactions = 0;
         int newTransactions = 0;
         int failedTransactions = 0;
@@ -171,15 +194,17 @@ public class TransactionsUploadController {
                                 bankTransaction.description = rowValues[i];
                                 break;
                             case "Amount":
-                                bankTransaction.amount = parseMoney(rowValues[i]);
+                                bankTransaction.amount = -parseMoney(rowValues[i]);
                                 break;
                         }
                     }
                 }
 
                 if (bankTransactionsService.add(bankTransaction)) {
-                    if (transactionsService.addFrom(bankTransaction)) {
+                    UUID transactionId = transactionsService.addFrom(bankTransaction);
+                    if (transactionId != null) {
                         newTransactions++;
+                        autoCategorize(bankTransaction, transactionId, categoriesByName);
                     } else {
                         logger.info("Failed to add to transactions table");
                         failedTransactions++;
@@ -196,7 +221,11 @@ public class TransactionsUploadController {
         return new TransactionUploadResults(newTransactions, existingTransactions, failedTransactions);
     }
 
-    private TransactionUploadResults parseZionsData(BufferedReader bufferedReader, String[] accountHeaders) throws CsvValidationException, IOException {
+    private TransactionUploadResults parseZionsData(
+            BufferedReader bufferedReader,
+            String[] accountHeaders,
+            Map<String, Category> categoriesByName
+    ) throws CsvValidationException, IOException {
         String accountValues = bufferedReader.readLine();
 
         String[] headers = parseCsvLine(bufferedReader.readLine());
@@ -211,7 +240,7 @@ public class TransactionsUploadController {
         while ((line = bufferedReader.readLine()) != null) {
             rowValues = parseCsvLine(line);
             if ("Account Number".equals(rowValues[0])) {
-                TransactionUploadResults transactionUploadResults = parseZionsData(bufferedReader, rowValues);
+                TransactionUploadResults transactionUploadResults = parseZionsData(bufferedReader, rowValues, categoriesByName);
                 return new TransactionUploadResults(
                         newTransactions + transactionUploadResults.newTransactions(),
                         existingTransactions + transactionUploadResults.existingTransactions(),
@@ -260,8 +289,10 @@ public class TransactionsUploadController {
                 } else {
                     if (bankTransactionsService.add(bankTransaction)) {
                         bankTransaction.description = cleanZionsDescription(bankTransaction.description);
-                        if (transactionsService.addFrom(bankTransaction)) {
+                        UUID transactionId = transactionsService.addFrom(bankTransaction);
+                        if (transactionId != null) {
                             newTransactions++;
+                            autoCategorize(bankTransaction, transactionId, categoriesByName);
                         } else {
                             logger.info("Failed to add to transactions table");
                             failedTransactions++;
@@ -314,6 +345,19 @@ public class TransactionsUploadController {
         }
 
         return null;
+    }
+
+    private void autoCategorize(
+            BankTransaction bankTransaction,
+            UUID transactionId,
+            Map<String, Category> categoriesByName
+    ) {
+        if ("VANGUARD BUY/INVESTMENT".equals(bankTransaction.description)) {
+            Category category = categoriesByName.get("Investments");
+            if (category != null) {
+                transactionsService.updateCategory(transactionId, category.id);
+            }
+        }
     }
 
 }
