@@ -8,11 +8,12 @@ public class BankTransaction {
     public UUID id;
     public String csv;
     public String account;
+    public String transactionType;
     public LocalDate transactionDate;
     public LocalDate postDate;
     public String description;
     public String comments;
     public String checkNumber;
-    public int amount;
+    public double amount;
 
 }

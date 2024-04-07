@@ -34,6 +34,7 @@ public class TransactionsService {
                 "  id," +
                 "  bankTransactionId," +
                 "  account," +
+                "  transactionType," +
                 "  transactionDate," +
                 "  description," +
                 "  amount" +
@@ -42,6 +43,7 @@ public class TransactionsService {
                 "  :id," +
                 "  :bankTransactionId," +
                 "  :account," +
+                "  :transactionType," +
                 "  :transactionDate," +
                 "  :description," +
                 "  :amount" +
@@ -51,9 +53,10 @@ public class TransactionsService {
                 .addValue("id", id)
                 .addValue("bankTransactionId", bankTransaction.id)
                 .addValue("account", bankTransaction.account, Types.VARCHAR)
+                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
-                .addValue("amount", bankTransaction.amount, Types.INTEGER);
+                .addValue("amount", bankTransaction.amount * 100, Types.INTEGER);
 
         if (namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1) {
             return id;
@@ -203,6 +206,7 @@ public class TransactionsService {
                 "  bankTransactionId," +
                 "  splitIndex," +
                 "  account," +
+                "  transactionType," +
                 "  transactionDate," +
                 "  description," +
                 "  amount," +
@@ -213,6 +217,7 @@ public class TransactionsService {
                 "  :bankTransactionId," +
                 "  :splitIndex," +
                 "  :account," +
+                "  :transactionType," +
                 "  :transactionDate," +
                 "  :description," +
                 "  :amount," +
@@ -224,6 +229,7 @@ public class TransactionsService {
                 .addValue("bankTransactionId", bankTransaction.id)
                 .addValue("splitIndex", splitTransaction.index)
                 .addValue("account", bankTransaction.account, Types.VARCHAR)
+                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("description", splitTransaction.description, Types.VARCHAR)
                 .addValue("amount", splitTransaction.amount * 100, Types.INTEGER)
@@ -241,7 +247,7 @@ public class TransactionsService {
         transaction.account = resultSet.getString("account");
         transaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
         transaction.description = resultSet.getString("description");
-        transaction.amount = resultSet.getInt("amount");
+        transaction.amount = (double) resultSet.getInt("amount") / 100d;
 
         String categoryId = resultSet.getString("categoryId");
         if (Strings.isNotBlank(categoryId)) {

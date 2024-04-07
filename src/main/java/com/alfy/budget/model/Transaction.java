@@ -9,15 +9,20 @@ public class Transaction {
     public BankTransaction bankTransaction;
     public int splitIndex;
     public String account;
+    public String transactionType;
     public LocalDate transactionDate;
     public String description;
-    public int amount;
+    public double amount;
     public Category category;
     public String tags;
     public String notes;
 
-    public double amountAsDouble() {
-        return amount / 100d;
+    public boolean credit() {
+        return "credit".equalsIgnoreCase(transactionType);
+    }
+
+    public boolean debit() {
+        return "debit".equalsIgnoreCase(transactionType);
     }
 
 }

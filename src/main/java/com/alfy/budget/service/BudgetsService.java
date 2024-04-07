@@ -44,9 +44,9 @@ public class BudgetsService {
         return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, BudgetsService::map);
     }
 
-    public void add(Budget budget) {
+    public Budget add(Budget budget) {
         if (budget == null || Strings.isBlank(budget.name) || budget.amount <= 0) {
-            return;
+            return null;
         }
 
         budget.id = UUID.randomUUID();
@@ -60,7 +60,11 @@ public class BudgetsService {
                 .addValue("name", budget.name, Types.VARCHAR)
                 .addValue("amount", (int) amount, Types.INTEGER);
 
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        if (namedParameterJdbcTemplate.update(query, sqlParameterSource) != 0) {
+            return budget;
+        }
+
+        return null;
     }
 
     private static Budget map(ResultSet resultSet, int rowNum) throws SQLException {

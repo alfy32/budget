@@ -57,6 +57,7 @@ public class BankTransactionsService {
                 "  id," +
                 "  csv," +
                 "  account," +
+                "  transactionType," +
                 "  transactionDate," +
                 "  postDate," +
                 "  description," +
@@ -68,6 +69,7 @@ public class BankTransactionsService {
                 "  :id," +
                 "  :csv," +
                 "  :account," +
+                "  :transactionType," +
                 "  :transactionDate," +
                 "  :postDate," +
                 "  :description," +
@@ -80,12 +82,13 @@ public class BankTransactionsService {
                 .addValue("id", bankTransaction.id)
                 .addValue("csv", bankTransaction.csv, Types.VARCHAR)
                 .addValue("account", bankTransaction.account, Types.VARCHAR)
+                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("postDate", bankTransaction.postDate, Types.DATE)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
                 .addValue("comments", bankTransaction.comments, Types.VARCHAR)
                 .addValue("checkNumber", bankTransaction.checkNumber, Types.VARCHAR)
-                .addValue("amount", bankTransaction.amount, Types.INTEGER);
+                .addValue("amount", bankTransaction.amount * 100, Types.INTEGER);
 
         return namedParameterJdbcTemplate.update(sql, sqlParameterSource) == 1;
     }
@@ -103,7 +106,7 @@ public class BankTransactionsService {
         bankTransaction.description = resultSet.getString("description");
         bankTransaction.comments = resultSet.getString("comments");
         bankTransaction.checkNumber = resultSet.getString("checkNumber");
-        bankTransaction.amount = resultSet.getInt("amount");
+        bankTransaction.amount = (double) resultSet.getInt("amount") / 100d;
         return bankTransaction;
     }
 

@@ -90,7 +90,8 @@ public class BudgetsController {
             if (transaction.category != null && transaction.category.id != null) {
                 CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
                 if (categoryInfo != null) {
-                    categoryInfo.total += transaction.amountAsDouble();
+                    addTransactionToTotal(categoryInfo, transaction);
+
                     if (categoryInfo.transactions == null) {
                         categoryInfo.transactions = new ArrayList<>();
                     }
@@ -99,7 +100,7 @@ public class BudgetsController {
                 }
             }
 
-            noCategoryInfo.total += transaction.amountAsDouble();
+            addTransactionToTotal(noCategoryInfo, transaction);
             if (noCategoryInfo.transactions == null) {
                 noCategoryInfo.transactions = new ArrayList<>();
             }
@@ -120,6 +121,14 @@ public class BudgetsController {
         }
 
         return budgetInfoList;
+    }
+
+    private static void addTransactionToTotal(CategoryInfo categoryInfo, Transaction transaction) {
+        if (transaction.credit()) {
+            categoryInfo.total -= transaction.amount;
+        } else {
+            categoryInfo.total += transaction.amount;
+        }
     }
 
 }

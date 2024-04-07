@@ -1,1 +1,0 @@
-ALTER TABLE bank_transactions ADD COLUMN postDate DATE;

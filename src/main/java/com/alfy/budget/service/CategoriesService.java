@@ -50,12 +50,13 @@ public class CategoriesService {
 
         category.id = UUID.randomUUID();
 
-        String query = "INSERT INTO categories (id, name)" +
-                "VALUES (:id, :name)";
+        String query = "INSERT INTO categories (id, name, budgetid)" +
+                "VALUES (:id, :name, :budgetId)";
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("id", category.id)
-                .addValue("name", category.name, Types.VARCHAR);
+                .addValue("name", category.name, Types.VARCHAR)
+                .addValue("budgetId", category.budget == null ? null : category.budget.id);
 
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }

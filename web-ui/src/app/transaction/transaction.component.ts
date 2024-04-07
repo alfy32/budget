@@ -18,6 +18,7 @@ export class TransactionComponent implements OnInit {
     id: '',
     splitIndex: -1,
     account: '',
+    transactionType: '',
     transactionDate: '',
     description: '',
     amount: 0,

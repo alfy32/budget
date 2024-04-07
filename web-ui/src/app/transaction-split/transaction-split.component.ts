@@ -48,7 +48,7 @@ export class TransactionSplitComponent implements OnInit {
 
   getOriginalAmount(): number {
     if (this.split && this.split.bankTransaction) {
-      return this.split.bankTransaction.amount / 100;
+      return this.split.bankTransaction.amount;
     }
 
     return 0;
@@ -72,16 +72,13 @@ export class TransactionSplitComponent implements OnInit {
   updateTotals(): void {
     if (this.split) {
       let remaining = this.split.bankTransaction?.amount || 0;
-      if (remaining < 0) {
-        remaining = -remaining;
-      }
-      remaining = remaining;
-      console.log(remaining);
+
       for (let i = 1; i < this.split.transactions.length; i++) {
         console.log(this.split.transactions[i].amount);
-        remaining -= this.split.transactions[i].amount * 100;
+        remaining -= this.split.transactions[i].amount;
       }
-      this.split.transactions[0].amount = remaining / 100;
+
+      this.split.transactions[0].amount = remaining;
     }
   }
 
@@ -91,7 +88,7 @@ export class TransactionSplitComponent implements OnInit {
     });
   }
 
-  onClickDone():void {
+  onClickDone(): void {
     this.location.back();
   }
 

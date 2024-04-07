@@ -3,7 +3,8 @@ package com.alfy.budget.model;
 public record TransactionUploadResults(
         int newTransactions,
         int existingTransactions,
-        int failedTransactions
+        int failedTransactions,
+        int autoCategorizedTransactions
 ) {
 
     @Override
