@@ -65,8 +65,11 @@ public class BudgetsController {
             budgetInfoById.put(budget.id, budgetInfo);
         }
 
+        boolean foundBudget;
         List<Category> categories = categoriesService.list();
         for (Category category : categories) {
+            foundBudget = false;
+
             if (category.budget != null && category.budget.id != null) {
                 BudgetInfo budgetInfo = budgetInfoById.get(category.budget.id);
                 if (budgetInfo != null) {
@@ -74,7 +77,15 @@ public class BudgetsController {
                     categoryInfo.category = category;
                     categoryInfoById.put(category.id, categoryInfo);
                     budgetInfo.categories.add(categoryInfo);
+                    foundBudget = true;
                 }
+            }
+
+            if (!foundBudget) {
+                CategoryInfo categoryInfo = new CategoryInfo();
+                categoryInfo.category = category;
+                categoryInfoById.put(category.id, categoryInfo);
+                noBudgetInfo.categories.add(categoryInfo);
             }
         }
 
