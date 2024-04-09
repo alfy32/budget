@@ -47,6 +47,14 @@ public class AutoCategorizeService {
             }
         }
 
+        if ("Check Payroll/PAY".equals(bankTransaction.description)) {
+            Category category = categoriesByName.get("Paycheck");
+            if (category != null) {
+                transactionsService.updateCategory(transactionId, category.id);
+                return true;
+            }
+        }
+
         return false;
     }
 
