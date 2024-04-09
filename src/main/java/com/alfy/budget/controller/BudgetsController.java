@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -123,12 +125,12 @@ public class BudgetsController {
         budgetInfoList.add(noBudgetInfo);
 
         for (BudgetInfo budgetInfo : budgetInfoList) {
-            budgetInfo.total = 0;
+            budgetInfo.total = BigDecimal.ZERO;
             for (CategoryInfo category : budgetInfo.categories) {
-                budgetInfo.total += category.total;
+                budgetInfo.total = budgetInfo.total.add(category.total);
             }
 
-            budgetInfo.percent = (int) (budgetInfo.total / budgetInfo.budget.amount * 100);
+            budgetInfo.percent = new BigDecimal(100).multiply(budgetInfo.total).divide(budgetInfo.budget.amount, RoundingMode.CEILING).intValue();
         }
 
         return budgetInfoList;
@@ -136,9 +138,9 @@ public class BudgetsController {
 
     private static void addTransactionToTotal(CategoryInfo categoryInfo, Transaction transaction) {
         if (transaction.credit()) {
-            categoryInfo.total -= transaction.amount;
+            categoryInfo.total = categoryInfo.total.subtract(transaction.amount);
         } else {
-            categoryInfo.total += transaction.amount;
+            categoryInfo.total = categoryInfo.total.add(transaction.amount);
         }
     }
 

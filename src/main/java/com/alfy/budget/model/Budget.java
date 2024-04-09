@@ -1,14 +1,15 @@
 package com.alfy.budget.model;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public class Budget {
 
     public UUID id;
     public String name;
-    public double amount;
+    public BigDecimal amount;
 
-    public static Budget create(String name, double amount) {
+    public static Budget create(String name, BigDecimal amount) {
         Budget budget = new Budget();
         budget.name = name;
         budget.amount = amount;

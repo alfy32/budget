@@ -1,5 +1,6 @@
 package com.alfy.budget.model;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public class SplitTransaction {
@@ -8,6 +9,6 @@ public class SplitTransaction {
     public int index;
     public String description;
     public UUID categoryId;
-    public double amount;
+    public BigDecimal amount;
 
 }

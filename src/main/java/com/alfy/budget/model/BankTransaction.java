@@ -1,5 +1,6 @@
 package com.alfy.budget.model;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
 
@@ -14,6 +15,6 @@ public class BankTransaction {
     public String description;
     public String comments;
     public String checkNumber;
-    public double amount;
+    public BigDecimal amount;
 
 }

@@ -1,6 +1,7 @@
 package com.alfy.budget.service;
 
 import com.alfy.budget.model.Budget;
+import com.alfy.budget.tools.Tools;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -45,7 +46,7 @@ public class BudgetsService {
     }
 
     public Budget add(Budget budget) {
-        if (budget == null || Strings.isBlank(budget.name) || budget.amount <= 0) {
+        if (budget == null || Strings.isBlank(budget.name) || Tools.isLessThanZero(budget.amount)) {
             return null;
         }
 
@@ -54,11 +55,10 @@ public class BudgetsService {
         String query = "INSERT INTO budgets (id, name, amount)" +
                 "VALUES (:id, :name, :amount)";
 
-        double amount = budget.amount * 100d;
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("id", budget.id)
                 .addValue("name", budget.name, Types.VARCHAR)
-                .addValue("amount", (int) amount, Types.INTEGER);
+                .addValue("amount", Tools.toDatabaseInt(budget.amount), Types.INTEGER);
 
         if (namedParameterJdbcTemplate.update(query, sqlParameterSource) != 0) {
             return budget;
@@ -71,7 +71,7 @@ public class BudgetsService {
         Budget budget = new Budget();
         budget.id = UUID.fromString(resultSet.getString("id"));
         budget.name = resultSet.getString("name");
-        budget.amount = resultSet.getDouble("amount") / 100d;
+        budget.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
         return budget;
     }
 }

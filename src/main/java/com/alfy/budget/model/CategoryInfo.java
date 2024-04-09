@@ -1,11 +1,12 @@
 package com.alfy.budget.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public class CategoryInfo {
 
     public Category category;
-    public double total;
+    public BigDecimal total;
     public List<Transaction> transactions;
 
 }

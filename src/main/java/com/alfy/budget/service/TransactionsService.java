@@ -4,6 +4,7 @@ import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Category;
 import com.alfy.budget.model.SplitTransaction;
 import com.alfy.budget.model.Transaction;
+import com.alfy.budget.tools.Tools;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -56,7 +57,7 @@ public class TransactionsService {
                 .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
-                .addValue("amount", bankTransaction.amount * 100, Types.INTEGER);
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER);
 
         if (namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1) {
             return id;
@@ -193,7 +194,7 @@ public class TransactionsService {
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("id", splitTransaction.id)
                 .addValue("description", splitTransaction.description, Types.VARCHAR)
-                .addValue("amount", splitTransaction.amount * 100, Types.INTEGER)
+                .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount), Types.INTEGER)
                 .addValue("splitIndex", splitTransaction.index, Types.INTEGER)
                 .addValue("categoryId", splitTransaction.categoryId);
 
@@ -232,7 +233,7 @@ public class TransactionsService {
                 .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("description", splitTransaction.description, Types.VARCHAR)
-                .addValue("amount", splitTransaction.amount * 100, Types.INTEGER)
+                .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount), Types.INTEGER)
                 .addValue("categoryId", splitTransaction.categoryId);
 
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
@@ -247,7 +248,7 @@ public class TransactionsService {
         transaction.account = resultSet.getString("account");
         transaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
         transaction.description = resultSet.getString("description");
-        transaction.amount = (double) resultSet.getInt("amount") / 100d;
+        transaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
 
         String categoryId = resultSet.getString("categoryId");
         if (Strings.isNotBlank(categoryId)) {

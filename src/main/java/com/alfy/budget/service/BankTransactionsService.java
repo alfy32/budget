@@ -1,6 +1,7 @@
 package com.alfy.budget.service;
 
 import com.alfy.budget.model.BankTransaction;
+import com.alfy.budget.tools.Tools;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
@@ -88,7 +89,7 @@ public class BankTransactionsService {
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
                 .addValue("comments", bankTransaction.comments, Types.VARCHAR)
                 .addValue("checkNumber", bankTransaction.checkNumber, Types.VARCHAR)
-                .addValue("amount", bankTransaction.amount * 100, Types.INTEGER);
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER);
 
         return namedParameterJdbcTemplate.update(sql, sqlParameterSource) == 1;
     }
@@ -107,7 +108,7 @@ public class BankTransactionsService {
         bankTransaction.description = resultSet.getString("description");
         bankTransaction.comments = resultSet.getString("comments");
         bankTransaction.checkNumber = resultSet.getString("checkNumber");
-        bankTransaction.amount = (double) resultSet.getInt("amount") / 100d;
+        bankTransaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
         return bankTransaction;
     }
 

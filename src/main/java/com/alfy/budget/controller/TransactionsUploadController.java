@@ -5,6 +5,7 @@ import com.alfy.budget.model.TransactionUploadResults;
 import com.alfy.budget.service.AutoCategorizeService;
 import com.alfy.budget.service.BankTransactionsService;
 import com.alfy.budget.service.TransactionsService;
+import com.alfy.budget.tools.Tools;
 import com.opencsv.CSVReader;
 import com.opencsv.exceptions.CsvValidationException;
 import org.slf4j.Logger;
@@ -22,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringReader;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -125,9 +127,9 @@ public class TransactionsUploadController {
                                 bankTransaction.checkNumber = rowValues[i];
                                 break;
                             case "Amount":
-                                double parsedAmount = parseMoney(rowValues[i]);
-                                bankTransaction.amount = Math.abs(parsedAmount);
-                                bankTransaction.transactionType = parsedAmount < 0 ? "debit" : "credit";
+                                BigDecimal parsedAmount = parseMoney(rowValues[i]);
+                                bankTransaction.amount = parsedAmount.abs();
+                                bankTransaction.transactionType = Tools.isLessThanZero(parsedAmount) ? "debit" : "credit";
                                 break;
                         }
                     }
@@ -198,9 +200,9 @@ public class TransactionsUploadController {
                                 bankTransaction.description = rowValues[i];
                                 break;
                             case "Amount":
-                                double parsedAmount = parseMoney(rowValues[i]);
-                                bankTransaction.amount = Math.abs(parsedAmount);
-                                bankTransaction.transactionType = parsedAmount < 0 ? "credit" : "debit";
+                                BigDecimal parsedAmount = parseMoney(rowValues[i]);
+                                bankTransaction.amount = parsedAmount.abs();
+                                bankTransaction.transactionType = Tools.isLessThanZero(parsedAmount) ? "credit" : "debit";
                                 break;
                         }
                     }
@@ -285,7 +287,7 @@ public class TransactionsUploadController {
                             case "Credit": {
                                 String value = rowValues[i];
                                 if (!value.isEmpty()) {
-                                    bankTransaction.amount = Math.abs(parseMoney(value));
+                                    bankTransaction.amount = parseMoney(value).abs();
                                     bankTransaction.transactionType = "credit";
                                 }
                                 break;
@@ -293,7 +295,7 @@ public class TransactionsUploadController {
                             case "Debit": {
                                 String value = rowValues[i];
                                 if (!value.isEmpty()) {
-                                    bankTransaction.amount = Math.abs(parseMoney(value));
+                                    bankTransaction.amount = parseMoney(value).abs();
                                     bankTransaction.transactionType = "debit";
                                 }
                                 break;
@@ -351,13 +353,13 @@ public class TransactionsUploadController {
         return description;
     }
 
-    private static double parseMoney(String string) {
+    public static BigDecimal parseMoney(String string) {
         if (string == null || string.isEmpty()) {
-            return 0;
+            return BigDecimal.ZERO;
         }
 
         String replaced = string.replaceAll("[^0-9.-]", "");
-        return Double.parseDouble(replaced);
+        return new BigDecimal(replaced);
     }
 
     private static String[] parseCsvLine(String line) throws IOException, CsvValidationException {
