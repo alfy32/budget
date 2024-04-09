@@ -131,10 +131,10 @@ public class BudgetsController {
                 budgetInfo.total = budgetInfo.total.add(category.total);
             }
 
-            if (budgetInfo.budget.amount != null) {
-                budgetInfo.percent = new BigDecimal(100).multiply(budgetInfo.total).divide(budgetInfo.budget.amount, RoundingMode.CEILING).intValue();
-            } else {
+            if (budgetInfo.budget.amount == null || BigDecimal.ZERO.compareTo(budgetInfo.budget.amount) == 0) {
                 budgetInfo.percent = 0;
+            } else {
+                budgetInfo.percent = new BigDecimal(100).multiply(budgetInfo.total).divide(budgetInfo.budget.amount, RoundingMode.CEILING).intValue();
             }
         }
 
