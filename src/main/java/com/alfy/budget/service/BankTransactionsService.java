@@ -99,6 +99,7 @@ public class BankTransactionsService {
         bankTransaction.csv = resultSet.getString("csv");
         bankTransaction.account = resultSet.getString("account");
         bankTransaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
+        bankTransaction.transactionType = resultSet.getString("transactionType");
         Date postDate = resultSet.getDate("postDate");
         if (postDate != null) {
             bankTransaction.postDate = postDate.toLocalDate();
