@@ -9,4 +9,8 @@ public class CategoryInfo {
     public BigDecimal total;
     public List<Transaction> transactions;
 
+    public CategoryInfo() {
+        this.total = BigDecimal.ZERO;
+    }
+
 }

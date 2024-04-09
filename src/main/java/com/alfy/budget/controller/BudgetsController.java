@@ -57,6 +57,7 @@ public class BudgetsController {
         noBudgetInfo.budget = new Budget();
         noBudgetInfo.budget.id = noBudgetId;
         noBudgetInfo.budget.name = "No Budget";
+        noBudgetInfo.budget.amount = new BigDecimal(0);
         noBudgetInfo.categories = new ArrayList<>();
 
         List<Budget> budgets = budgetsService.list();
@@ -130,7 +131,11 @@ public class BudgetsController {
                 budgetInfo.total = budgetInfo.total.add(category.total);
             }
 
-            budgetInfo.percent = new BigDecimal(100).multiply(budgetInfo.total).divide(budgetInfo.budget.amount, RoundingMode.CEILING).intValue();
+            if (budgetInfo.budget.amount != null) {
+                budgetInfo.percent = new BigDecimal(100).multiply(budgetInfo.total).divide(budgetInfo.budget.amount, RoundingMode.CEILING).intValue();
+            } else {
+                budgetInfo.percent = 0;
+            }
         }
 
         return budgetInfoList;
