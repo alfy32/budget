@@ -1,7 +1,7 @@
 package com.alfy.budget.tools;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
+import java.math.MathContext;
 
 public class Tools {
 
@@ -16,11 +16,23 @@ public class Tools {
     }
 
     public static BigDecimal fromDatabaseInt(int integer) {
-        return new BigDecimal(integer).divide(ONE_HUNDRED, RoundingMode.CEILING);
+        return new BigDecimal(integer).divide(ONE_HUNDRED, MathContext.UNLIMITED);
     }
 
     public static boolean isLessThanZero(BigDecimal bigDecimal) {
         return bigDecimal == null || bigDecimal.compareTo(BigDecimal.ZERO) < 0;
+    }
+
+    public static int percentAsInt(BigDecimal numerator, BigDecimal denominator) {
+        if (numerator == null || denominator == null) {
+            return 0;
+        }
+
+        if (BigDecimal.ZERO.compareTo(denominator) == 0) {
+            return 0;
+        }
+
+        return numerator.divide(denominator, MathContext.UNLIMITED).multiply(ONE_HUNDRED).intValue();
     }
 
 }

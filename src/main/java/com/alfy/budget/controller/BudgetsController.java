@@ -4,13 +4,13 @@ import com.alfy.budget.model.*;
 import com.alfy.budget.service.BudgetsService;
 import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;
+import com.alfy.budget.tools.Tools;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -131,11 +131,7 @@ public class BudgetsController {
                 budgetInfo.total = budgetInfo.total.add(category.total);
             }
 
-            if (budgetInfo.budget.amount == null || BigDecimal.ZERO.compareTo(budgetInfo.budget.amount) == 0) {
-                budgetInfo.percent = 0;
-            } else {
-                budgetInfo.percent = new BigDecimal(100).multiply(budgetInfo.total).divide(budgetInfo.budget.amount, RoundingMode.CEILING).intValue();
-            }
+            budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
         }
 
         return budgetInfoList;
