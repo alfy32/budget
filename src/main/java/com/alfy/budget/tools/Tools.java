@@ -16,7 +16,7 @@ public class Tools {
     }
 
     public static BigDecimal fromDatabaseInt(int integer) {
-        return new BigDecimal(integer).divide(ONE_HUNDRED, MathContext.UNLIMITED);
+        return new BigDecimal(integer).divide(ONE_HUNDRED, MathContext.DECIMAL32);
     }
 
     public static boolean isLessThanZero(BigDecimal bigDecimal) {
@@ -32,7 +32,7 @@ public class Tools {
             return 0;
         }
 
-        return numerator.divide(denominator, MathContext.UNLIMITED).multiply(ONE_HUNDRED).intValue();
+        return numerator.divide(denominator, MathContext.DECIMAL32).multiply(ONE_HUNDRED).intValue();
     }
 
 }
