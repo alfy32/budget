@@ -246,6 +246,7 @@ public class TransactionsService {
         transaction.bankTransaction.id = UUID.fromString(resultSet.getString("bankTransactionId"));
         transaction.splitIndex = resultSet.getInt("splitIndex");
         transaction.account = resultSet.getString("account");
+        transaction.transactionType = resultSet.getString("transactionType");
         transaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
         transaction.description = resultSet.getString("description");
         transaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));

@@ -28,6 +28,10 @@ div.transaction_amount {
   float: right;
 }
 
+div.credit {
+  color: green;
+}
+
 div.transaction_split {
   float: right;
 }
