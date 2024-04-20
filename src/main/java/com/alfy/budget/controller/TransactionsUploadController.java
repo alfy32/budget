@@ -35,6 +35,7 @@ public class TransactionsUploadController {
     final Logger logger = LoggerFactory.getLogger(TransactionsUploadController.class);
 
     public static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+    public static final DateTimeFormatter DATE_FORMATTER_DFCU = DateTimeFormatter.ofPattern("M/d/yyyy");
 
     private final BankTransactionsService bankTransactionsService;
     private final TransactionsService transactionsService;
@@ -69,6 +70,10 @@ public class TransactionsUploadController {
                 }
                 case "Zions Cash Back Visa" -> {
                     TransactionUploadResults results = parseZionsCreditCard(bufferedReader, "Cash Back Visa");
+                    return ResponseEntity.ok(results);
+                }
+                case "First Choice Platinum" -> {
+                    TransactionUploadResults results = parseDFCU(bufferedReader, account);
                     return ResponseEntity.ok(results);
                 }
                 case "Zions All" -> {
@@ -204,6 +209,77 @@ public class TransactionsUploadController {
                                 bankTransaction.amount = parsedAmount.abs();
                                 bankTransaction.transactionType = Tools.isLessThanZero(parsedAmount) ? "credit" : "debit";
                                 break;
+                        }
+                    }
+                }
+
+                if (bankTransactionsService.add(bankTransaction)) {
+                    UUID transactionId = transactionsService.addFrom(bankTransaction);
+                    if (transactionId != null) {
+                        newTransactions++;
+                        boolean autoCategorized = autoCategorizeService.autoCategorize(bankTransaction, transactionId);
+                        if (autoCategorized) {
+                            autoCategorizedTransactions++;
+                        }
+                    } else {
+                        logger.info("Failed to add to transactions table");
+                        failedTransactions++;
+                    }
+                } else {
+                    logger.info("Failed to add to bank_transactions table");
+                    failedTransactions++;
+                }
+            } catch (Throwable throwable) {
+                logger.error("Failed", throwable);
+            }
+        }
+
+        return new TransactionUploadResults(newTransactions, existingTransactions, failedTransactions, autoCategorizedTransactions);
+    }
+
+    private TransactionUploadResults parseDFCU(
+            BufferedReader bufferedReader,
+            String account
+    ) throws IOException, CsvValidationException {
+        int existingTransactions = 0;
+        int newTransactions = 0;
+        int failedTransactions = 0;
+        int autoCategorizedTransactions = 0;
+
+        String[] headers = parseCsvLine(bufferedReader.readLine());
+
+        String line;
+        String[] rowValues;
+        BankTransaction bankTransaction;
+        while ((line = bufferedReader.readLine()) != null) {
+            rowValues = parseCsvLine(line);
+            if (bankTransactionsService.exists(account, line)) {
+                existingTransactions++;
+                continue;
+            }
+
+            bankTransaction = new BankTransaction();
+            bankTransaction.csv = line;
+            bankTransaction.account = account;
+
+            try {
+                for (int i = 0; i < rowValues.length; i++) {
+                    String column = headers[i];
+
+                    if (column != null) {
+                        switch (column) {
+                            case "Posting Date" -> bankTransaction.postDate = LocalDate.parse(rowValues[i], DATE_FORMATTER_DFCU);
+                            case "Effective Date" -> bankTransaction.transactionDate = LocalDate.parse(rowValues[i], DATE_FORMATTER_DFCU);
+                            case "Transaction Type" -> {
+                                if (rowValues[i] == null) {
+                                    bankTransaction.transactionType = "credit";
+                                } else {
+                                    bankTransaction.transactionType = rowValues[i].toLowerCase();
+                                }
+                            }
+                            case "Amount" -> bankTransaction.amount = parseMoney(rowValues[i]).abs();
+                            case "Check Number" -> bankTransaction.checkNumber = rowValues[i];
+                            case "Description" -> bankTransaction.description = rowValues[i];
                         }
                     }
                 }
