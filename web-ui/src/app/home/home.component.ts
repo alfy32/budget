@@ -2,7 +2,8 @@ import {Component} from '@angular/core';
 
 import {HttpClientModule} from '@angular/common/http';
 import {CommonModule} from '@angular/common';
-import {RouterModule} from '@angular/router';
+import {Router, RouterModule} from '@angular/router';
+import {TransactionService} from "../transaction.service";
 
 @Component({
   selector: 'app-home',
@@ -13,4 +14,15 @@ import {RouterModule} from '@angular/router';
 })
 export class HomeComponent {
 
+  constructor(
+    private router: Router,
+    private transactionService: TransactionService,
+  ) {
+  }
+
+  createTransaction(): void {
+    this.transactionService.createTransaction().subscribe(transactionId => {
+      this.router.navigate(['/transactions/' + transactionId]);
+    });
+  }
 }

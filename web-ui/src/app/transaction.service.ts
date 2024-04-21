@@ -5,83 +5,87 @@ import {Transaction} from "./transaction";
 import {Split} from "./split";
 import {BudgetInfo} from "./budgetInfo";
 
-@Injectable({ providedIn: 'root' })
+@Injectable({providedIn: 'root'})
 export class TransactionService {
 
-    constructor(
-        private http: HttpClient
-    ) { }
+  constructor(
+    private http: HttpClient
+  ) {
+  }
 
-    getTransactions(needsCategorized: boolean): Observable<Transaction[]> {
-        return this.http.get<Transaction[]>('/rest/transactions', {
-            params: { needsCategorized: !!needsCategorized }
-        });
-    }
+  getTransactions(needsCategorized: boolean): Observable<Transaction[]> {
+    return this.http.get<Transaction[]>('/rest/transactions', {
+      params: {needsCategorized: !!needsCategorized}
+    });
+  }
 
-    getTransaction(transactionId: string): Observable<Transaction> {
-        return this.http.get<Transaction>('/rest/transactions/' + transactionId);
-    }
+  createTransaction(): Observable<String> {
+    return this.http.post<String>(
+      '/rest/transactions/create',
+      {},
+      {}
+    );
+  }
 
-    getTransactionDescription(transactionId: string): Observable<any> {
-        return this.http.get<any>('/rest/transactions/' + transactionId + '/description');
-    }
+  getTransaction(transactionId: string): Observable<Transaction> {
+    return this.http.get<Transaction>('/rest/transactions/' + transactionId);
+  }
 
-    setTransactionDescription(transactionId: string, description: string): Observable<Object> {
-        const formData = new URLSearchParams();
-        formData.set('description', description);
-        return this.http.post(
-            '/rest/transactions/' + transactionId + '/description',
-            formData.toString(),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }
-        )
-    }
+  setTransactionDescription(transactionId: string, description: string): Observable<Object> {
+    const formData = new URLSearchParams();
+    formData.set('description', description);
+    return this.http.post(
+      '/rest/transactions/' + transactionId + '/description',
+      formData.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+  }
 
-    setTransactionCategory(transactionId: string, categoryId: string): Observable<void> {
-        const formData = new URLSearchParams();
-        formData.set('categoryId', categoryId);
-        return this.http.post<void>(
-            '/rest/transactions/' + transactionId + '/category',
-            formData.toString(),
-            {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            }
-        )
-    }
+  setTransactionCategory(transactionId: string, categoryId: string): Observable<void> {
+    const formData = new URLSearchParams();
+    formData.set('categoryId', categoryId);
+    return this.http.post<void>(
+      '/rest/transactions/' + transactionId + '/category',
+      formData.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    )
+  }
 
-    setTransactionTags(transactionId: string, tags: string[]): Observable<void> {
-        return this.http.post<void>(
-            '/rest/transactions/' + transactionId + '/tags',
-            tags
-        )
-    }
+  setTransactionTags(transactionId: string, tags: string[]): Observable<void> {
+    return this.http.post<void>(
+      '/rest/transactions/' + transactionId + '/tags',
+      tags
+    )
+  }
 
-    setTransactionNotes(transactionId: string, notes: any): Observable<void> {
-        return this.http.post<void>(
-            '/rest/transactions/' + transactionId + '/notes',
-            notes
-        )
-    }
+  setTransactionNotes(transactionId: string, notes: any): Observable<void> {
+    return this.http.post<void>(
+      '/rest/transactions/' + transactionId + '/notes',
+      notes
+    )
+  }
 
-    getSplit(id: string): Observable<Split> {
-        return this.http.get<Split>('/rest/split/' + id);
-    }
+  getSplit(id: string): Observable<Split> {
+    return this.http.get<Split>('/rest/split/' + id);
+  }
 
-    saveSplit(split?: Split): Observable<Split> {
-        return this.http.post<Split>(
-            '/rest/split/' + split?.bankTransaction?.id,
-            split
-        );
-    }
+  saveSplit(split?: Split): Observable<Split> {
+    return this.http.post<Split>(
+      '/rest/split/' + split?.bankTransaction?.id,
+      split
+    );
+  }
 
-    getBudgets(date: Date): Observable<BudgetInfo[]> {
-        const dateString = date.toISOString().split('T')[0];
-        return this.http.get<BudgetInfo[]>('/rest/budgets/query?date=' + dateString);
-    }
-
+  getBudgets(date: Date): Observable<BudgetInfo[]> {
+    const dateString = date.toISOString().split('T')[0];
+    return this.http.get<BudgetInfo[]>('/rest/budgets/query?date=' + dateString);
+  }
 }
