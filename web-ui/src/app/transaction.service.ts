@@ -15,7 +15,7 @@ export class TransactionService {
 
   getTransactions(needsCategorized: boolean): Observable<Transaction[]> {
     return this.http.get<Transaction[]>('/rest/transactions', {
-      params: {needsCategorized: needsCategorized}
+      params: {needsCategorized: !!needsCategorized}
     });
   }
 
@@ -83,7 +83,7 @@ export class TransactionService {
   setTransactionDate(transactionId: string, transactionDate: string): Observable<void> {
     return this.http.post<void>(
       '/rest/transactions/' + transactionId + '/date',
-      String(transactionDate)
+      new String(transactionDate)
     )
   }
 
