@@ -1,3 +1,4 @@
+<div class="done" *ngIf="transactions.length == 0">Nothing to categorize</div>
 <div class="list">
   <div class="item" *ngFor="let transaction of transactions">
     <a class="transaction_link" [routerLink]="['/transactions/'+ transaction.id]" [queryParams]="{needsCategorized:needsCategorized}">
