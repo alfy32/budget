@@ -73,6 +73,13 @@ export class TransactionService {
     )
   }
 
+  setTransactionDate(transactionId: string, transactionDate: string): Observable<void> {
+    return this.http.post<void>(
+      '/rest/transactions/' + transactionId + '/date',
+      new String(transactionDate)
+    )
+  }
+
   setTransactionType(transactionId: string, transactionType: string): Observable<void> {
     return this.http.post<void>(
       '/rest/transactions/' + transactionId + '/type',

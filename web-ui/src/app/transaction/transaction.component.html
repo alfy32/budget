@@ -60,6 +60,25 @@
 
 <hr>
 
+<div (click)="onClickDate()">
+  <div *ngIf="!editingDate">
+    <div class="selection_title">Date</div>
+    <div class="selection_value">{{ transaction.transactionDate | date :'longDate' }}</div>
+  </div>
+  <div *ngIf="editingDate">
+    <div class="selection_title">Original Date</div>
+    <div class="selection_value">{{ transaction.bankTransaction?.transactionDate | date : 'longDate' }}</div>
+    <input class="transaction_date" type="date" [(ngModel)]="transaction.transactionDate">
+    <br>
+    <br>
+    <div class="fake_button" (click)="onClickUpdateDate()">Update Date</div>
+    <br>
+    <div class="fake_button" (click)="onClickCancelDate()">Cancel</div>
+  </div>
+</div>
+
+<hr>
+
 <div (click)="onClickTransactionType()">
   <div class="selection_title">Transaction Type</div>
   <div *ngIf="!editingTransactionType">

@@ -25,6 +25,7 @@ export class TransactionComponent implements OnInit {
   };
   editingDescription: boolean = false;
   editingNotes: boolean = false;
+  editingDate: boolean = false;
   editingTransactionType: boolean = false;
 
   constructor(
@@ -87,7 +88,26 @@ export class TransactionComponent implements OnInit {
     });
   }
 
-  onClickTransactionType() {
+  onClickDate(): void {
+    if (!this.editingDate) {
+      this.editingDate = true;
+    }
+  }
+
+  onClickUpdateDate(): void {
+    this.transactionService.setTransactionDate(this.transaction.id, this.transaction.transactionDate).subscribe(() => {
+      this.editingDate = false;
+    });
+  }
+
+  onClickCancelDate(): void {
+    this.transactionService.getTransaction(this.transaction.id).subscribe(transaction => {
+      this.transaction = transaction;
+      this.editingDate = false;
+    });
+  }
+
+  onClickTransactionType(): void {
     if (!this.editingTransactionType) {
       this.editingTransactionType = true;
     }

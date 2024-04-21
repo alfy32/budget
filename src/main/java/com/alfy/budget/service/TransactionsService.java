@@ -171,6 +171,18 @@ public class TransactionsService {
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
+    public void updateDate(UUID transactionId, LocalDate transactionDate) {
+        String query = "UPDATE transactions"
+                + " SET transactionDate = :transactionDate"
+                + " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", transactionId)
+                .addValue("transactionDate", transactionDate, Types.DATE);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     public void updateType(UUID transactionId, String transactionType) {
         String query = "UPDATE transactions"
                 + " SET transactionType = :transactionType"

@@ -129,6 +129,14 @@ public class TransactionsController {
         transactionsService.updateNotes(transactionId, note);
     }
 
+    @PostMapping(path = "/{id}/date")
+    public void updateDate(
+            @PathVariable("id") UUID transactionId,
+            @RequestBody LocalDate transactionDate
+    ) {
+        transactionsService.updateDate(transactionId, transactionDate);
+    }
+
     @PostMapping(path = "/{id}/type")
     public void updateType(
             @PathVariable("id") UUID transactionId,
