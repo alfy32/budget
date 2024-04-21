@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
+import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -143,6 +144,18 @@ public class TransactionsService {
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("id", transactionId)
                 .addValue("categoryId", categoryId);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
+    public void updateAmount(UUID transactionId, BigDecimal amount) {
+        String query = "UPDATE transactions"
+                + " SET amount = :amount"
+                + " WHERE id = :transactionId";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("transactionId", transactionId)
+                .addValue("amount", Tools.toDatabaseInt(amount), Types.INTEGER);
 
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
@@ -285,5 +298,4 @@ public class TransactionsService {
         transaction.notes = resultSet.getString("notes");
         return transaction;
     }
-
 }

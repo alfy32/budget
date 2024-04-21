@@ -92,6 +92,14 @@ public class TransactionsController {
         return transactionsService.getTransactionDescription(id);
     }
 
+    @PostMapping(path = "/{id}/amount")
+    public void updateAmount(
+            @PathVariable(name = "id") UUID id,
+            @RequestBody BigDecimal amount
+    ) {
+        transactionsService.updateAmount(id, amount);
+    }
+
     @PostMapping(path = "/{id}/description")
     public void updateTransactionDescription(
             @PathVariable(name = "id") UUID id,

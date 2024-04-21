@@ -31,6 +31,13 @@ export class TransactionService {
     return this.http.get<Transaction>('/rest/transactions/' + transactionId);
   }
 
+  setTransactionAmount(transactionId: string, amount: number): Observable<void> {
+    return this.http.post<void>(
+      '/rest/transactions/' + transactionId + '/amount',
+      amount
+    )
+  }
+
   setTransactionDescription(transactionId: string, description: string): Observable<Object> {
     const formData = new URLSearchParams();
     formData.set('description', description);

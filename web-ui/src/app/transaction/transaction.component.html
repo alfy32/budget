@@ -1,8 +1,26 @@
-<div class="transaction_amount" [ngClass]="transaction.transactionType">{{ transaction.amount | currency }}</div>
+<div class="transaction_amount" [ngClass]="transaction.transactionType"
+     *ngIf="!editingAmount"
+     (click)="onClickAmount()"
+>
+  {{ transaction.amount | currency }}
+</div>
 <div class="transaction_description"> {{ transaction.description }}</div>
 <div class="transaction_date"> {{ transaction.transactionDate | date }}</div>
 <div class="transaction_account">{{ transaction.account }}</div>
 
+<div *ngIf="editingAmount">
+  <hr>
+
+  <div class="selection_title">Original Amount</div>
+  <div class="selection_value">{{ transaction.bankTransaction?.amount | currency }}</div>
+  <input type="number" [(ngModel)]="transaction.amount" (keyup.enter)="onClickUpdateAmount()">
+
+  <br>
+  <br>
+  <div class="fake_button" (click)="onClickUpdateAmount()">Update Amount</div>
+  <br>
+  <div class="fake_button" (click)="onClickCancelEditAmount()">Cancel</div>
+</div>
 <hr>
 
 <div (click)="onClickDescription()">

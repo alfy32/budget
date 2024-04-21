@@ -23,6 +23,7 @@ export class TransactionComponent implements OnInit {
     description: '',
     amount: 0,
   };
+  editingAmount: boolean = false;
   editingDescription: boolean = false;
   editingNotes: boolean = false;
   editingDate: boolean = false;
@@ -37,6 +38,27 @@ export class TransactionComponent implements OnInit {
   }
 
   ngOnInit(): void {
+  }
+
+  onClickAmount():void {
+    if (!this.editingAmount) {
+      this.editingAmount = true;
+    }
+  }
+
+  onClickUpdateAmount() {
+    this.transactionService.setTransactionAmount(this.transaction.id, this.transaction.amount).subscribe(result => {
+      this.editingAmount = false;
+    });
+  }
+
+  onClickCancelEditAmount(): void {
+    if (this.editingAmount) {
+      this.transactionService.getTransaction(this.transaction.id).subscribe(transaction => {
+        this.editingAmount = false;
+        this.transaction = transaction;
+      });
+    }
   }
 
   onClickDescription(): void {
@@ -131,4 +153,5 @@ export class TransactionComponent implements OnInit {
       this.transaction = transaction;
     });
   }
+
 }

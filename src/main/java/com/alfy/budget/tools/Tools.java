@@ -12,7 +12,7 @@ public class Tools {
             return 0;
         }
 
-        return bigDecimal.multiply(ONE_HUNDRED).intValue();
+        return bigDecimal.multiply(ONE_HUNDRED).setScale(0, RoundingMode.HALF_UP).intValue();
     }
 
     public static BigDecimal fromDatabaseInt(int integer) {
