@@ -118,7 +118,7 @@ public class TransactionsController {
     }
 
     @PostMapping(path = "/{id}/notes")
-    public void update(
+    public void updateNotes(
             @PathVariable("id") UUID transactionId,
             @RequestBody(required = false) String note
     ) {
@@ -127,6 +127,16 @@ public class TransactionsController {
         }
 
         transactionsService.updateNotes(transactionId, note);
+    }
+
+    @PostMapping(path = "/{id}/type")
+    public void updateType(
+            @PathVariable("id") UUID transactionId,
+            @RequestBody(required = false) String transactionType
+    ) {
+        if ("credit".equals(transactionType) || "debit".equals(transactionType)) {
+            transactionsService.updateType(transactionId, transactionType);
+        }
     }
 
 }

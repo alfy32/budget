@@ -73,6 +73,13 @@ export class TransactionService {
     )
   }
 
+  setTransactionType(transactionId: string, transactionType: string): Observable<void> {
+    return this.http.post<void>(
+      '/rest/transactions/' + transactionId + '/type',
+      transactionType
+    )
+  }
+
   getSplit(id: string): Observable<Split> {
     return this.http.get<Split>('/rest/split/' + id);
   }

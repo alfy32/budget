@@ -25,6 +25,7 @@ export class TransactionComponent implements OnInit {
   };
   editingDescription: boolean = false;
   editingNotes: boolean = false;
+  editingTransactionType: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
@@ -34,7 +35,8 @@ export class TransactionComponent implements OnInit {
     this.route.queryParams.subscribe(params => this.needsCategorized = params['needsCategorized'])
   }
 
-  ngOnInit(): void { }
+  ngOnInit(): void {
+  }
 
   onClickDescription(): void {
     if (!this.editingDescription) {
@@ -85,10 +87,28 @@ export class TransactionComponent implements OnInit {
     });
   }
 
+  onClickTransactionType() {
+    if (!this.editingTransactionType) {
+      this.editingTransactionType = true;
+    }
+  }
+
+  onClickUpdateTransactionType(): void {
+    this.transactionService.setTransactionType(this.transaction.id, this.transaction.transactionType).subscribe(result => {
+      this.editingTransactionType = false;
+    });
+  }
+
+  onClickCancelTransactionType(): void {
+    this.transactionService.getTransaction(this.transaction.id).subscribe(transaction => {
+      this.transaction = transaction;
+      this.editingTransactionType = false;
+    });
+  }
+
   getTransaction(id: string): void {
     this.transactionService.getTransaction(id).subscribe(transaction => {
       this.transaction = transaction;
     });
   }
-
 }

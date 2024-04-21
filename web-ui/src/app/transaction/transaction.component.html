@@ -1,4 +1,4 @@
-<div class="transaction_amount">{{ transaction.amount | currency }}</div>
+<div class="transaction_amount" [ngClass]="transaction.transactionType">{{ transaction.amount | currency }}</div>
 <div class="transaction_description"> {{ transaction.description }}</div>
 <div class="transaction_date"> {{ transaction.transactionDate | date }}</div>
 <div class="transaction_account">{{ transaction.account }}</div>
@@ -55,6 +55,26 @@
     <div class="fake_button" (click)="onClickUpdateNotes()">Update Notes</div>
     <br>
     <div class="fake_button" (click)="onClickCancelNotes()">Cancel</div>
+  </div>
+</div>
+
+<hr>
+
+<div (click)="onClickTransactionType()">
+  <div class="selection_title">Transaction Type</div>
+  <div *ngIf="!editingTransactionType">
+    <div class="selection_value">{{ transaction.transactionType }}</div>
+  </div>
+  <div *ngIf="editingTransactionType">
+    <select class="transaction_type" [(ngModel)]="transaction.transactionType">
+      <option value="debit" [selected]="transaction.transactionType === 'debit'">debit</option>
+      <option value="credit" [selected]="transaction.transactionType === 'credit'">credit</option>
+    </select>
+    <br>
+    <br>
+    <div class="fake_button" (click)="onClickUpdateTransactionType()">Update Transaction Type</div>
+    <br>
+    <div class="fake_button" (click)="onClickCancelTransactionType()">Cancel</div>
   </div>
 </div>
 
