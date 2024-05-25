@@ -22,6 +22,7 @@ export class TransactionComponent implements OnInit {
     transactionDate: '',
     description: '',
     amount: 0,
+    needsTransferred: false,
   };
   editingAmount: boolean = false;
   editingDescription: boolean = false;
@@ -145,6 +146,14 @@ export class TransactionComponent implements OnInit {
     this.transactionService.getTransaction(this.transaction.id).subscribe(transaction => {
       this.transaction = transaction;
       this.editingTransactionType = false;
+    });
+  }
+
+  onClickNeedsTransferred(): void {
+    this.transactionService.setNeedsTransferred(this.transaction.id, this.transaction.needsTransferred).subscribe(result => {
+      this.transactionService.getTransaction(this.transaction.id).subscribe(transaction => {
+        this.transaction = transaction;
+      });
     });
   }
 

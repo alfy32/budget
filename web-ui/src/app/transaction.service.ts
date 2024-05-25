@@ -94,6 +94,20 @@ export class TransactionService {
     )
   }
 
+  setNeedsTransferred(transactionId: string, needsTransferred: boolean): Observable<void> {
+    if (needsTransferred) {
+      return this.http.put<void>(
+        '/rest/transactions/' + transactionId + '/transferComplete',
+        null
+      );
+    } else {
+      return this.http.put<void>(
+        '/rest/transactions/' + transactionId + '/needsTransferred',
+        null
+      );
+    }
+  }
+
   getSplit(id: string): Observable<Split> {
     return this.http.get<Split>('/rest/split/' + id);
   }

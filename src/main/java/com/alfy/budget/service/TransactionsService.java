@@ -220,6 +220,18 @@ public class TransactionsService {
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
+    public void needsTransferred(UUID transactionId, boolean needsTransferred) {
+        String query = "UPDATE transactions"
+                + " SET needs_transferred = :needsTransferred"
+                + " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", transactionId)
+                .addValue("needsTransferred", needsTransferred, Types.BOOLEAN);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     public void updateTransaction(SplitTransaction splitTransaction) {
         String query = "UPDATE transactions" +
                 " SET description = :description" +
@@ -296,6 +308,7 @@ public class TransactionsService {
 
         transaction.tags = resultSet.getString("tags");
         transaction.notes = resultSet.getString("notes");
+        transaction.needsTransferred = resultSet.getBoolean("needs_transferred");
         return transaction;
     }
 }

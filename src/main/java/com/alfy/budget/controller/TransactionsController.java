@@ -155,4 +155,18 @@ public class TransactionsController {
         }
     }
 
+    @PutMapping(path = "/{id}/needsTransferred")
+    public void needsTransferred(
+            @PathVariable("id") UUID transactionId
+    ) {
+        transactionsService.needsTransferred(transactionId, true);
+    }
+
+    @PutMapping(path = "/{id}/transferComplete")
+    public void transferComplete(
+            @PathVariable("id") UUID transactionId
+    ) {
+        transactionsService.needsTransferred(transactionId, false);
+    }
+
 }

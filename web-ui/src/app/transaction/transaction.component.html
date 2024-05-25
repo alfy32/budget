@@ -125,5 +125,12 @@
 
 <hr>
 
+<div (click)="onClickNeedsTransferred()">
+  <div class="selection_title">Needs Transferred</div>
+  <div class="selection_value">{{ transaction.needsTransferred }}</div>
+</div>
+
+<hr>
+
 <br>
 <a class="fake_button" [routerLink]="['/transactions']" [queryParams]="{needsCategorized:needsCategorized}">Done</a>

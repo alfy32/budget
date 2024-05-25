@@ -13,4 +13,5 @@ export interface Transaction {
   category?: Category,
   tags?: string,
   notes?: string,
+  needsTransferred: boolean,
 }

@@ -17,6 +17,7 @@ public class Transaction {
     public Category category;
     public String tags;
     public String notes;
+    public boolean needsTransferred;
 
     public boolean credit() {
         return "credit".equalsIgnoreCase(transactionType);
