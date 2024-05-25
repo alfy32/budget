@@ -1,8 +1,8 @@
-<div class="done" *ngIf="transactions.length == 0 && needsCategorized">Nothing to categorize</div>
-<div class="done" *ngIf="transactions.length == 0 && needsTransferred">Nothing to transfer</div>
+<div class="done" *ngIf="transactions.length == 0 && query ==='needsCategorized'">Nothing to categorize</div>
+<div class="done" *ngIf="transactions.length == 0 && query === 'needsTransferred'">Nothing to transfer</div>
 <div class="list">
   <div class="item" *ngFor="let transaction of transactions">
-    <a class="transaction_link" [routerLink]="['/transactions/'+ transaction.id]" [queryParams]="{needsCategorized:needsCategorized}">
+    <a class="transaction_link" [routerLink]="['/transactions/'+ transaction.id]" [queryParams]="{query:query}">
       <div class="transaction_block">
         <div class="transaction_description">{{ transaction.description }}</div>
         <div class="transaction_split">{{ transaction.splitIndex > 0 ? "Split" : "" }}</div>

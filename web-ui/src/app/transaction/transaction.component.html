@@ -46,7 +46,7 @@
 <hr>
 
 <a class="plain_link" [routerLink]="['/transactions/'+transaction.id+'/category']"
-   [queryParams]="{needsCategorized:needsCategorized}">
+   [queryParams]="{query:query}">
   <div class="selection_title">Category</div>
   <div class="selection_value">{{ transaction.category ? transaction.category.name : "Select Category" }}</div>
 </a>
@@ -54,7 +54,7 @@
 <hr>
 
 <a class="plain_link" [routerLink]="['/transactions/'+transaction.id+'/tags']"
-   [queryParams]="{needsCategorized:needsCategorized}">
+   [queryParams]="{query:query}">
   <div class="selection_title">Tags</div>
   <div class="selection_value"> {{ transaction.tags || "Add Tags" }}</div>
 </a>
@@ -118,7 +118,7 @@
 <hr>
 
 <a class="plain_link " [routerLink]="['/split/'+transaction.bankTransaction?.id]"
-   [queryParams]="{needsCategorized:needsCategorized}">
+   [queryParams]="{query:query}">
   <div class="selection_title">Split Transaction</div>
   <div class="selection_value">{{ transaction.splitIndex > 0 ? "Split" : "Not Split" }}</div>
 </a>
@@ -133,4 +133,4 @@
 <hr>
 
 <br>
-<a class="fake_button" [routerLink]="['/transactions']" [queryParams]="{needsCategorized:needsCategorized}">Done</a>
+<a class="fake_button" [routerLink]="['/transactions']" [queryParams]="{query:query}">Done</a>

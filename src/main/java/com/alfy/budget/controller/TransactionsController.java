@@ -34,18 +34,12 @@ public class TransactionsController {
 
     @GetMapping
     public List<Transaction> getTransactions(
-            @RequestParam(name = "needsCategorized", required = false) boolean needsCategorized,
-            @RequestParam(name = "needsTransferred", required = false) boolean needsTransferred
+            @RequestParam(name = "query", required = false) String query
     ) {
-        List<Transaction> transactionsOrderedByDate = transactionsService.listOrderedByDate(needsCategorized, needsTransferred);
-
-        if (needsCategorized) {
-            transactionsOrderedByDate.removeIf(transaction -> transaction.category != null);
-        }
-
-        if (needsTransferred) {
-            transactionsOrderedByDate.removeIf(transaction -> !transaction.needsTransferred);
-        }
+        List<Transaction> transactionsOrderedByDate = transactionsService.listOrderedByDate(
+                "needsCategorized".equals(query),
+                "needsTransferred".equals(query)
+        );
 
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
         for (Transaction transaction : transactionsOrderedByDate) {

@@ -14,11 +14,10 @@ export class TransactionService {
   ) {
   }
 
-  getTransactions(needsCategorized: boolean, needsTransferred: boolean): Observable<Transaction[]> {
+  getTransactions(query: string | undefined): Observable<Transaction[]> {
     return this.http.get<Transaction[]>('/rest/transactions', {
       params: {
-        needsCategorized: needsCategorized,
-        needsTransferred: needsTransferred
+        query: query ? query : 'all'
       }
     });
   }

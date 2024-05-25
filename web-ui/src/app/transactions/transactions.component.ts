@@ -13,8 +13,7 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
   styleUrl: './transactions.component.css'
 })
 export class TransactionsComponent {
-  needsCategorized: boolean = false;
-  needsTransferred: boolean = false;
+  query?: string | undefined = 'all';
   transactions: Transaction[] = [];
 
   constructor(
@@ -22,11 +21,9 @@ export class TransactionsComponent {
     private transactionService: TransactionService
   ) {
     this.route.queryParams.subscribe(params => {
-      let needsCategorized = params['needsCategorized'];
-      let needsTransferred = params['needsTransferred'];
-      if (needsCategorized != this.needsCategorized || needsTransferred != this.needsTransferred) {
-        this.needsCategorized = !!needsCategorized;
-        this.needsTransferred = !!needsTransferred;
+      let query = params['query'];
+      if (query != this.query) {
+        this.query = query;
         this.transactions = [];
         this.getTransactions();
       }
@@ -34,7 +31,7 @@ export class TransactionsComponent {
   }
 
   getTransactions(): void {
-    this.transactionService.getTransactions(this.needsCategorized, this.needsTransferred).subscribe(transactions => this.transactions = transactions)
+    this.transactionService.getTransactions(this.query).subscribe(transactions => this.transactions = transactions)
   }
 
 }

@@ -13,7 +13,7 @@ import {FormsModule, ReactiveFormsModule} from '@angular/forms';
   styleUrl: './transaction.component.css'
 })
 export class TransactionComponent implements OnInit {
-  needsCategorized: boolean = false;
+  query: String = 'all';
   transaction: Transaction = {
     id: '',
     splitIndex: -1,
@@ -35,7 +35,7 @@ export class TransactionComponent implements OnInit {
     private transactionService: TransactionService
   ) {
     this.route.params.subscribe(params => this.getTransaction(params['id']));
-    this.route.queryParams.subscribe(params => this.needsCategorized = params['needsCategorized'])
+    this.route.queryParams.subscribe(params => this.query = params['query'])
   }
 
   ngOnInit(): void {
