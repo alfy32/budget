@@ -12,6 +12,18 @@ progress {
   max-width: 600px;
 }
 
+progress.progress-full {
+  accent-color: crimson;
+}
+
+progress.progress-high {
+  accent-color: #FF5722;
+}
+
+progress.progress-normal {
+  accent-color: #2196F3;
+}
+
 .category {
   margin-top: 10px;
   margin-bottom: 10px;
