@@ -11,9 +11,12 @@ import {TransactionCategoryComponent} from './transaction-category/transaction-c
 import {TransactionTagsComponent} from './transaction-tags/transaction-tags.component';
 import {TransactionSplitComponent} from './transaction-split/transaction-split.component';
 import {CategoryComponent} from "./category/category.component";
+import {TransactionCreateComponent} from "./transaction-create/transaction-create.component";
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
+
+    { path: 'create-transaction', component: TransactionCreateComponent },
 
     { path: 'transactions', component: TransactionsComponent },
     { path: 'transactions/:id', component: TransactionComponent },

@@ -4,6 +4,7 @@ import {Observable} from "rxjs";
 import {Transaction} from "./transaction";
 import {Split} from "./split";
 import {BudgetInfo} from "./budgetInfo";
+import {BankTransaction} from "./bankTransaction";
 
 @Injectable({providedIn: 'root'})
 export class TransactionService {
@@ -22,10 +23,10 @@ export class TransactionService {
     });
   }
 
-  createTransaction(): Observable<String> {
+  createTransaction(bankTransaction: BankTransaction): Observable<String> {
     return this.http.post<String>(
       '/rest/transactions/create',
-      {},
+      bankTransaction,
       {}
     );
   }

@@ -59,18 +59,31 @@ public class TransactionsController {
 
     @PostMapping(path = "/create")
     public UUID createTransaction(
-            @RequestParam(name= "account", defaultValue = "Cash") String account,
-            @RequestParam(name= "transactionType", defaultValue = "debit") String transactionType
+            @RequestBody BankTransaction bankTransaction
     ) {
-        BankTransaction bankTransaction = new BankTransaction();
+        if (bankTransaction.account == null || bankTransaction.account.isEmpty()) {
+            throw new IllegalArgumentException("'account' is required");
+        }
+
+        if (!"credit".equals(bankTransaction.transactionType) && !"debit".equals(bankTransaction.transactionType)) {
+            throw new IllegalArgumentException("'transactionType' of 'credit' or 'debit' required");
+        }
+
+        if (bankTransaction.transactionDate == null) {
+            throw new IllegalArgumentException("'transactionDate' is required");
+        }
+
+        if (bankTransaction.description == null || bankTransaction.description.isEmpty()) {
+            throw new IllegalArgumentException("'description' is required");
+        }
+
+        if (bankTransaction.amount == null) {
+            throw new IllegalArgumentException("'amount' is required");
+        }
+
         bankTransaction.id = UUID.randomUUID();
         bankTransaction.csv = "UserTransaction" + bankTransaction.id;
-        bankTransaction.account = account;
-        bankTransaction.transactionType = transactionType;
-        bankTransaction.transactionDate = LocalDate.now();
-        bankTransaction.postDate = LocalDate.now();
-        bankTransaction.description = "New Transaction";
-        bankTransaction.amount = new BigDecimal("1.00");
+        bankTransaction.postDate = bankTransaction.transactionDate;
         bankTransactionsService.add(bankTransaction);
         return transactionsService.addFrom(bankTransaction);
     }

@@ -1,0 +1,45 @@
+<div class="transaction_amount"> {{ bankTransaction.amount | currency }}</div>
+<div class="transaction_description"> {{ bankTransaction.description }}</div>
+<div class="transaction_date"> {{ bankTransaction.transactionDate | date }}</div>
+<div class="transaction_account">{{ bankTransaction.account }}</div>
+
+<hr>
+
+<div class="selection_title">Amount</div>
+<input class="description" type="number" [(ngModel)]="bankTransaction.amount">
+
+<hr>
+
+<div>
+  <div class="selection_title">Account</div>
+  <select class="transaction_type" [(ngModel)]="bankTransaction.account">
+    <option>Cash</option>
+    <option>Gunnison Checking</option>
+    <option>Cash Back Visa</option>
+    <option>First Choice Platinum</option>
+  </select>
+</div>
+
+<hr>
+
+<div>
+  <div class="selection_title">Description</div>
+  <input class="description" type="text" [(ngModel)]="bankTransaction.description">
+</div>
+
+<hr>
+
+<div class="selection_title">Date</div>
+<input class="transaction_date" type="date" [(ngModel)]="bankTransaction.transactionDate">
+
+<hr>
+
+<div class="selection_title">Transaction Type</div>
+<select class="transaction_type" [(ngModel)]="bankTransaction.transactionType">
+  <option>debit</option>
+  <option>credit</option>
+</select>
+
+<hr>
+
+<div class="fake_button" (click)="createTransaction()">Create Transaction</div>
