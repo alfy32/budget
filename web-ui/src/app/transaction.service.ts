@@ -13,9 +13,12 @@ export class TransactionService {
   ) {
   }
 
-  getTransactions(needsCategorized: boolean): Observable<Transaction[]> {
+  getTransactions(needsCategorized: boolean, needsTransferred: boolean): Observable<Transaction[]> {
     return this.http.get<Transaction[]>('/rest/transactions', {
-      params: {needsCategorized: !!needsCategorized}
+      params: {
+        needsCategorized: needsCategorized,
+        needsTransferred: needsTransferred
+      }
     });
   }
 

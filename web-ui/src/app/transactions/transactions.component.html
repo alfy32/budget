@@ -1,11 +1,12 @@
-<div class="done" *ngIf="transactions.length == 0">Nothing to categorize</div>
+<div class="done" *ngIf="transactions.length == 0 && needsCategorized">Nothing to categorize</div>
+<div class="done" *ngIf="transactions.length == 0 && needsTransferred">Nothing to transfer</div>
 <div class="list">
   <div class="item" *ngFor="let transaction of transactions">
     <a class="transaction_link" [routerLink]="['/transactions/'+ transaction.id]" [queryParams]="{needsCategorized:needsCategorized}">
       <div class="transaction_block">
         <div class="transaction_description">{{ transaction.description }}</div>
         <div class="transaction_split">{{ transaction.splitIndex > 0 ? "Split" : "" }}</div>
-        <div class="transaction_category">{{ transaction.category ? transaction.category.name : null || 'Needs Categorized' }}</div>
+        <div class="transaction_category">{{ transaction.category ? transaction.category.name : 'Needs Categorized' }}</div>
         <div class="transaction_amount" [ngClass]="transaction.transactionType">{{ transaction.amount | currency }}</div>
         <div class="transaction_date">{{ transaction.transactionDate | date:'MMM d' }}</div>
       </div>

@@ -1,4 +1,4 @@
-import {Component, OnInit} from '@angular/core';
+import {Component} from '@angular/core';
 
 import {TransactionService} from '../transaction.service';
 import {Transaction} from '../transaction';
@@ -12,8 +12,9 @@ import {ActivatedRoute, RouterModule} from '@angular/router';
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.css'
 })
-export class TransactionsComponent implements OnInit {
+export class TransactionsComponent {
   needsCategorized: boolean = false;
+  needsTransferred: boolean = false;
   transactions: Transaction[] = [];
 
   constructor(
@@ -22,20 +23,18 @@ export class TransactionsComponent implements OnInit {
   ) {
     this.route.queryParams.subscribe(params => {
       let needsCategorized = params['needsCategorized'];
-      if (needsCategorized != this.needsCategorized) {
-        this.needsCategorized = needsCategorized;
+      let needsTransferred = params['needsTransferred'];
+      if (needsCategorized != this.needsCategorized || needsTransferred != this.needsTransferred) {
+        this.needsCategorized = !!needsCategorized;
+        this.needsTransferred = !!needsTransferred;
         this.transactions = [];
         this.getTransactions();
       }
     })
   }
 
-  ngOnInit(): void {
-    this.getTransactions();
-  }
-
   getTransactions(): void {
-    this.transactionService.getTransactions(this.needsCategorized).subscribe(transactions => this.transactions = transactions)
+    this.transactionService.getTransactions(this.needsCategorized, this.needsTransferred).subscribe(transactions => this.transactions = transactions)
   }
 
 }

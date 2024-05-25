@@ -106,9 +106,29 @@ public class TransactionsService {
         return json;
     }
 
-    public List<Transaction> listOrderedByDate() {
-        String query = "SELECT * FROM transactions" +
-                " ORDER By transactionDate DESC, description";
+    public List<Transaction> listOrderedByDate(
+            boolean needsCategorized,
+            boolean needsTransferred
+    ) {
+        String query;
+        if (needsCategorized) {
+            query = """
+                    SELECT * FROM transactions
+                    WHERE categoryId IS NULL
+                    ORDER By transactionDate DESC, description
+                    """;
+        } else if (needsTransferred) {
+            query = """
+                    SELECT * FROM transactions
+                    WHERE needs_transferred = True
+                    ORDER By transactionDate DESC, description
+                    """;
+        } else {
+            query = """
+                    SELECT * FROM transactions
+                    ORDER By transactionDate DESC, description
+                    """;
+        }
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource();
         return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
