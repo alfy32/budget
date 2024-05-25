@@ -3,7 +3,7 @@ import {Routes} from '@angular/router';
 import {HomeComponent} from './home/home.component';
 import {TransactionsComponent} from './transactions/transactions.component';
 import {TransactionComponent} from './transaction/transaction.component';
-import {BudgetsComponent} from './budgets/budgets.component';
+import {BudgetsYearlyComponent} from './budgets-yearly/budgets-yearly.component';
 import {CategoriesComponent} from './categories/categories.component';
 
 import {TransactionsUploadComponent} from './transactions-upload/transactions-upload.component';
@@ -12,6 +12,8 @@ import {TransactionTagsComponent} from './transaction-tags/transaction-tags.comp
 import {TransactionSplitComponent} from './transaction-split/transaction-split.component';
 import {CategoryComponent} from "./category/category.component";
 import {TransactionCreateComponent} from "./transaction-create/transaction-create.component";
+import {BudgetsMonthlyComponent} from "./budgets-monthly/budgets-monthly.component";
+import {BudgetConfigurationComponent} from "./budget-configuration/budget-configuration.component";
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -24,7 +26,11 @@ export const routes: Routes = [
     { path: 'transactions/:id/tags', component: TransactionTagsComponent },
     { path: 'split/:id', component: TransactionSplitComponent },
 
-    { path: 'budgets', component: BudgetsComponent },
+    { path: 'monthly', component: BudgetsMonthlyComponent },
+    { path: 'yearly', component: BudgetsYearlyComponent },
+
+    { path: 'budget-configuration', component: BudgetConfigurationComponent },
+
     { path: 'categories', component: CategoriesComponent },
     { path: 'categories/:id', component: CategoryComponent },
 

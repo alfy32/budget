@@ -1,0 +1,17 @@
+div.budget_name {
+  font-size: large;
+  font-weight: bold;
+}
+
+input[type="number"] {
+  font-size: large;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding: 2px 0px;
+  width: 100%;
+  max-width: 596px;
+}
+
+label {
+  font-size: medium;
+}

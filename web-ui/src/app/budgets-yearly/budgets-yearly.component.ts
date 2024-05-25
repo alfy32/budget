@@ -8,10 +8,10 @@ import {BudgetInfo} from "../budgetInfo";
   selector: 'app-budgets',
   standalone: true,
   imports: [CommonModule, RouterModule],
-  templateUrl: './budgets.component.html',
-  styleUrl: './budgets.component.css'
+  templateUrl: './budgets-yearly.component.html',
+  styleUrl: './budgets-yearly.component.css'
 })
-export class BudgetsComponent implements OnInit {
+export class BudgetsYearlyComponent implements OnInit {
   date: Date = new Date();
   previousDate: string = '';
   nextDate: string = '';

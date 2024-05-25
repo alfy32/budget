@@ -15,4 +15,17 @@ export class BudgetsService {
     return this.http.get<Budget[]>('/rest/budgets');
   }
 
+  setAmount(id: string, amount: number) {
+    return this.http.post<void>(
+      '/rest/budgets/' + id + '/amount',
+      amount
+    );
+  }
+
+  setMonthly(id: string, monthly: boolean): Observable<void> {
+    return this.http.post<void>(
+      '/rest/budgets/' + id + '/monthly',
+      monthly
+    );
+  }
 }

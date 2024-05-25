@@ -1,0 +1,22 @@
+<div class="container">
+  <h2>{{ date | date : 'MMMM yyyy' }}</h2>
+
+  <a [routerLink]="['/monthly']" [queryParams]="{date:previousDate}">Previous</a>
+  -
+  <a [routerLink]="['/monthly']" [queryParams]="">This Month</a>
+  -
+  <a [routerLink]="['/monthly']" [queryParams]="{date:nextDate}">Next</a>
+
+  <br>
+  <br>
+
+  <div *ngFor="let budget of budgets">
+    <div class="budgetTitle">{{ budget.budget.name }}</div>
+    <label for="budget"> </label>
+    <progress id="budget" value="{{budget.percent}}" max="100">20</progress>
+    <div>{{ budget.total | currency }} of {{ budget.budget.amount | currency }}</div>
+    <div *ngFor="let category of budget.categories">
+      <div class="category">{{ category.category.name }}: {{ category.total | currency }}</div>
+    </div>
+  </div>
+</div>

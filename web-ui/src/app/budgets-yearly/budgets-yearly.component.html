@@ -1,11 +1,11 @@
 <div class="container">
   <h2>{{ date | date : 'MMMM yyyy' }}</h2>
 
-  <a [routerLink]="['/budgets']" [queryParams]="{date:previousDate}">Previous</a>
+  <a [routerLink]="['/yearly']" [queryParams]="{date:previousDate}">Previous</a>
   -
-  <a [routerLink]="['/budgets']" [queryParams]="">This Month</a>
+  <a [routerLink]="['/yearly']" [queryParams]="">This Month</a>
   -
-  <a [routerLink]="['/budgets']" [queryParams]="{date:nextDate}">Next</a>
+  <a [routerLink]="['/yearly']" [queryParams]="{date:nextDate}">Next</a>
 
   <br>
   <br>

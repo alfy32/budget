@@ -1,7 +1,8 @@
 <div class="topnav">
     <a [routerLink]="['/']">Home</a>
     <a [routerLink]="['/transactions']"[queryParams]="{needsCategorized:true}">Categorize</a>
-    <a [routerLink]="['/budgets']">Budgets</a>
+    <a [routerLink]="['/monthly']">Monthly</a>
+    <a [routerLink]="['/yearly']">Yearly</a>
 </div>
 <main>
     <router-outlet />

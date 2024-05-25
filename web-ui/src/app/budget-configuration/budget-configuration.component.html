@@ -1,0 +1,13 @@
+<br>
+
+<div *ngFor="let budget of budgets">
+  <div class="budget_name">{{ budget.name }}</div>
+  <input type="number" [(ngModel)]="budget.amount"
+         (keyup.enter)="onAmountChange(budget.id, budget.amount)"
+         (focusout)="onAmountChange(budget.id, budget.amount)"
+  />
+  <br>
+  <input type="checkbox" [(ngModel)]="budget.monthly" (change)="setMonthly(budget.id, budget.monthly)">
+  <label>Monthly</label>
+  <hr>
+</div>

@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
@@ -67,11 +68,36 @@ public class BudgetsService {
         return null;
     }
 
+    public void setMonthly(UUID id, boolean monthly) {
+        String query = "UPDATE budgets"
+                + " SET monthly = :monthly"
+                + " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("monthly", monthly, Types.BOOLEAN);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
+    public void setAmount(UUID id, BigDecimal amount) {
+        String query = "UPDATE budgets"
+                + " SET amount = :amount"
+                + " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("amount", Tools.toDatabaseInt(amount), Types.INTEGER);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     private static Budget map(ResultSet resultSet, int rowNum) throws SQLException {
         Budget budget = new Budget();
         budget.id = UUID.fromString(resultSet.getString("id"));
         budget.name = resultSet.getString("name");
         budget.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
+        budget.monthly = resultSet.getBoolean("monthly");
         return budget;
     }
 }
