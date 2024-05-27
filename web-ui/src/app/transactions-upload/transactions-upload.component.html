@@ -1,15 +1,14 @@
-<p>Select Downloaded Transactions to upload</p>
+<h3>Select export to upload</h3>
 <form method="POST" action="/rest/transactions/upload" enctype="multipart/form-data">
-  <select name="account">
-    <option value="Zions Cash Back Visa">Zions Cash Back Visa</option>
-    <option value="Gunnison Checking">Gunnison Checking</option>
-    <option value="First Choice Platinum">First Choice Platinum</option>
-    <option value="Zions All">Zions All</option>
+  <hr>
+  <input class="file_selector" type="file" name="file" (change)="onFileSelected($event)"/>
+  <hr>
+  <div class="title">Account</div>
+  <select name="account" [(ngModel)]="account">
+    <option *ngFor="let accountName of accounts" value="{{accountName}}">
+      {{ accountName }}
+    </option>
   </select>
-  <br>
-  <br>
-  <input type="file" name="file"/>
-  <br>
-  <br>
-  <input type="submit"/>
+  <hr>
+  <input class="submit_button" type="submit"/>
 </form>
