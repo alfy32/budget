@@ -15,7 +15,7 @@ import {TransactionService} from '../transaction.service';
 })
 export class TransactionCategoryComponent implements OnInit {
   transactionId: string;
-  needsCategorized: boolean = false;
+  query: string = 'all';
   categories: Category[] = [];
 
   constructor(
@@ -30,7 +30,7 @@ export class TransactionCategoryComponent implements OnInit {
     });
 
     this.route.queryParams.subscribe(params => {
-      this.needsCategorized = params['needsCategorized'];
+      this.query = params['query'];
     });
   }
 
@@ -44,7 +44,7 @@ export class TransactionCategoryComponent implements OnInit {
     this.transactionService.setTransactionCategory(this.transactionId, categoryId).subscribe(() => {
       this.router.navigate(['/transactions/' + this.transactionId], {
         queryParams: {
-          needsCategorized: this.needsCategorized
+          query: this.query
         }
       });
     });

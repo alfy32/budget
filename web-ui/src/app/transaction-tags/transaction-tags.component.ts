@@ -1,6 +1,6 @@
 import {CommonModule} from '@angular/common';
 import {Component, OnInit} from '@angular/core';
-import {FormArray, FormBuilder, FormControl, FormGroup, ReactiveFormsModule} from '@angular/forms';
+import {FormArray, FormControl, FormGroup, ReactiveFormsModule} from '@angular/forms';
 import {TransactionService} from '../transaction.service';
 import {ActivatedRoute, Router} from '@angular/router';
 
@@ -13,7 +13,7 @@ import {ActivatedRoute, Router} from '@angular/router';
 })
 export class TransactionTagsComponent implements OnInit {
   transactionId: string;
-  needsCategorized: boolean;
+  query: string = 'all';
   formArray: FormArray;
   formGroup: FormGroup;
 
@@ -28,7 +28,6 @@ export class TransactionTagsComponent implements OnInit {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
-    private formBuilder: FormBuilder,
     private transactionService: TransactionService
   ) {
     this.transactionId = '';
@@ -36,9 +35,8 @@ export class TransactionTagsComponent implements OnInit {
       this.transactionId = params['id'];
     });
 
-    this.needsCategorized = false;
     this.route.queryParams.subscribe(params => {
-      this.needsCategorized = params['needsCategorized'];
+      this.query = params['query'];
     });
 
     this.formArray = new FormArray<any>([]);
@@ -70,7 +68,7 @@ export class TransactionTagsComponent implements OnInit {
     this.transactionService.setTransactionTags(this.transactionId, selectedTags).subscribe(result => {
       this.router.navigate(['/transactions/' + this.transactionId], {
         queryParams: {
-          needsCategorized: this.needsCategorized
+          query: this.query
         }
       });
     });

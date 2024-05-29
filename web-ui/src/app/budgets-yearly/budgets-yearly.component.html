@@ -16,7 +16,10 @@
     <progress id="budget" value="{{budget.percent}}" max="100">20</progress>
     <div>{{ budget.total | currency }} of {{ budget.budget.amount | currency }}</div>
     <div *ngFor="let category of budget.categories">
-      <div class="category">{{ category.category.name }}: {{ category.total | currency }}</div>
+      <a class="category_link" [routerLink]="['/transactions']"
+         [queryParams]="{ query: createQuery(category.category.id) }">
+        <div class="category">{{ category.category.name }}: {{ category.total | currency }}</div>
+      </a>
     </div>
   </div>
 </div>

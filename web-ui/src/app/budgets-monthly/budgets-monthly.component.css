@@ -28,3 +28,8 @@ progress.progress-normal {
   margin-top: 10px;
   margin-bottom: 10px;
 }
+
+a.category_link {
+  text-decoration: none;
+  color: inherit;
+}

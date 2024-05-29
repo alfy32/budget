@@ -134,6 +134,27 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
 
+    public List<Transaction> listOrderedByDateWithCategory(
+            UUID categoryId,
+            LocalDate startDate,
+            LocalDate endDate
+    ) {
+        String query = """
+                SELECT * FROM transactions
+                WHERE categoryId = :categoryId
+                  AND transactionDate >= :startDate
+                  AND transactionDate <= :endDate
+                ORDER By transactionDate DESC, description
+                """;
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("categoryId", categoryId)
+                .addValue("startDate", Date.valueOf(startDate))
+                .addValue("endDate", Date.valueOf(endDate));
+
+        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+    }
+
     public List<Transaction> listByDate(LocalDate start, LocalDate end) {
         String query = "SELECT * FROM transactions" +
                 " WHERE transactionDate >= :start" +

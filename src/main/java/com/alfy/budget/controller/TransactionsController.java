@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -33,13 +34,10 @@ public class TransactionsController {
     }
 
     @GetMapping
-    public List<Transaction> getTransactions(
+    public List<Transaction> queryTransactions(
             @RequestParam(name = "query", required = false) String query
     ) {
-        List<Transaction> transactionsOrderedByDate = transactionsService.listOrderedByDate(
-                "needsCategorized".equals(query),
-                "needsTransferred".equals(query)
-        );
+        List<Transaction> transactionsOrderedByDate = getTransactions(query);
 
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
         for (Transaction transaction : transactionsOrderedByDate) {
@@ -49,6 +47,41 @@ public class TransactionsController {
         }
 
         return transactionsOrderedByDate;
+    }
+
+    private List<Transaction> getTransactions(String query) {
+        if (query != null ) {
+            if ("needsCategorized".equals(query)) {
+                return transactionsService.listOrderedByDate(
+                        true,
+                        false
+                );
+            } else if ("needsTransferred".equals(query)) {
+                return transactionsService.listOrderedByDate(
+                        false,
+                        true
+                );
+            } else if (query.startsWith("category,")) {
+                return getCategoryTransactions(query);
+            }
+        }
+
+        return transactionsService.listOrderedByDate(
+                false,
+                false
+        );
+    }
+
+    private List<Transaction> getCategoryTransactions(String query) {
+        String[] split = query.split(",");
+        if ("category".equals(split[0])) {
+            UUID categoryId = UUID.fromString(split[1]);
+            LocalDate startDate = LocalDate.parse(split[2]);
+            LocalDate endDate = LocalDate.parse(split[3]);
+            return transactionsService.listOrderedByDateWithCategory(categoryId, startDate, endDate);
+        }
+
+        return Collections.emptyList();
     }
 
     @PostMapping(path = "/create")
