@@ -1,5 +1,5 @@
 <h3>Select export to upload</h3>
-<form method="POST" action="/rest/transactions/upload" enctype="multipart/form-data">
+<form ngNoForm method="POST" action="/rest/transactions/upload" enctype="multipart/form-data">
   <hr>
   <input class="file_selector" type="file" name="file" (change)="onFileSelected($event)"/>
   <hr>
