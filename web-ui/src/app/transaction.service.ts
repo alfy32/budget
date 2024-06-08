@@ -127,8 +127,8 @@ export class TransactionService {
     return this.http.get<BudgetInfo[]>('/rest/budgets/query-monthly?date=' + dateString);
   }
 
-  getBudgets(date: Date): Observable<BudgetInfo[]> {
+  getYearlyBudgets(date: Date): Observable<BudgetInfo[]> {
     const dateString = date.toISOString().split('T')[0];
-    return this.http.get<BudgetInfo[]>('/rest/budgets/query?date=' + dateString);
+    return this.http.get<BudgetInfo[]>('/rest/budgets/query-yearly?date=' + dateString);
   }
 }

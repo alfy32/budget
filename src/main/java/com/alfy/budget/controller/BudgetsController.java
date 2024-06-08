@@ -8,7 +8,10 @@ import com.alfy.budget.tools.Tools;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.Year;
+import java.time.temporal.TemporalAdjusters;
 import java.util.*;
 
 @RestController
@@ -59,8 +62,8 @@ public class BudgetsController {
         if (date == null) {
             date = LocalDate.now();
         }
-        LocalDate start = date.withDayOfMonth(1);
-        LocalDate end = date.withDayOfMonth(date.getMonth().length(date.isLeapYear()));
+        LocalDate start = date.with(TemporalAdjusters.firstDayOfMonth());
+        LocalDate end = date.with(TemporalAdjusters.lastDayOfMonth());
 
         Map<UUID, BudgetInfo> budgetInfoById = new HashMap<>();
         Map<UUID, CategoryInfo> categoryInfoById = new HashMap<>();
@@ -119,15 +122,15 @@ public class BudgetsController {
         return budgetInfoList;
     }
 
-    @GetMapping(path = "/query")
-    public List<BudgetInfo> getBudgets(
+    @GetMapping(path = "/query-yearly")
+    public List<BudgetInfo> getYearlyBudgets(
             @RequestParam(name = "date", required = false) LocalDate date
     ) {
         if (date == null) {
             date = LocalDate.now();
         }
-        LocalDate start = date.withDayOfMonth(1);
-        LocalDate end = date.withDayOfMonth(date.getMonth().length(date.isLeapYear()));
+        LocalDate start = date.with(TemporalAdjusters.firstDayOfYear());
+        LocalDate end = date.with(TemporalAdjusters.lastDayOfYear());
 
         Map<UUID, BudgetInfo> budgetInfoById = new HashMap<>();
         Map<UUID, CategoryInfo> categoryInfoById = new HashMap<>();
@@ -210,6 +213,15 @@ public class BudgetsController {
             for (CategoryInfo category : budgetInfo.categories) {
                 budgetInfo.total = budgetInfo.total.add(category.total);
             }
+
+            budgetInfo.budget.amount = BigDecimal.valueOf(12).multiply(budgetInfo.budget.amount);
+
+            BigDecimal dayOfYear = BigDecimal.valueOf(date.getDayOfYear());
+            BigDecimal daysInYear = BigDecimal.valueOf(Year.of(date.getYear()).length());
+            BigDecimal percentOfYear = dayOfYear.divide(daysInYear, 2, RoundingMode.HALF_UP);
+
+            budgetInfo.expectedTotal = percentOfYear.multiply(budgetInfo.budget.amount);
+            budgetInfo.expectedPercent = Tools.percentAsInt(budgetInfo.total, budgetInfo.expectedTotal);
 
             budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
         }

@@ -15,8 +15,8 @@ export class BudgetsYearlyComponent implements OnInit {
   date: Date = new Date();
   previousDate: string = '';
   nextDate: string = '';
-  startOfMonth: string = '';
-  endOfMonth: string = '';
+  startOfYear: string = '';
+  endOfYear: string = '';
   budgets: BudgetInfo[] = [];
 
   constructor(
@@ -40,20 +40,20 @@ export class BudgetsYearlyComponent implements OnInit {
   }
 
   updateDates(): void {
-    this.previousDate = new Date(this.date.getFullYear(), this.date.getMonth() - 1, 1).toISOString().split('T')[0];
-    this.nextDate = new Date(this.date.getFullYear(), this.date.getMonth() + 1, 1).toISOString().split('T')[0];
-    this.startOfMonth = new Date(this.date.getFullYear(), this.date.getMonth(), 1).toISOString().split('T')[0];
-    this.endOfMonth = new Date(this.date.getFullYear(), this.date.getMonth() + 1, 0).toISOString().split('T')[0];
+    this.previousDate = new Date(this.date.getFullYear() - 1, 0, 1).toISOString().split('T')[0];
+    this.nextDate = new Date(this.date.getFullYear() + 1, 0, 1).toISOString().split('T')[0];
+    this.startOfYear = new Date(this.date.getFullYear(), 0, 1).toISOString().split('T')[0];
+    this.endOfYear = new Date(this.date.getFullYear() + 1, 0, 1).toISOString().split('T')[0];
   }
 
   updateBudgets(): void {
-    this.transactionService.getBudgets(this.date).subscribe(budgets => {
+    this.transactionService.getYearlyBudgets(this.date).subscribe(budgets => {
       this.budgets = budgets;
     });
   }
 
   createQuery(id: string) {
-    return "category," + id + ',' + this.startOfMonth + ',' + this.endOfMonth;
+    return "category," + id + ',' + this.startOfYear + ',' + this.endOfYear;
   }
 
 
