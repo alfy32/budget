@@ -14,6 +14,13 @@
        (focusout)="updateAmount()"
 />
 
+<div class="title">Categories:</div>
+<div class="category_list">
+  <div *ngFor="let category of categories">
+    <div *ngIf="category.budget?.id === budgetId">{{ category.name }}</div>
+  </div>
+</div>
+
 <div class="title">Monthly:</div>
 <input type="checkbox"
        [(ngModel)]="monthly"

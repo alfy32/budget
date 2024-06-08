@@ -2,6 +2,20 @@ div.title {
   font-size: large;
 }
 
+div.category_list {
+  width: 100%;
+  max-width: 600px;
+  margin: 8px 0;
+  border: 1px solid #ccc;
+  box-shadow: inset 0 1px 3px #ddd;
+  border-radius: 4px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding: 12px 12px;
+  font-size: medium;
+}
+
 input.input_class {
   width: 100%;
   max-width: 600px;
@@ -13,7 +27,7 @@ input.input_class {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
-  padding: 12px 20px;
+  padding: 12px 12px;
   font-size: medium;
 }
 
