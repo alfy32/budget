@@ -39,6 +39,39 @@ public class BudgetsController {
         return budgetsService.list();
     }
 
+    @PostMapping
+    public void create(
+            @RequestBody(required = false) Budget budget
+    ) {
+        if (budget.amount == null) {
+            budget.amount = BigDecimal.ZERO;
+        }
+
+        budgetsService.add(budget);
+    }
+
+    @GetMapping(path = "/{id}")
+    public Budget getBudget(
+            @PathVariable(name = "id") UUID id
+    ) {
+        return budgetsService.get(id);
+    }
+
+    @DeleteMapping(path = "/{id}")
+    public void deleteBudget(
+            @PathVariable(name = "id") UUID id
+    ) {
+        budgetsService.delete(id);
+    }
+
+    @PostMapping(path = "/{id}/name")
+    public void setName(
+            @PathVariable(name = "id") UUID id,
+            @RequestBody(required = false) String name
+    ) {
+        budgetsService.setName(id, name);
+    }
+
     @PostMapping(path = "/{id}/monthly")
     public void setMonthly(
             @PathVariable(name = "id") UUID id,

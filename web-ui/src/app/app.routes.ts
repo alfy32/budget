@@ -14,6 +14,7 @@ import {CategoryComponent} from "./category/category.component";
 import {TransactionCreateComponent} from "./transaction-create/transaction-create.component";
 import {BudgetsMonthlyComponent} from "./budgets-monthly/budgets-monthly.component";
 import {BudgetConfigurationComponent} from "./budget-configuration/budget-configuration.component";
+import {BudgetsConfigurationComponent} from "./budgets-configuration/budgets-configuration.component";
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -29,7 +30,8 @@ export const routes: Routes = [
     { path: 'monthly', component: BudgetsMonthlyComponent },
     { path: 'yearly', component: BudgetsYearlyComponent },
 
-    { path: 'budget-configuration', component: BudgetConfigurationComponent },
+    { path: 'budgets', component: BudgetsConfigurationComponent },
+    { path: 'budgets/:id', component: BudgetConfigurationComponent },
 
     { path: 'categories', component: CategoriesComponent },
     { path: 'categories/:id', component: CategoryComponent },

@@ -68,6 +68,24 @@ public class BudgetsService {
         return null;
     }
 
+    public void delete(UUID id) {
+        String query = "DELETE FROM budgets WHERE id=:id";
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
+    public void setName(UUID id, String name) {
+        String query = "UPDATE budgets"
+                + " SET name = :name"
+                + " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("name", name, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     public void setMonthly(UUID id, boolean monthly) {
         String query = "UPDATE budgets"
                 + " SET monthly = :monthly"

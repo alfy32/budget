@@ -29,7 +29,7 @@ progress.progress-normal {
   margin-bottom: 10px;
 }
 
-a.category_link {
+a.invisible_link {
   text-decoration: none;
   color: inherit;
 }

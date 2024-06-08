@@ -1,0 +1,14 @@
+<div class="container">
+  <input type="text" [(ngModel)]="newBudget" (keyup.enter)="addNewBudget()"/>
+  <br>
+  <br>
+  <div class="fake_button" (click)="addNewBudget()">Add Budget</div>
+  <br>
+  <br>
+
+  <div *ngFor="let budget of budgets">
+    <div class="budget" [routerLink]="['/budgets/' + budget.id]">
+      {{ budget.name }} ({{ budget.amount | currency }})
+    </div>
+  </div>
+</div>

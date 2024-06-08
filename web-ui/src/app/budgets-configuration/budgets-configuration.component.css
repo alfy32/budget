@@ -1,8 +1,8 @@
-div.title {
-  font-size: large;
+.container {
+  margin-top: 5px;
 }
 
-input.input_class {
+input {
   width: 100%;
   max-width: 600px;
   margin: 8px 0;
@@ -17,23 +17,30 @@ input.input_class {
   font-size: medium;
 }
 
-label {
-  font-size: medium;
-}
-
-.red_button {
-  background-color: #c40000;
-  color: #f2f2f2;
-}
-
-.green_button {
+.fake_button {
+  text-decoration: none;
   background-color: #04AA6D;
   color: #f2f2f2;
-}
-
-.green_button, .red_button {
-  text-decoration: none;
   font-size: x-large;
   padding: 10px;
   max-width: 580px;
+}
+
+.budget {
+  text-decoration: none;
+  background-color: #4b4b4b;
+  color: #f2f2f2;
+  font-size: large;
+  padding: 10px;
+  max-width: 580px;
+  margin-bottom: 10px;
+}
+
+li {
+  margin-bottom: 10px;
+}
+
+ul form {
+  margin: 0px;
+  display: inline;
 }

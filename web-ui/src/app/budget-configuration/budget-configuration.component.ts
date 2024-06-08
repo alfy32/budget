@@ -3,6 +3,7 @@ import {BudgetsService} from "../budgets.service";
 import {Budget} from "../budget";
 import {CommonModule, NgForOf} from "@angular/common";
 import {FormsModule} from "@angular/forms";
+import {ActivatedRoute, Router} from "@angular/router";
 
 @Component({
   selector: 'app-budget-configuration',
@@ -12,45 +13,59 @@ import {FormsModule} from "@angular/forms";
   styleUrl: './budget-configuration.component.css'
 })
 export class BudgetConfigurationComponent implements OnInit {
-  budgets: Budget[] = [];
+  budgetId: string = '';
+  name: string = '';
+  amount: number = 0;
+  monthly: boolean = false;
+
+  budget?: Budget;
 
   constructor(
+    private route: ActivatedRoute,
+    private router: Router,
     private budgetService: BudgetsService,
   ) {
+    this.route.params.subscribe(params => this.budgetId = params['id']);
   }
 
   ngOnInit() {
-    this.loadBudgets();
+    this.refreshBudget();
   }
 
-  private loadBudgets() {
-    this.budgetService.getBudgets().subscribe(budgets => {
-      budgets.sort((budget1: Budget, budget2: Budget) => {
-        if (budget1.name < budget2.name) {
-          return -1;
-        } else if (budget1.name > budget2.name) {
-          return 1;
-        } else {
-          return 0;
-        }
-      });
+  private refreshBudget() {
+    this.budgetService.getBudget(this.budgetId).subscribe(budget => {
+      this.name = budget.name;
+      this.amount = budget.amount;
+      this.monthly = budget.monthly;
+      this.budget = budget;
+    })
+  }
 
-      this.budgets = budgets;
+  updateName() {
+    this.budgetService.setName(this.budgetId, this.name).subscribe(() => {
+      this.refreshBudget();
+    })
+  }
+
+  updateAmount() {
+    this.budgetService.setAmount(this.budgetId, this.amount).subscribe(() => {
+      this.refreshBudget();
+    })
+  }
+
+  updateMonthly() {
+    this.budgetService.setMonthly(this.budgetId, this.monthly).subscribe(() => {
+      this.refreshBudget();
+    })
+  }
+
+  done() {
+    this.router.navigate(['budgets']);
+  }
+
+  deleteBudget() {
+    this.budgetService.delete(this.budgetId).subscribe(() => {
+      this.router.navigate(['budgets']);
     });
   }
-
-  onAmountChange(id: string | undefined, amount: number) {
-    if (id) {
-      this.budgetService.setAmount(id, amount).subscribe(() => {
-      });
-    }
-  }
-
-  setMonthly(id: string | undefined, monthly: boolean) {
-    if (id) {
-      this.budgetService.setMonthly(id, monthly).subscribe(() => {
-      });
-    }
-  }
-
 }
