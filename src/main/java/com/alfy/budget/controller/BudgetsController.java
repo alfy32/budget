@@ -221,7 +221,7 @@ public class BudgetsController {
             BigDecimal percentOfYear = dayOfYear.divide(daysInYear, 2, RoundingMode.HALF_UP);
 
             budgetInfo.expectedTotal = percentOfYear.multiply(budgetInfo.budget.amount);
-            budgetInfo.expectedPercent = Tools.percentAsInt(budgetInfo.total, budgetInfo.expectedTotal);
+            budgetInfo.expectedPercent = Tools.percentAsInt(budgetInfo.expectedTotal, budgetInfo.budget.amount);
 
             budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
         }
