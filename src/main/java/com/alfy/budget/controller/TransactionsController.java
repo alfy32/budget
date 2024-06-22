@@ -50,7 +50,7 @@ public class TransactionsController {
     }
 
     private List<Transaction> getTransactions(String query) {
-        if (query != null ) {
+        if (query != null) {
             if ("needsCategorized".equals(query)) {
                 return transactionsService.listOrderedByDate(
                         true,
@@ -61,6 +61,9 @@ public class TransactionsController {
                         false,
                         true
                 );
+            } else if ("possibleDuplicates".equals(query)) {
+                List<BankTransaction> bankTransactions = bankTransactionsService.listPossibleDuplicates();
+                return transactionsService.listPossibleDuplicates(bankTransactions);
             } else if (query.startsWith("category,")) {
                 return getCategoryTransactions(query);
             }

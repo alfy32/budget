@@ -104,10 +104,6 @@ public class TransactionsUploadController {
         BankTransaction bankTransaction;
         while ((line = bufferedReader.readLine()) != null) {
             rowValues = parseCsvLine(line);
-            if (bankTransactionsService.exists(account, line)) {
-                existingTransactions++;
-                continue;
-            }
 
             bankTransaction = new BankTransaction();
             bankTransaction.csv = line;
@@ -136,8 +132,16 @@ public class TransactionsUploadController {
                                 bankTransaction.amount = parsedAmount.abs();
                                 bankTransaction.transactionType = Tools.isLessThanZero(parsedAmount) ? "debit" : "credit";
                                 break;
+                            case "Balance":
+                                bankTransaction.balance = parseMoney(rowValues[i]);
+                                break;
                         }
                     }
+                }
+
+                if (bankTransactionsService.exists(account, bankTransaction)) {
+                    existingTransactions++;
+                    continue;
                 }
 
                 if (bankTransactionsService.add(bankTransaction)) {

@@ -16,10 +16,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class TransactionsService {
 
@@ -104,6 +101,20 @@ public class TransactionsService {
         json.put("description", decription);
         json.put("originalDescription", originalDescription);
         return json;
+    }
+
+    public List<Transaction> listPossibleDuplicates(List<BankTransaction> bankTransactions) {
+        List<Transaction> possibleDuplicates = new ArrayList<>();
+
+        for (BankTransaction bankTransaction : bankTransactions) {
+            List<Transaction> transactions = listWithBankTransactionId(bankTransaction.id);
+            for (Transaction transaction : transactions) {
+                transaction.bankTransaction = bankTransaction;
+                possibleDuplicates.add(transaction);
+            }
+        }
+
+        return possibleDuplicates;
     }
 
     public List<Transaction> listOrderedByDate(

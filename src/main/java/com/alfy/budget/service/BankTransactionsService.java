@@ -11,6 +11,8 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class BankTransactionsService {
@@ -42,11 +44,83 @@ public class BankTransactionsService {
         return sqlRowSet.next();
     }
 
+    public boolean exists(String account, BankTransaction bankTransaction) {
+        if (account == null || account.isEmpty()) {
+            return false;
+        }
+
+        if (bankTransaction == null) {
+            return false;
+        }
+
+        String query = """
+                SELECT id FROM bank_transactions
+                WHERE account=:account
+                  AND transactionType=:transactionType
+                  AND description=:description
+                  AND amount=:amount
+                  AND balance=:balance
+                """;
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("account", bankTransaction.account, Types.VARCHAR)
+                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
+                .addValue("description", bankTransaction.description, Types.VARCHAR)
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER)
+                .addValue("balance", Tools.toDatabaseInt(bankTransaction.balance), Types.INTEGER);
+
+        SqlRowSet sqlRowSet = namedParameterJdbcTemplate.queryForRowSet(query, sqlParameterSource);
+        return sqlRowSet.next();
+    }
+
     public BankTransaction get(UUID id) {
         String query = "SELECT * FROM bank_transactions WHERE id = :id";
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
         return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, BankTransactionsService::map);
+    }
 
+    public List<BankTransaction> listPossibleDuplicates() {
+        String query = """
+                SELECT account, transactiontype, description, amount, balance, COUNT(*)
+                FROM bank_transactions
+                GROUP BY account, transactiontype, description, amount, balance
+                HAVING COUNT(*) > 1
+                """;
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource();
+        List<BankTransaction> possibleDuplicates = namedParameterJdbcTemplate.query(query, sqlParameterSource, (rs, rowNum) -> {
+            BankTransaction bankTransaction = new BankTransaction();
+            bankTransaction.account = rs.getString("account");
+            bankTransaction.transactionType = rs.getString("transactionType");
+            bankTransaction.description = rs.getString("description");
+            bankTransaction.amount = Tools.fromDatabaseInt(rs.getInt("amount"));
+            bankTransaction.balance = Tools.fromDatabaseInt(rs.getInt("balance"));
+            return bankTransaction;
+        });
+
+
+        List<BankTransaction> bankTransactions = new ArrayList<>();
+        for (BankTransaction possibleDuplicate : possibleDuplicates) {
+            query = """
+                    SELECT * FROM bank_transactions
+                    WHERE account=:account
+                      AND transactionType=:transactionType
+                      AND description=:description
+                      AND amount=:amount
+                      AND balance=:balance
+                    """;
+
+            sqlParameterSource = new MapSqlParameterSource()
+                    .addValue("account", possibleDuplicate.account)
+                    .addValue("transactionType", possibleDuplicate.transactionType)
+                    .addValue("description", possibleDuplicate.description)
+                    .addValue("amount", Tools.toDatabaseInt(possibleDuplicate.amount), Types.INTEGER)
+                    .addValue("balance", Tools.toDatabaseInt(possibleDuplicate.balance), Types.INTEGER);
+
+            bankTransactions.addAll(namedParameterJdbcTemplate.query(query, sqlParameterSource, BankTransactionsService::map));
+        }
+
+        return bankTransactions;
     }
 
     public boolean add(BankTransaction bankTransaction) {
@@ -54,30 +128,47 @@ public class BankTransactionsService {
             bankTransaction.id = UUID.randomUUID();
         }
 
-        String sql = "INSERT INTO bank_transactions (" +
-                "  id," +
-                "  csv," +
-                "  account," +
-                "  transactionType," +
-                "  transactionDate," +
-                "  postDate," +
-                "  description," +
-                "  comments," +
-                "  checkNumber," +
-                "  amount" +
-                ")" +
-                "VALUES (" +
-                "  :id," +
-                "  :csv," +
-                "  :account," +
-                "  :transactionType," +
-                "  :transactionDate," +
-                "  :postDate," +
-                "  :description," +
-                "  :comments," +
-                "  :checkNumber," +
-                "  :amount" +
-                ")";
+        String query = """
+                INSERT INTO bank_transactions (
+                    id,
+                    csv,
+                    account,
+                    transactionType,
+                    transactionDate,
+                    postDate,
+                    description,
+                    comments,
+                    checkNumber,
+                    amount,
+                    balance
+                )
+                VALUES (
+                    :id,
+                    :csv,
+                    :account,
+                    :transactionType,
+                    :transactionDate,
+                    :postDate,
+                    :description,
+                    :comments,
+                    :checkNumber,
+                    :amount,
+                    :balance
+                )
+                ON CONFLICT (id)
+                DO UPDATE SET
+                    id=:id,
+                    csv=:csv,
+                    account=:account,
+                    transactionType=:transactionType,
+                    transactionDate=:transactionDate,
+                    postDate=:postDate,
+                    description=:description,
+                    comments=:comments,
+                    checkNumber=:checkNumber,
+                    amount=:amount,
+                    balance=:balance
+                """;
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
                 .addValue("id", bankTransaction.id)
@@ -89,9 +180,10 @@ public class BankTransactionsService {
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
                 .addValue("comments", bankTransaction.comments, Types.VARCHAR)
                 .addValue("checkNumber", bankTransaction.checkNumber, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER);
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER)
+                .addValue("balance", Tools.toDatabaseInt(bankTransaction.balance), Types.INTEGER);
 
-        return namedParameterJdbcTemplate.update(sql, sqlParameterSource) == 1;
+        return namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1;
     }
 
     private static BankTransaction map(ResultSet resultSet, int i) throws SQLException {
@@ -109,6 +201,7 @@ public class BankTransactionsService {
         bankTransaction.comments = resultSet.getString("comments");
         bankTransaction.checkNumber = resultSet.getString("checkNumber");
         bankTransaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
+        bankTransaction.balance = Tools.fromDatabaseInt(resultSet.getInt("balance"));
         return bankTransaction;
     }
 

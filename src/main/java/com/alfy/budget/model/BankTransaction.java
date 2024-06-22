@@ -16,5 +16,6 @@ public class BankTransaction {
     public String comments;
     public String checkNumber;
     public BigDecimal amount;
+    public BigDecimal balance;
 
 }
