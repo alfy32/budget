@@ -1,7 +1,7 @@
 import {Component, OnInit} from '@angular/core';
 import {TransactionService} from '../transaction.service';
 import {Transaction} from '../transaction';
-import {ActivatedRoute, RouterModule} from '@angular/router';
+import {ActivatedRoute, Router, RouterModule} from '@angular/router';
 import {CommonModule} from '@angular/common';
 import {FormsModule, ReactiveFormsModule} from '@angular/forms';
 
@@ -29,9 +29,11 @@ export class TransactionComponent implements OnInit {
   editingNotes: boolean = false;
   editingDate: boolean = false;
   editingTransactionType: boolean = false;
+  areYouSure: boolean = false;
 
   constructor(
     private route: ActivatedRoute,
+    private router: Router,
     private transactionService: TransactionService
   ) {
     this.route.params.subscribe(params => this.getTransaction(params['id']));
@@ -41,7 +43,7 @@ export class TransactionComponent implements OnInit {
   ngOnInit(): void {
   }
 
-  onClickAmount():void {
+  onClickAmount(): void {
     if (!this.editingAmount) {
       this.editingAmount = true;
     }
@@ -160,6 +162,20 @@ export class TransactionComponent implements OnInit {
   getTransaction(id: string): void {
     this.transactionService.getTransaction(id).subscribe(transaction => {
       this.transaction = transaction;
+    });
+  }
+
+  deleteTransaction(): void {
+    this.areYouSure = true;
+  }
+
+  imSureDeleteTransaction(): void {
+    this.transactionService.deleteTransaction(this.transaction.id).subscribe(() => {
+      this.router.navigate(['/transactions'], {
+        queryParams: {
+          query: this.query
+        }
+      })
     });
   }
 

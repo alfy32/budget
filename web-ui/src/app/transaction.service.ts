@@ -30,6 +30,10 @@ export class TransactionService {
     );
   }
 
+  deleteTransaction(transactionId: string): Observable<void> {
+    return this.http.delete<void>('/rest/transactions/' + transactionId);
+  }
+
   getTransaction(transactionId: string): Observable<Transaction> {
     return this.http.get<Transaction>('/rest/transactions/' + transactionId);
   }

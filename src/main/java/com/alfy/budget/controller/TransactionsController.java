@@ -136,6 +136,13 @@ public class TransactionsController {
         return transaction;
     }
 
+    @DeleteMapping(path = "/{id}")
+    public void deleteTransaction(
+            @PathVariable(name = "id") UUID id
+    ) {
+        transactionsService.delete(id);
+    }
+
     @GetMapping(path = "/{id}/description")
     public Map<String, Object> getTransactionDescription(
             @PathVariable(name = "id") UUID id

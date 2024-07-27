@@ -134,3 +134,12 @@
 
 <br>
 <a class="fake_button" [routerLink]="['/transactions']" [queryParams]="{query:query}">Done</a>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<div class="fake_button_red" *ngIf="!areYouSure" (click)="deleteTransaction()">Delete</div>
+<div class="fake_button_red" *ngIf="areYouSure" (click)="imSureDeleteTransaction()">Yes delete for sure</div>
