@@ -11,8 +11,11 @@ import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Duration;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 public class BankTransactionsService {
@@ -80,47 +83,46 @@ public class BankTransactionsService {
     }
 
     public List<BankTransaction> listPossibleDuplicates() {
-        String query = """
-                SELECT account, transactiontype, description, amount, balance, COUNT(*)
-                FROM bank_transactions
-                GROUP BY account, transactiontype, description, amount, balance
-                HAVING COUNT(*) > 1
-                """;
+        List<BankTransaction> duplicates = new ArrayList<>();
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource();
-        List<BankTransaction> possibleDuplicates = namedParameterJdbcTemplate.query(query, sqlParameterSource, (rs, rowNum) -> {
-            BankTransaction bankTransaction = new BankTransaction();
-            bankTransaction.account = rs.getString("account");
-            bankTransaction.transactionType = rs.getString("transactionType");
-            bankTransaction.description = rs.getString("description");
-            bankTransaction.amount = Tools.fromDatabaseInt(rs.getInt("amount"));
-            bankTransaction.balance = Tools.fromDatabaseInt(rs.getInt("balance"));
-            return bankTransaction;
-        });
+        String query = "SELECT * FROM bank_transactions WHERE transactionDate > :transactionDate";
 
+        LocalDate startDate = LocalDate.now().minusMonths(12);
 
-        List<BankTransaction> bankTransactions = new ArrayList<>();
-        for (BankTransaction possibleDuplicate : possibleDuplicates) {
-            query = """
-                    SELECT * FROM bank_transactions
-                    WHERE account=:account
-                      AND transactionType=:transactionType
-                      AND description=:description
-                      AND amount=:amount
-                      AND balance=:balance
-                    """;
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("transactionDate", startDate, Types.DATE);
 
-            sqlParameterSource = new MapSqlParameterSource()
-                    .addValue("account", possibleDuplicate.account)
-                    .addValue("transactionType", possibleDuplicate.transactionType)
-                    .addValue("description", possibleDuplicate.description)
-                    .addValue("amount", Tools.toDatabaseInt(possibleDuplicate.amount), Types.INTEGER)
-                    .addValue("balance", Tools.toDatabaseInt(possibleDuplicate.balance), Types.INTEGER);
+        List<BankTransaction> transactions = namedParameterJdbcTemplate.query(query, sqlParameterSource, BankTransactionsService::map);
 
-            bankTransactions.addAll(namedParameterJdbcTemplate.query(query, sqlParameterSource, BankTransactionsService::map));
+        for (int i = 0; i < transactions.size() - 1; i++) {
+            BankTransaction transaction1 = transactions.get(i);
+            for (int j = i + 1; j < transactions.size(); j++) {
+                BankTransaction transaction2 = transactions.get(j);
+                if (isDuplicate(transaction1, transaction2)) {
+                    duplicates.add(transaction1);
+                    duplicates.add(transaction2);
+                }
+            }
         }
 
-        return bankTransactions;
+        return duplicates;
+    }
+
+    private static boolean isDuplicate(BankTransaction transaction1, BankTransaction transaction2) {
+        if (transaction1 == transaction2) {
+            return false;
+        }
+
+        if (!Objects.equals(transaction1.amount, transaction2.amount)) {
+            return false;
+        }
+
+        if (!Objects.equals(transaction1.transactionType, transaction2.transactionType)) {
+            return false;
+        }
+
+        long days = Duration.between(transaction1.transactionDate.atStartOfDay(), transaction2.transactionDate.atStartOfDay()).abs().toDays();
+        return days < 5;
     }
 
     public boolean add(BankTransaction bankTransaction) {

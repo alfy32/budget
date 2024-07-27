@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping(path = "/rest/transactions")
@@ -63,7 +60,12 @@ public class TransactionsController {
                 );
             } else if ("possibleDuplicates".equals(query)) {
                 List<BankTransaction> bankTransactions = bankTransactionsService.listPossibleDuplicates();
-                return transactionsService.listPossibleDuplicates(bankTransactions);
+                List<Transaction> transactions = transactionsService.listPossibleDuplicates(bankTransactions);
+                transactions.sort(Comparator
+                        .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
+                        .thenComparing((Transaction transaction) -> transaction.description)
+                );
+                return transactions;
             } else if (query.startsWith("category,")) {
                 return getCategoryTransactions(query);
             }
