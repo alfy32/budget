@@ -2,6 +2,7 @@ package com.alfy.budget.controller;
 
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Category;
+import com.alfy.budget.model.PossibleDuplicateTransactions;
 import com.alfy.budget.model.Transaction;
 import com.alfy.budget.service.BankTransactionsService;
 import com.alfy.budget.service.CategoriesService;
@@ -59,8 +60,8 @@ public class TransactionsController {
                         true
                 );
             } else if ("possibleDuplicates".equals(query)) {
-                List<BankTransaction> bankTransactions = bankTransactionsService.listPossibleDuplicates();
-                List<Transaction> transactions = transactionsService.listPossibleDuplicates(bankTransactions);
+                List<PossibleDuplicateTransactions> possibleDuplicateTransactions = bankTransactionsService.listPossibleDuplicates();
+                List<Transaction> transactions = transactionsService.listPossibleDuplicates(possibleDuplicateTransactions);
                 transactions.sort(Comparator
                         .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
                         .thenComparing((Transaction transaction) -> transaction.description)

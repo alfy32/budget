@@ -1,6 +1,7 @@
 package com.alfy.budget.service;
 
 import com.alfy.budget.model.BankTransaction;
+import com.alfy.budget.model.PossibleDuplicateTransactions;
 import com.alfy.budget.tools.Tools;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -82,8 +83,8 @@ public class BankTransactionsService {
         return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, BankTransactionsService::map);
     }
 
-    public List<BankTransaction> listPossibleDuplicates() {
-        List<BankTransaction> duplicates = new ArrayList<>();
+    public List<PossibleDuplicateTransactions> listPossibleDuplicates() {
+        List<PossibleDuplicateTransactions> possibleDuplicates = new ArrayList<>();
 
         String query = "SELECT * FROM bank_transactions WHERE transactionDate > :transactionDate";
 
@@ -99,13 +100,15 @@ public class BankTransactionsService {
             for (int j = i + 1; j < transactions.size(); j++) {
                 BankTransaction transaction2 = transactions.get(j);
                 if (isDuplicate(transaction1, transaction2)) {
-                    duplicates.add(transaction1);
-                    duplicates.add(transaction2);
+                    PossibleDuplicateTransactions possibleDuplicateTransactions = new PossibleDuplicateTransactions();
+                    possibleDuplicateTransactions.transaction1 = transaction1;
+                    possibleDuplicateTransactions.transaction2 = transaction2;
+                    possibleDuplicates.add(possibleDuplicateTransactions);
                 }
             }
         }
 
-        return duplicates;
+        return possibleDuplicates;
     }
 
     private static boolean isDuplicate(BankTransaction transaction1, BankTransaction transaction2) {

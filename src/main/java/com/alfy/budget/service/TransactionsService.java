@@ -1,9 +1,6 @@
 package com.alfy.budget.service;
 
-import com.alfy.budget.model.BankTransaction;
-import com.alfy.budget.model.Category;
-import com.alfy.budget.model.SplitTransaction;
-import com.alfy.budget.model.Transaction;
+import com.alfy.budget.model.*;
 import com.alfy.budget.tools.Tools;
 import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -103,14 +100,22 @@ public class TransactionsService {
         return json;
     }
 
-    public List<Transaction> listPossibleDuplicates(List<BankTransaction> bankTransactions) {
+    public List<Transaction> listPossibleDuplicates(List<PossibleDuplicateTransactions> possibleDuplicateTransactions) {
         List<Transaction> possibleDuplicates = new ArrayList<>();
 
-        for (BankTransaction bankTransaction : bankTransactions) {
-            List<Transaction> transactions = listWithBankTransactionId(bankTransaction.id);
-            for (Transaction transaction : transactions) {
-                transaction.bankTransaction = bankTransaction;
-                possibleDuplicates.add(transaction);
+        for (PossibleDuplicateTransactions duplicateTransactions : possibleDuplicateTransactions) {
+            List<Transaction> transactions1 = listWithBankTransactionId(duplicateTransactions.transaction1.id);
+            List<Transaction> transactions2 = listWithBankTransactionId(duplicateTransactions.transaction2.id);
+            if (!transactions1.isEmpty() && !transactions2.isEmpty()) {
+                for (Transaction transaction : transactions1) {
+                    transaction.bankTransaction = duplicateTransactions.transaction1;
+                    possibleDuplicates.add(transaction);
+                }
+
+                for (Transaction transaction : transactions2) {
+                    transaction.bankTransaction = duplicateTransactions.transaction2;
+                    possibleDuplicates.add(transaction);
+                }
             }
         }
 
