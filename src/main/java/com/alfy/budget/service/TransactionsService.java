@@ -406,7 +406,7 @@ public class TransactionsService {
         String query = """
             UPDATE transactions
             SET needs_transferred = false
-            AND transactions.categoryId IN (
+            WHERE transactions.categoryId IN (
                 SELECT categories.id FROM categories
                 WHERE categories.budgetid IN (
                     SELECT budgets.id FROM budgets
