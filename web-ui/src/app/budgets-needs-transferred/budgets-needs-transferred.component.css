@@ -1,0 +1,59 @@
+
+input[type="date"] {
+  width: 100%;
+  max-width: 600px;
+  margin: 8px 0;
+  display: inline-block;
+  border: 1px solid #ccc;
+  box-shadow: inset 0 1px 3px #ddd;
+  border-radius: 4px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  padding: 12px 12px;
+  font-size: medium;
+}
+
+.transferAccountTitle {
+  background-color: #646464;
+  color: white;
+  max-width: 590px;
+  padding: 5px;
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+
+.budgetTitle {
+  background-color: #d0d0d0;
+  max-width: 590px;
+  padding: 5px;
+  margin-bottom: 5px;
+  margin-top: 5px;
+}
+
+progress {
+  width: 100%;
+  max-width: 600px;
+}
+
+progress.progress-full {
+  accent-color: crimson;
+}
+
+progress.progress-high {
+  accent-color: #ffc107;
+}
+
+progress.progress-normal {
+  accent-color: #2196F3;
+}
+
+.category {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+a.invisible_link {
+  text-decoration: none;
+  color: inherit;
+}

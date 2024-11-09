@@ -15,6 +15,7 @@ import {TransactionCreateComponent} from "./transaction-create/transaction-creat
 import {BudgetsMonthlyComponent} from "./budgets-monthly/budgets-monthly.component";
 import {BudgetConfigurationComponent} from "./budget-configuration/budget-configuration.component";
 import {BudgetsConfigurationComponent} from "./budgets-configuration/budgets-configuration.component";
+import {BudgetsNeedsTransferredComponent} from "./budgets-needs-transferred/budgets-needs-transferred.component";
 
 export const routes: Routes = [
     { path: '', component: HomeComponent },
@@ -29,6 +30,7 @@ export const routes: Routes = [
 
     { path: 'monthly', component: BudgetsMonthlyComponent },
     { path: 'yearly', component: BudgetsYearlyComponent },
+    { path: 'needs-transferred', component: BudgetsNeedsTransferredComponent },
 
     { path: 'budgets', component: BudgetsConfigurationComponent },
     { path: 'budgets/:id', component: BudgetConfigurationComponent },

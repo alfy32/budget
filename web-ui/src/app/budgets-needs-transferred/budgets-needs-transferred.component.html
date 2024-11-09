@@ -1,0 +1,24 @@
+<div class="container">
+  <h2>Needs Transferred</h2>
+
+  <input type="date" [(ngModel)]="startDate" (change)="startDateChanged()">
+
+  <br>
+  <br>
+
+  <div *ngFor="let transferInfo of transferInfoList">
+    <div class="transferAccountTitle">{{ transferInfo.amount | currency }} - {{ transferInfo.account }}</div>
+    <div *ngFor="let budget of transferInfo.budgets">
+      <a class="invisible_link" [routerLink]="['/budgets/' + budget.budget.id]">
+        <div class="budgetTitle">{{ budget.budget.name }}</div>
+      </a>
+      <div>{{ budget.total | currency }}</div>
+      <div *ngFor="let category of budget.categories">
+        <a class="invisible_link" [routerLink]="['/transactions']"
+           [queryParams]="{ query: createQuery(category.category.id) }">
+          <div class="category">{{ category.category.name }}: {{ category.total | currency }}</div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

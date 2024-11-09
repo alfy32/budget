@@ -19,6 +19,7 @@ export class BudgetConfigurationComponent implements OnInit {
   name: string = '';
   amount: number = 0;
   monthly: boolean = false;
+  transferAccount: string = '';
 
   budget?: Budget;
   categories: Category[] = [];
@@ -45,6 +46,7 @@ export class BudgetConfigurationComponent implements OnInit {
       this.name = budget.name;
       this.amount = budget.amount;
       this.monthly = budget.monthly;
+      this.transferAccount = budget.transferAccount;
       this.budget = budget;
     });
   }
@@ -63,6 +65,12 @@ export class BudgetConfigurationComponent implements OnInit {
 
   updateMonthly() {
     this.budgetService.setMonthly(this.budgetId, this.monthly).subscribe(() => {
+      this.refreshBudget();
+    });
+  }
+
+  updateTransferAccount() {
+    this.budgetService.setTransferAccount(this.budgetId, this.transferAccount).subscribe(() => {
       this.refreshBudget();
     });
   }

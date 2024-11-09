@@ -49,6 +49,13 @@ export class BudgetsService {
     );
   }
 
+  setTransferAccount(id: string, transferAccount: string): Observable<void> {
+    return this.http.post<void>(
+      '/rest/budgets/' + id + '/transfer-account',
+      transferAccount
+    );
+  }
+
   delete(id: string) {
     return this.http.delete<void>('/rest/budgets/' + id);
   }

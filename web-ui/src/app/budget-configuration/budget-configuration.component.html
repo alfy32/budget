@@ -21,6 +21,13 @@
   </div>
 </div>
 
+<div class="title">Transfer Account:</div>
+<input type="text" class="input_class"
+       [(ngModel)]="transferAccount"
+       (keyup.enter)="updateTransferAccount()"
+       (focusout)="updateTransferAccount()"
+/>
+
 <div class="title">Monthly:</div>
 <input type="checkbox"
        [(ngModel)]="monthly"

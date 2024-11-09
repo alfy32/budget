@@ -5,6 +5,7 @@ import {Transaction} from "./transaction";
 import {Split} from "./split";
 import {BudgetInfo} from "./budgetInfo";
 import {BankTransaction} from "./bankTransaction";
+import {TransferInfo} from "./transferInfo";
 
 @Injectable({providedIn: 'root'})
 export class TransactionService {
@@ -135,4 +136,9 @@ export class TransactionService {
     const dateString = date.toISOString().split('T')[0];
     return this.http.get<BudgetInfo[]>('/rest/budgets/query-yearly?date=' + dateString);
   }
+
+  getNeedsTransferredBudgets(lastTransferDate: string): Observable<TransferInfo[]> {
+    return this.http.get<TransferInfo[]>('/rest/budgets/query-needs-transferred?lastTransferDate=' + lastTransferDate);
+  }
+
 }

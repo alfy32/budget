@@ -3,4 +3,5 @@ export interface Budget {
   name: string,
   amount: number,
   monthly: boolean,
+  transferAccount: string,
 }

@@ -110,12 +110,25 @@ public class BudgetsService {
         namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 
+    public void setTransferAccount(UUID id, String transferAccount) {
+        String query = "UPDATE budgets"
+                + " SET transfer_account = :transfer_account"
+                + " WHERE id = :id";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("id", id)
+                .addValue("transfer_account", transferAccount, Types.VARCHAR);
+
+        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    }
+
     private static Budget map(ResultSet resultSet, int rowNum) throws SQLException {
         Budget budget = new Budget();
         budget.id = UUID.fromString(resultSet.getString("id"));
         budget.name = resultSet.getString("name");
         budget.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
         budget.monthly = resultSet.getBoolean("monthly");
+        budget.transferAccount = resultSet.getString("transfer_account");
         return budget;
     }
 }

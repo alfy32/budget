@@ -88,6 +88,14 @@ public class BudgetsController {
         budgetsService.setAmount(id, amount);
     }
 
+    @PostMapping(path = "/{id}/transfer-account")
+    public void setTransferAccount(
+            @PathVariable(name = "id") UUID id,
+            @RequestBody(required = false) String transferAccount
+    ) {
+        budgetsService.setTransferAccount(id, transferAccount);
+    }
+
     @GetMapping(path = "/query-monthly")
     public List<BudgetInfo> getMonthlyBudgets(
             @RequestParam(name = "date", required = false) LocalDate date
@@ -260,6 +268,89 @@ public class BudgetsController {
         }
 
         return budgetInfoList;
+    }
+
+    @GetMapping(path = "/query-needs-transferred")
+    public List<TransferInfo> getBudgetsNeedsTransferredResponse(
+            @RequestParam(name = "lastTransferDate", required = false) LocalDate lastTransferDate
+    ) {
+        if (lastTransferDate == null) {
+            lastTransferDate = LocalDate.now();
+        }
+        LocalDate start = lastTransferDate;
+        LocalDate end = LocalDate.now().plusDays(1);
+
+        Map<String, TransferInfo> transferInfoByAccount = new HashMap<>();
+        Map<UUID, BudgetInfo> budgetInfoById = new HashMap<>();
+        Map<UUID, CategoryInfo> categoryInfoById = new HashMap<>();
+
+        List<Budget> budgets = budgetsService.list();
+        for (Budget budget : budgets) {
+            BudgetInfo budgetInfo = new BudgetInfo();
+            budgetInfo.budget = budget;
+            budgetInfo.categories = new ArrayList<>();
+            budgetInfoById.put(budget.id, budgetInfo);
+            if (budget.transferAccount != null && !budget.transferAccount.isEmpty()) {
+                TransferInfo transferInfo = transferInfoByAccount.computeIfAbsent(budget.transferAccount, (String account) -> {
+                    TransferInfo newTransferInfo = new TransferInfo();
+                    newTransferInfo.account = account;
+                    newTransferInfo.amount = BigDecimal.ZERO;
+                    newTransferInfo.budgets = new ArrayList<>();
+                    return newTransferInfo;
+                });
+                transferInfo.budgets.add(budgetInfo);
+            }
+        }
+
+        List<Category> categories = categoriesService.list();
+        for (Category category : categories) {
+            if (category.budget != null && category.budget.id != null) {
+                BudgetInfo budgetInfo = budgetInfoById.get(category.budget.id);
+                if (budgetInfo != null) {
+                    CategoryInfo categoryInfo = new CategoryInfo();
+                    categoryInfo.category = category;
+                    categoryInfoById.put(category.id, categoryInfo);
+                    budgetInfo.categories.add(categoryInfo);
+                }
+            }
+        }
+
+        List<Transaction> transactions = transactionsService.listByDate(start, end);
+        for (Transaction transaction : transactions) {
+            if (transaction.category != null && transaction.category.id != null) {
+                CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
+                if (categoryInfo != null) {
+                    addTransactionToTotal(categoryInfo, transaction);
+
+                    if (categoryInfo.transactions == null) {
+                        categoryInfo.transactions = new ArrayList<>();
+                    }
+                    categoryInfo.transactions.add(transaction);
+                }
+            }
+        }
+
+        for (BudgetInfo budgetInfo : budgetInfoById.values()) {
+            budgetInfo.total = BigDecimal.ZERO;
+            for (CategoryInfo category : budgetInfo.categories) {
+                budgetInfo.total = budgetInfo.total.add(category.total);
+            }
+
+            budgetInfo.budget.amount = BigDecimal.valueOf(12).multiply(budgetInfo.budget.amount);
+            budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
+        }
+
+        List<TransferInfo> transferInfoList = new ArrayList<>(transferInfoByAccount.values());
+        transferInfoList.sort(Comparator.comparing(info -> info.account));
+
+        for (TransferInfo transferInfo : transferInfoList) {
+            transferInfo.amount = BigDecimal.ZERO;
+            for (BudgetInfo budget : transferInfo.budgets) {
+                transferInfo.amount = transferInfo.amount.add(budget.total);
+            }
+        }
+
+        return transferInfoList;
     }
 
     private static void addTransactionToTotal(CategoryInfo categoryInfo, Transaction transaction) {

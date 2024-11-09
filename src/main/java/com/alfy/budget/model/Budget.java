@@ -9,6 +9,7 @@ public class Budget {
     public String name;
     public BigDecimal amount;
     public boolean monthly;
+    public String transferAccount;
 
     public static Budget create(String name, BigDecimal amount) {
         Budget budget = new Budget();
