@@ -57,3 +57,14 @@ a.invisible_link {
   text-decoration: none;
   color: inherit;
 }
+
+.green_button {
+  background-color: #04AA6D;
+  color: #f2f2f2;
+}
+
+.green_button, .red_button {
+  text-decoration: none;
+  padding: 5px;
+  max-width: 590px;
+}

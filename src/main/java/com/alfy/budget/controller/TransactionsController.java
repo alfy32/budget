@@ -82,9 +82,13 @@ public class TransactionsController {
         String[] split = query.split(",");
         if ("category".equals(split[0])) {
             UUID categoryId = UUID.fromString(split[1]);
-            LocalDate startDate = LocalDate.parse(split[2]);
-            LocalDate endDate = LocalDate.parse(split[3]);
-            return transactionsService.listOrderedByDateWithCategory(categoryId, startDate, endDate);
+            if (split[2].equals("needsTransferred")) {
+                return transactionsService.listOrderedByDateWithCategory(categoryId);
+            } else {
+                LocalDate startDate = LocalDate.parse(split[2]);
+                LocalDate endDate = LocalDate.parse(split[3]);
+                return transactionsService.listOrderedByDateWithCategory(categoryId, startDate, endDate);
+            }
         }
 
         return Collections.emptyList();

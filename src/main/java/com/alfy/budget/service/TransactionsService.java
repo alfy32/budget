@@ -33,7 +33,8 @@ public class TransactionsService {
                 "  transactionType," +
                 "  transactionDate," +
                 "  description," +
-                "  amount" +
+                "  amount," +
+                "  needs_transferred" +
                 ")" +
                 "VALUES (" +
                 "  :id," +
@@ -42,7 +43,8 @@ public class TransactionsService {
                 "  :transactionType," +
                 "  :transactionDate," +
                 "  :description," +
-                "  :amount" +
+                "  :amount," +
+                "  :needs_transferred" +
                 ")";
 
         SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
@@ -52,7 +54,8 @@ public class TransactionsService {
                 .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER);
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER)
+                .addValue("needs_transferred", true, Types.BOOLEAN);
 
         if (namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1) {
             return id;
@@ -150,6 +153,16 @@ public class TransactionsService {
         return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
 
+    public List<Transaction> listNeedTransferred() {
+        String query = """
+                SELECT * FROM transactions
+                WHERE needs_transferred IS TRUE
+                ORDER By transactionDate DESC, description
+                """;
+
+        return namedParameterJdbcTemplate.query(query, new MapSqlParameterSource(), TransactionsService::mapTransaction);
+    }
+
     public List<Transaction> listOrderedByDateWithCategory(
             UUID categoryId,
             LocalDate startDate,
@@ -167,6 +180,22 @@ public class TransactionsService {
                 .addValue("categoryId", categoryId)
                 .addValue("startDate", Date.valueOf(startDate))
                 .addValue("endDate", Date.valueOf(endDate));
+
+        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+    }
+
+    public List<Transaction> listOrderedByDateWithCategory(
+            UUID categoryId
+    ) {
+        String query = """
+                SELECT * FROM transactions
+                WHERE categoryId = :categoryId
+                  AND needs_transferred IS TRUE
+                ORDER By transactionDate DESC, description
+                """;
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("categoryId", categoryId);
 
         return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
     }
@@ -367,5 +396,28 @@ public class TransactionsService {
         transaction.notes = resultSet.getString("notes");
         transaction.needsTransferred = resultSet.getBoolean("needs_transferred");
         return transaction;
+    }
+
+    public int markTransactionsTransferredForAccount(String transferAccount) {
+        if (transferAccount == null || transferAccount.isEmpty()) {
+            return 0;
+        }
+
+        String query = """
+            UPDATE transactions
+            SET needs_transferred = false
+            AND transactions.categoryId IN (
+                SELECT categories.id FROM categories
+                WHERE categories.budgetid IN (
+                    SELECT budgets.id FROM budgets
+                    WHERE transfer_account = :transfer_account
+                )
+            )
+            """;
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("transfer_account", transferAccount, Types.VARCHAR);
+
+        return namedParameterJdbcTemplate.update(query, sqlParameterSource);
     }
 }

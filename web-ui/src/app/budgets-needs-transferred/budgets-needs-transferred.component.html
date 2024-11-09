@@ -1,13 +1,11 @@
 <div class="container">
   <h2>Needs Transferred</h2>
 
-  <input type="date" [(ngModel)]="startDate" (change)="startDateChanged()">
-
-  <br>
-  <br>
-
   <div *ngFor="let transferInfo of transferInfoList">
     <div class="transferAccountTitle">{{ transferInfo.amount | currency }} - {{ transferInfo.account }}</div>
+    <div class="green_button" (click)="markTransferred(transferInfo.account)">
+      <div>Mark {{ transferInfo.account }} Transferred</div>
+    </div>
     <div *ngFor="let budget of transferInfo.budgets">
       <a class="invisible_link" [routerLink]="['/budgets/' + budget.budget.id]">
         <div class="budgetTitle">{{ budget.budget.name }}</div>

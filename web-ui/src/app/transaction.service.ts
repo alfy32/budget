@@ -137,8 +137,14 @@ export class TransactionService {
     return this.http.get<BudgetInfo[]>('/rest/budgets/query-yearly?date=' + dateString);
   }
 
-  getNeedsTransferredBudgets(lastTransferDate: string): Observable<TransferInfo[]> {
-    return this.http.get<TransferInfo[]>('/rest/budgets/query-needs-transferred?lastTransferDate=' + lastTransferDate);
+  getNeedsTransferredBudgets(): Observable<TransferInfo[]> {
+    return this.http.get<TransferInfo[]>('/rest/budgets/query-needs-transferred');
   }
 
+  markTransferred(account: String) {
+    return this.http.post<void>(
+      '/rest/budgets/transfer-completed',
+      account
+    )
+  }
 }

@@ -270,16 +270,15 @@ public class BudgetsController {
         return budgetInfoList;
     }
 
-    @GetMapping(path = "/query-needs-transferred")
-    public List<TransferInfo> getBudgetsNeedsTransferredResponse(
-            @RequestParam(name = "lastTransferDate", required = false) LocalDate lastTransferDate
+    @PostMapping(path = "/transfer-completed")
+    public int transferCompletedForAccount(
+            @RequestBody String transferAccount
     ) {
-        if (lastTransferDate == null) {
-            lastTransferDate = LocalDate.now();
-        }
-        LocalDate start = lastTransferDate;
-        LocalDate end = LocalDate.now().plusDays(1);
+        return transactionsService.markTransactionsTransferredForAccount(transferAccount);
+    }
 
+    @GetMapping(path = "/query-needs-transferred")
+    public List<TransferInfo> getBudgetsNeedsTransferredResponse() {
         Map<String, TransferInfo> transferInfoByAccount = new HashMap<>();
         Map<UUID, BudgetInfo> budgetInfoById = new HashMap<>();
         Map<UUID, CategoryInfo> categoryInfoById = new HashMap<>();
@@ -315,7 +314,7 @@ public class BudgetsController {
             }
         }
 
-        List<Transaction> transactions = transactionsService.listByDate(start, end);
+        List<Transaction> transactions = transactionsService.listNeedTransferred();
         for (Transaction transaction : transactions) {
             if (transaction.category != null && transaction.category.id != null) {
                 CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
