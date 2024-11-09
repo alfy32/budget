@@ -1,3 +1,11 @@
+input.search {
+  font-size: large;
+  margin-top: 10px;
+  padding: 10px 0px;
+  width: 100%;
+  max-width: 596px;
+}
+
 a.transaction_link {
   color: #444444;
   text-decoration: none;

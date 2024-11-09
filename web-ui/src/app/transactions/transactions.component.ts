@@ -4,17 +4,19 @@ import {TransactionService} from '../transaction.service';
 import {Transaction} from '../transaction';
 import {CommonModule} from '@angular/common';
 import {ActivatedRoute, RouterModule} from '@angular/router';
+import {FormsModule} from "@angular/forms";
 
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, FormsModule, RouterModule],
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.css'
 })
 export class TransactionsComponent {
   query?: string | undefined = 'all';
   transactions: Transaction[] = [];
+  search: string = '';
 
   constructor(
     private route: ActivatedRoute,
@@ -34,4 +36,25 @@ export class TransactionsComponent {
     this.transactionService.getTransactions(this.query).subscribe(transactions => this.transactions = transactions)
   }
 
+  matchesSearch(transaction: Transaction) {
+    if (this.search === '') {
+      return true;
+    }
+
+    const search = this.search.toLowerCase();
+
+    if (transaction.description != null) {
+      if (transaction.description.toLowerCase().includes(search)) {
+        return true;
+      }
+    }
+
+    if (transaction.notes != null) {
+      if (transaction.notes.toLowerCase().includes(search)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
