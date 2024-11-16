@@ -8,10 +8,18 @@ div.title {
 
 select {
   font-size: large;
-  margin-top: 10px;
+  margin-top: 5px;
   padding: 10px 0px;
   width: 100%;
   max-width: 596px;
+}
+
+input.skip {
+  font-size: large;
+  margin-top: 5px;
+  padding: 10px 0px;
+  width: 100%;
+  max-width: 593px;
 }
 
 input.file_selector {

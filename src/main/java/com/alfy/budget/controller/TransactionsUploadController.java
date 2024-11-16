@@ -56,8 +56,9 @@ public class TransactionsUploadController {
             produces = MediaType.APPLICATION_JSON_VALUE
     )
     public ResponseEntity<Object> uploadTransactions(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("account") String account
+            @RequestParam(name = "file") MultipartFile file,
+            @RequestParam(name = "skip", defaultValue = "0") int skip,
+            @RequestParam(name = "account") String account
     ) throws IOException, CsvValidationException {
 
         autoCategorizeService.updateCachedData();
@@ -65,7 +66,7 @@ public class TransactionsUploadController {
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             switch (account) {
                 case "Gunnison Checking" -> {
-                    TransactionUploadResults results = parseStateBankData(bufferedReader, account);
+                    TransactionUploadResults results = parseStateBankData(bufferedReader, skip, account);
                     return ResponseEntity.ok(results);
                 }
                 case "Zions Cash Back Visa" -> {
@@ -90,6 +91,7 @@ public class TransactionsUploadController {
 
     private TransactionUploadResults parseStateBankData(
             BufferedReader bufferedReader,
+            int skip,
             String account
     ) throws IOException, CsvValidationException {
         int existingTransactions = 0;
@@ -103,6 +105,11 @@ public class TransactionsUploadController {
         String[] rowValues;
         BankTransaction bankTransaction;
         while ((line = bufferedReader.readLine()) != null) {
+            if (skip > 0) {
+                skip--;
+                continue;
+            }
+
             rowValues = parseCsvLine(line);
 
             bankTransaction = new BankTransaction();
@@ -272,8 +279,10 @@ public class TransactionsUploadController {
 
                     if (column != null) {
                         switch (column) {
-                            case "Posting Date" -> bankTransaction.postDate = LocalDate.parse(rowValues[i], DATE_FORMATTER_DFCU);
-                            case "Effective Date" -> bankTransaction.transactionDate = LocalDate.parse(rowValues[i], DATE_FORMATTER_DFCU);
+                            case "Posting Date" ->
+                                    bankTransaction.postDate = LocalDate.parse(rowValues[i], DATE_FORMATTER_DFCU);
+                            case "Effective Date" ->
+                                    bankTransaction.transactionDate = LocalDate.parse(rowValues[i], DATE_FORMATTER_DFCU);
                             case "Transaction Type" -> {
                                 if (rowValues[i] == null) {
                                     bankTransaction.transactionType = "credit";

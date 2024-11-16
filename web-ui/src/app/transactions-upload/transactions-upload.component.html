@@ -3,6 +3,9 @@
   <hr>
   <input class="file_selector" type="file" name="file" (change)="onFileSelected($event)"/>
   <hr>
+  <div class="title">Skip</div>
+  <input class="skip" type="number" name="skip"/>
+  <hr>
   <div class="title">Account</div>
   <select name="account" [(ngModel)]="account">
     <option *ngFor="let accountName of accounts" value="{{accountName}}">
