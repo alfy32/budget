@@ -65,15 +65,15 @@ public class TransactionsUploadController {
 
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
             switch (account) {
-                case "Gunnison Checking" -> {
+                case "SBSU - Checking (5333)" -> {
                     TransactionUploadResults results = parseStateBankData(bufferedReader, skip, account);
                     return ResponseEntity.ok(results);
                 }
-                case "Zions Cash Back Visa" -> {
-                    TransactionUploadResults results = parseZionsCreditCard(bufferedReader, "Cash Back Visa");
+                case "Zions - Cash Back Visa (1478)" -> {
+                    TransactionUploadResults results = parseZionsCreditCard(bufferedReader, account);
                     return ResponseEntity.ok(results);
                 }
-                case "First Choice Platinum" -> {
+                case "DFCU - Checking (3424)" -> {
                     TransactionUploadResults results = parseDFCU(bufferedReader, account);
                     return ResponseEntity.ok(results);
                 }

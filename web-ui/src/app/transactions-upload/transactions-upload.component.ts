@@ -11,9 +11,9 @@ import {NgForOf} from "@angular/common";
 })
 export class TransactionsUploadComponent {
   accounts: string[] = [
-    "Gunnison Checking",
-    "Zions Cash Back Visa",
-    "First Choice Platinum",
+    "SBSU - Checking (5333)",
+    "Zions - Cash Back Visa (1478)",
+    "DFCU - Checking (3424)",
     "Zions All",
   ];
 
@@ -25,9 +25,9 @@ export class TransactionsUploadComponent {
       let file = target.files[0];
       if (file != null && file.name != null) {
         if (file.name.startsWith('export_')) {
-          this.account = "Gunnison Checking";
+          this.account = "SBSU - Checking (5333)";
         } else if (file.name.startsWith('transactions-')) {
-          this.account = "Zions Cash Back Visa";
+          this.account = "Zions - Cash Back Visa (1478)";
         }
       }
     }
