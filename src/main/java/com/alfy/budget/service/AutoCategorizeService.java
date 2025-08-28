@@ -47,8 +47,26 @@ public class AutoCategorizeService {
             }
         }
 
-        if ("Check Payroll/PAY".equals(bankTransaction.description)) {
+        if ("Ch JesusChrist/DONATION".equals(bankTransaction.description)) {
+            Category category = categoriesByName.get("Donations");
+            if (category != null) {
+                transactionsService.updateCategory(transactionId, category.id);
+                return true;
+            }
+        }
+
+        if ("Check Payroll/PAY".equals(bankTransaction.description)
+                || "EddyHR Payroll/PAY".equals(bankTransaction.description)
+        ) {
             Category category = categoriesByName.get("Paycheck");
+            if (category != null) {
+                transactionsService.updateCategory(transactionId, category.id);
+                return true;
+            }
+        }
+
+        if ("CENTRA COM/BILLPAY".equals(bankTransaction.description)) {
+            Category category = categoriesByName.get("Internet");
             if (category != null) {
                 transactionsService.updateCategory(transactionId, category.id);
                 return true;
