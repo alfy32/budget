@@ -28,12 +28,12 @@ public class BaseConfiguration {
         return new TransactionsService(namedParameterJdbcTemplate);
     }
 
-    @Bean
-    public InitializerService initializerService(BudgetsService budgetsService, CategoriesService categoriesService) {
-        InitializerService initializerService = new InitializerService(budgetsService, categoriesService);
-        initializerService.addInitialBudgetsAndCategories();
-        return initializerService;
-    }
+//    @Bean
+//    public InitializerService initializerService(BudgetsService budgetsService, CategoriesService categoriesService) {
+//        InitializerService initializerService = new InitializerService(budgetsService, categoriesService);
+//        initializerService.addInitialBudgetsAndCategories();
+//        return initializerService;
+//    }
 
     @Bean
     public AutoCategorizeService autoCategorizeService(
