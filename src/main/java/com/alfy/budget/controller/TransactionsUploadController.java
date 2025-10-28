@@ -1,13 +1,5 @@
 package com.alfy.budget.controller;
 
-import com.alfy.budget.model.BankTransaction;
-import com.alfy.budget.model.TransactionUploadResults;
-import com.alfy.budget.service.AutoCategorizeService;
-import com.alfy.budget.service.BankTransactionsService;
-import com.alfy.budget.service.TransactionsService;
-import com.alfy.budget.tools.Tools;
-import com.opencsv.CSVReader;
-import com.opencsv.exceptions.CsvValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,7 +10,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.alfy.budget.model.BankTransaction;
+import com.alfy.budget.model.TransactionUploadResults;
+import com.alfy.budget.service.AutoCategorizeService;
+import com.alfy.budget.service.BankTransactionsService;
+import com.alfy.budget.service.TransactionsService;
+import com.alfy.budget.tools.Tools;
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -70,7 +69,11 @@ public class TransactionsUploadController {
                     return ResponseEntity.ok(results);
                 }
                 case "Zions Cash Back Visa" -> {
-                    TransactionUploadResults results = parseZionsCreditCard(bufferedReader, "Cash Back Visa");
+                    TransactionUploadResults results = parseZionsCreditCardV2(bufferedReader, "Cash Back Visa");
+                    return ResponseEntity.ok(results);
+                }
+                case "Zions Cash Back Visa V1" -> {
+                    TransactionUploadResults results = parseZionsCreditCardV1(bufferedReader, "Cash Back Visa");
                     return ResponseEntity.ok(results);
                 }
                 case "First Choice Platinum" -> {
@@ -175,7 +178,83 @@ public class TransactionsUploadController {
         return new TransactionUploadResults(newTransactions, existingTransactions, failedTransactions, autoCategorizedTransactions);
     }
 
-    private TransactionUploadResults parseZionsCreditCard(
+    private TransactionUploadResults parseZionsCreditCardV2(
+            BufferedReader bufferedReader,
+            String account
+    ) throws IOException, CsvValidationException {
+        int existingTransactions = 0;
+        int newTransactions = 0;
+        int failedTransactions = 0;
+        int autoCategorizedTransactions = 0;
+
+        String[] headers = parseCsvLine(bufferedReader.readLine());
+
+        String line;
+        String[] rowValues;
+        BankTransaction bankTransaction;
+        while ((line = bufferedReader.readLine()) != null) {
+            rowValues = parseCsvLine(line);
+
+            bankTransaction = new BankTransaction();
+            bankTransaction.csv = line;
+            bankTransaction.account = account;
+
+            try {
+                for (int i = 0; i < rowValues.length; i++) {
+                    String column = headers[i];
+                    if (column != null) {
+                        switch (column) {
+                            case "Transaction Date":
+                                bankTransaction.transactionDate = LocalDate.parse(rowValues[i]);
+                                break;
+                            case "Posting Date":
+                                bankTransaction.postDate = LocalDate.parse(rowValues[i]);
+                                break;
+                            case "Ref#":
+                                bankTransaction.referenceNumber = rowValues[i];
+                                break;
+                            case "Amount":
+                                BigDecimal parsedAmount = parseMoney(rowValues[i]);
+                                bankTransaction.amount = parsedAmount.abs();
+                                bankTransaction.transactionType = Tools.isLessThanZero(parsedAmount) ? "credit" : "debit";
+                                break;
+                            case "Description":
+                                bankTransaction.description = rowValues[i];
+                                break;
+                        }
+                    }
+                }
+
+                if (bankTransactionsService.existsReferenceNumber(account, bankTransaction.referenceNumber)) {
+                    existingTransactions++;
+                    continue;
+                }
+
+                if (bankTransactionsService.add(bankTransaction)) {
+                    UUID transactionId = transactionsService.addFrom(bankTransaction);
+                    if (transactionId != null) {
+                        newTransactions++;
+                        boolean autoCategorized = autoCategorizeService.autoCategorize(bankTransaction, transactionId);
+                        if (autoCategorized) {
+                            autoCategorizedTransactions++;
+                        }
+                    } else {
+                        logger.info("Failed to add to transactions table");
+                        failedTransactions++;
+                    }
+                } else {
+                    logger.info("Failed to add to bank_transactions table");
+                    failedTransactions++;
+                }
+            } catch (Throwable throwable) {
+                logger.error("Failed", throwable);
+            }
+        }
+
+        return new TransactionUploadResults(newTransactions, existingTransactions, failedTransactions, autoCategorizedTransactions);
+    }
+
+    private TransactionUploadResults parseZionsCreditCardV1(
             BufferedReader bufferedReader,
             String account
     ) throws IOException, CsvValidationException {

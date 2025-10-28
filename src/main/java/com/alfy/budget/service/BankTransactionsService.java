@@ -1,13 +1,12 @@
 package com.alfy.budget.service;
 
-import com.alfy.budget.model.BankTransaction;
-import com.alfy.budget.model.PossibleDuplicateTransactions;
-import com.alfy.budget.tools.Tools;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
-
+import com.alfy.budget.model.BankTransaction;
+import com.alfy.budget.model.PossibleDuplicateTransactions;
+import com.alfy.budget.tools.Tools;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,6 +24,27 @@ public class BankTransactionsService {
 
     public BankTransactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
         this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    }
+
+    public boolean existsReferenceNumber(String account, String referenceNumber) {
+        if (account == null || account.isEmpty()) {
+            return false;
+        }
+
+        if (referenceNumber == null || referenceNumber.isEmpty()) {
+            return false;
+        }
+
+        String query = "SELECT id FROM bank_transactions"
+                       + " WHERE account=:account"
+                       + "   AND referenceNumber=:referenceNumber";
+
+        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
+                .addValue("account", account, Types.VARCHAR)
+                .addValue("referenceNumber", referenceNumber, Types.VARCHAR);
+
+        SqlRowSet sqlRowSet = namedParameterJdbcTemplate.queryForRowSet(query, sqlParameterSource);
+        return sqlRowSet.next();
     }
 
     public boolean exists(String account, String csv) {
@@ -141,6 +161,7 @@ public class BankTransactionsService {
                     transactionType,
                     transactionDate,
                     postDate,
+                    referenceNumber,
                     description,
                     comments,
                     checkNumber,
@@ -154,6 +175,7 @@ public class BankTransactionsService {
                     :transactionType,
                     :transactionDate,
                     :postDate,
+                    :referenceNumber,
                     :description,
                     :comments,
                     :checkNumber,
@@ -168,6 +190,7 @@ public class BankTransactionsService {
                     transactionType=:transactionType,
                     transactionDate=:transactionDate,
                     postDate=:postDate,
+                    referenceNumber=:referenceNumber,
                     description=:description,
                     comments=:comments,
                     checkNumber=:checkNumber,
@@ -182,6 +205,7 @@ public class BankTransactionsService {
                 .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
                 .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
                 .addValue("postDate", bankTransaction.postDate, Types.DATE)
+                .addValue("referenceNumber", bankTransaction.referenceNumber, Types.VARCHAR)
                 .addValue("description", bankTransaction.description, Types.VARCHAR)
                 .addValue("comments", bankTransaction.comments, Types.VARCHAR)
                 .addValue("checkNumber", bankTransaction.checkNumber, Types.VARCHAR)
@@ -202,6 +226,7 @@ public class BankTransactionsService {
         if (postDate != null) {
             bankTransaction.postDate = postDate.toLocalDate();
         }
+        bankTransaction.referenceNumber = resultSet.getString("referenceNumber");
         bankTransaction.description = resultSet.getString("description");
         bankTransaction.comments = resultSet.getString("comments");
         bankTransaction.checkNumber = resultSet.getString("checkNumber");

@@ -12,6 +12,7 @@ public class BankTransaction {
     public String transactionType;
     public LocalDate transactionDate;
     public LocalDate postDate;
+    public String referenceNumber;
     public String description;
     public String comments;
     public String checkNumber;
