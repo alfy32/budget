@@ -26,7 +26,7 @@ export class TransactionsUploadComponent {
       if (file != null && file.name != null) {
         if (file.name.startsWith('export_')) {
           this.account = "Gunnison Checking";
-        } else if (file.name.startsWith('transactions-')) {
+        } else if (file.name.startsWith('Transactions')) {
           this.account = "Zions Cash Back Visa";
         }
       }
