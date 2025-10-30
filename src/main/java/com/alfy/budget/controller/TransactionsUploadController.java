@@ -532,7 +532,9 @@ public class TransactionsUploadController {
 
     private static String[] parseCsvLine(String line) throws IOException, CsvValidationException {
         if (line != null && !line.isEmpty()) {
-            try (CSVReader strings = new CSVReader(new StringReader(line))) {
+            // Remove Zero Width No-Break Space character
+            String cleanLine = line.replace("\uFEFF", "");
+            try (CSVReader strings = new CSVReader(new StringReader(cleanLine))) {
                 return strings.readNext();
             }
         }
