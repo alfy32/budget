@@ -14,4 +14,4 @@ BACKUP_FILE="$BACKUP_DIR/$DB_NAME-$DATE.sql"
 PGPASSWORD="$DB_PASS" pg_dump -U "$DB_USER" -h localhost "$DB_NAME" > "$BACKUP_FILE"
 
 # Optional: Remove old backups (e.g., older than 7 days)
-find "$BACKUP_DIR" -type f -name "*.sql" -mtime +7 -delete
+find "$BACKUP_DIR" -type f -name "*.sql" -mtime +30 -delete
