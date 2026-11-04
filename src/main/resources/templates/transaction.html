@@ -36,9 +36,15 @@
                 <div class="value" th:text="${t.splitIndex > 0 ? 'Split' : 'Not split'}">Not split</div>
                 <svg th:replace="~{layout :: chevron}"></svg>
             </a>
-            <form class="row" th:hx-post="@{/transactions/{id}/needs-transferred(id=${t.id})}" hx-trigger="change">
+            <!-- Only for budgets that are paid back from another account (e.g. Yearly → checking). -->
+            <form class="row" th:if="${transferAccount != null}"
+                  th:hx-post="@{/transactions/{id}/needs-transferred(id=${t.id})}" hx-trigger="change">
                 <input type="hidden" name="query" th:if="${query}" th:value="${query}">
-                <label class="main" th:for="'transferred'">Needs transferred</label>
+                <label class="main" for="transferred">
+                    <span th:text="|Needs transfer from ${transferAccount}|">Needs transfer from Yearly</span>
+                    <span class="sub" style="display: block;" th:if="${!t.needsTransferred && t.transferredFrom != null}"
+                          th:text="|Paid back from ${t.transferredFrom}|">Paid back from Yearly</span>
+                </label>
                 <input id="transferred" class="switch" type="checkbox" th:checked="${t.needsTransferred}">
             </form>
         </div>

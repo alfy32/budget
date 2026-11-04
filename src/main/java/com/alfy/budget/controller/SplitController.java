@@ -106,7 +106,7 @@ public class SplitController {
                 transactionsService.updateTransaction(splitTransaction);
             } else {
                 splitTransaction.description = first.description;
-                transactionsService.addSplitTransaction(bankTransaction, splitTransaction);
+                transactionsService.addSplitTransaction(bankTransaction, splitTransaction, first.transferredFrom);
             }
         }
 

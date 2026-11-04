@@ -214,6 +214,7 @@ public class TransactionsController {
         transaction.bankTransaction = bankTransactionsService.get(transaction.bankTransaction.id);
 
         model.addAttribute("transaction", transaction);
+        model.addAttribute("transferAccount", transactionsService.transferAccountFor(id));
         model.addAttribute("query", query);
         return "transaction";
     }

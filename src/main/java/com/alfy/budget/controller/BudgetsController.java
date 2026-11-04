@@ -82,7 +82,10 @@ public class BudgetsController {
 
     @GetMapping("/needs-transferred")
     public String needsTransferred(Model model) {
-        model.addAttribute("transfers", budgetReportsService.needsTransferred());
+        // Only accounts with something to move.
+        model.addAttribute("transfers", budgetReportsService.needsTransferred().stream()
+                .filter(transfer -> transfer.amount.signum() != 0)
+                .toList());
         return "needs-transferred";
     }
 

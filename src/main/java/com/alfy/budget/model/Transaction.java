@@ -18,6 +18,8 @@ public class Transaction {
     public String tags;
     public String notes;
     public boolean needsTransferred;
+    /** The account that paid checking back for this transaction, once it's transferred. */
+    public String transferredFrom;
 
     public boolean credit() {
         return "credit".equalsIgnoreCase(transactionType);

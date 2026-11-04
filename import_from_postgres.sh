@@ -52,13 +52,19 @@ echo "➡️  Copying $SOURCE_DB into $TARGET_FILE..."
         FROM bank_transactions"
 
     # A transaction pointing at a deleted category becomes 'needs categorized', same as the old app showed it.
+    # Transfers: v1 flagged every transaction. Only ones in a budget with a transfer account keep the flag;
+    # ones there that were already marked done record that account as transferred_from.
     "${PSQL[@]}" -c "
-        SELECT format('INSERT INTO transactions (id, bank_transaction_id, split_index, account, transaction_type, transaction_date, description, amount, category_id, tags, notes, needs_transferred) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);',
+        SELECT format('INSERT INTO transactions (id, bank_transaction_id, split_index, account, transaction_type, transaction_date, description, amount, category_id, tags, notes, needs_transferred, transferred_from) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);',
             quote_nullable(t.id::text), quote_nullable(t.banktransactionid::text), coalesce(t.splitindex, -1),
             quote_nullable(t.account), quote_nullable(t.transactiontype), quote_nullable(t.transactiondate::text),
             quote_nullable(t.description), t.amount, quote_nullable(c.id::text),
-            quote_nullable(t.tags), quote_nullable(t.notes), CASE WHEN t.needs_transferred THEN 1 ELSE 0 END)
-        FROM transactions t LEFT JOIN categories c ON c.id = t.categoryid"
+            quote_nullable(t.tags), quote_nullable(t.notes),
+            CASE WHEN coalesce(t.needs_transferred, false) AND coalesce(b.transfer_account, '') <> '' THEN 1 ELSE 0 END,
+            quote_nullable(CASE WHEN NOT coalesce(t.needs_transferred, false) AND coalesce(b.transfer_account, '') <> '' THEN b.transfer_account END))
+        FROM transactions t
+        LEFT JOIN categories c ON c.id = t.categoryid
+        LEFT JOIN budgets b ON b.id = c.budgetid"
 
     # The rules that used to be hard-coded in AutoCategorizeService.java.
     "${PSQL[@]}" -c "

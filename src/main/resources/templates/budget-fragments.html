@@ -5,8 +5,8 @@
 <!--
   One budget as a card: name, how much is left (or over), a bar, and its categories.
     b         a BudgetInfo
-    query     how a category row links to its transactions, e.g. 'category,{id},2026-11-01,2026-11-30'
-              (written with {id} where the category id goes)
+    start/end the date range; each category row links to its transactions in that range
+              (dates written with toString() so they come out as 2026-11-01, not 11/1/26)
     expected  true on the yearly page: draws a tick where spending "should" be by today
 -->
 <div th:fragment="budget-card(b, start, end, expected)" class="card"
@@ -29,7 +29,7 @@
         </div>
     </a>
     <a class="row" th:each="c : ${b.categories}"
-       th:href="@{/transactions(query=${start == null ? 'category,' + c.category.id + ',needsTransferred' : 'category,' + c.category.id + ',' + start + ',' + end})}">
+       th:href="@{/transactions(query=|category,${c.category.id},${start.toString()},${end.toString()}|)}">
         <div class="main small" th:text="${c.category.name}">Category</div>
         <div class="amount small" th:text="${#numbers.formatCurrency(c.total)}">$0.00</div>
         <svg th:replace="~{layout :: chevron}"></svg>

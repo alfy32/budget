@@ -20,7 +20,7 @@ public class HomeController {
     @GetMapping("/")
     public String home(Model model) {
         model.addAttribute("needsCategorized", transactionsService.countNeedsCategorized());
-        model.addAttribute("needsTransferred", transactionsService.countNeedsTransferred());
+        model.addAttribute("transfers", transactionsService.transferSummary());
         model.addAttribute("accounts", accountsService.list());
         return "home";
     }

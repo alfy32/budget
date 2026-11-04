@@ -107,6 +107,20 @@ class BudgetApplicationTests {
         }
 
         mvc.perform(get("/transactions?search=gunnison")).andExpect(content().string(org.hamcrest.Matchers.containsString("GUNNISON MARKET")));
+
+        // Follow the category links on the monthly and yearly pages (they carry dates in the URL).
+        for (String report : new String[]{"/monthly", "/yearly"}) {
+            String html = mvc.perform(get(report)).andReturn().getResponse().getContentAsString();
+            var links = java.util.regex.Pattern.compile("href=\"(/transactions\\?query=category[^\"]*)\"").matcher(html);
+            int followed = 0;
+            while (links.find()) {
+                String link = org.springframework.web.util.HtmlUtils.htmlUnescape(links.group(1));
+                assertTrue(link.matches(".*\\d{4}-\\d{2}-\\d{2}.*"), report + " link has ISO dates: " + link);
+                mvc.perform(get(java.net.URI.create(link))).andExpect(status().isOk());
+                followed++;
+            }
+            assertTrue(followed > 0, report + " has category links");
+        }
         mvc.perform(get("/monthly")).andExpect(content().string(org.hamcrest.Matchers.containsString("$42.50 of $700.00")));
     }
 
@@ -243,6 +257,72 @@ class BudgetApplicationTests {
             count++;
         }
         return count;
+    }
+
+    @Test
+    void transfersFollowTheCategoryUntilPaidBack() throws Exception {
+        Budget yearly = budgetsService.add(Budget.create("TransferTest Yearly", new BigDecimal("100")));
+        budgetsService.setTransferAccount(yearly.id, "TransferTest A");
+        Budget savings = budgetsService.add(Budget.create("TransferTest Savings", new BigDecimal("100")));
+        budgetsService.setTransferAccount(savings.id, "TransferTest B");
+        Budget plain = budgetsService.add(Budget.create("TransferTest Plain", new BigDecimal("100")));
+
+        Category inYearly = Category.create("TransferTest Car", yearly);
+        Category inSavings = Category.create("TransferTest Hired Help", savings);
+        Category inPlain = Category.create("TransferTest Snacks", plain);
+        categoriesService.add(inYearly);
+        categoriesService.add(inSavings);
+        categoriesService.add(inPlain);
+
+        BankTransaction bank = new BankTransaction();
+        bank.account = "SBSU Checking";
+        bank.transactionType = "debit";
+        bank.transactionDate = LocalDate.of(2022, 5, 5);
+        bank.description = "TRANSFERTEST OIL CHANGE";
+        bank.amount = new BigDecimal("80.00");
+        bankTransactionsService.add(bank);
+        UUID id = transactionsService.addFrom(bank);
+
+        // New and uncategorized: nothing to transfer.
+        assertFalse(transactionsService.get(id).needsTransferred);
+
+        // The flag follows the category until it's paid back.
+        transactionsService.updateCategory(id, inPlain.id);
+        assertFalse(transactionsService.get(id).needsTransferred);
+        transactionsService.updateCategory(id, inYearly.id);
+        assertTrue(transactionsService.get(id).needsTransferred);
+        assertEquals("TransferTest A", transactionsService.transferAccountFor(id));
+        transactionsService.updateCategory(id, inPlain.id);
+        assertFalse(transactionsService.get(id).needsTransferred);
+        transactionsService.updateCategory(id, inYearly.id);
+
+        // Paying it back records where the money came from...
+        mvc.perform(post("/needs-transferred/mark").param("account", "TransferTest A"));
+        var paid = transactionsService.get(id);
+        assertFalse(paid.needsTransferred);
+        assertEquals("TransferTest A", paid.transferredFrom);
+
+        // ...and moving it to another transfer budget afterwards doesn't ask for the money again.
+        transactionsService.updateCategory(id, inSavings.id);
+        assertFalse(transactionsService.get(id).needsTransferred);
+        assertEquals("TransferTest A", transactionsService.get(id).transferredFrom);
+
+        // Splitting a paid-back transaction: the new row counts as paid back too.
+        mvc.perform(post("/split/" + bank.id)
+                .param("rows[0].id", id.toString()).param("rows[0].categoryId", inYearly.id.toString())
+                .param("rows[1].id", "").param("rows[1].categoryId", inSavings.id.toString()).param("rows[1].amount", "30.00"));
+        for (var row : transactionsService.listWithBankTransactionId(bank.id)) {
+            assertFalse(row.needsTransferred);
+            assertEquals("TransferTest A", row.transferredFrom);
+        }
+
+        // The page shows the switch with the account name, and the home tile only counts real transfers.
+        mvc.perform(get("/transactions/" + id))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Needs transfer from TransferTest A")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Paid back from TransferTest A")));
+        int before = transactionsService.transferSummary().count();
+        transactionsService.needsTransferred(id, true);
+        assertEquals(before + 1, transactionsService.transferSummary().count());
     }
 
     @Test

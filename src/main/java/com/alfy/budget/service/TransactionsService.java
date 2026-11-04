@@ -15,6 +15,26 @@ public class TransactionsService {
 
     private static final String ORDER = " ORDER BY transaction_date DESC, description";
 
+    /*
+     * Transfers: spending comes out of checking. When a transaction's budget has a transfer account
+     * (e.g. "Yearly"), checking gets paid back from that account. needs_transferred = 1 means it hasn't
+     * been yet; transferred_from records the account that did pay it back. Choosing a category sets
+     * needs_transferred from the category's budget, unless the transaction was already paid back.
+     */
+
+    /** SQL for the transfer account of a category (null if its budget has none). %s is the category id. */
+    private static final String TRANSFER_ACCOUNT_OF = """
+            (SELECT nullif(budgets.transfer_account, '')
+             FROM categories JOIN budgets ON budgets.id = categories.budget_id
+             WHERE categories.id = %s)""";
+
+    /** needs_transferred after choosing category :categoryId for an existing transaction. */
+    private static final String NEEDS_TRANSFERRED_FOR_NEW_CATEGORY =
+            "CASE WHEN transferred_from IS NOT NULL THEN 0 WHEN " + TRANSFER_ACCOUNT_OF.formatted(":categoryId") + " IS NOT NULL THEN 1 ELSE 0 END";
+
+    /** Transactions waiting for a transfer, in a budget that has a transfer account. */
+    private static final String WAITING_FOR_TRANSFER = "needs_transferred = 1 AND " + TRANSFER_ACCOUNT_OF.formatted("transactions.category_id") + " IS NOT NULL";
+
     private final NamedParameterJdbcTemplate jdbc;
 
     public TransactionsService(NamedParameterJdbcTemplate jdbc) {
@@ -31,7 +51,7 @@ public class TransactionsService {
                 )
                 VALUES (
                     :id, :bankTransactionId, :account, :transactionType, :transactionDate,
-                    :description, :amount, 1
+                    :description, :amount, 0
                 )
                 """;
 
@@ -91,7 +111,7 @@ public class TransactionsService {
             query.append(" AND category_id IS NULL");
         }
         if (filter.needsTransferred()) {
-            query.append(" AND needs_transferred = 1");
+            query.append(" AND ").append(WAITING_FOR_TRANSFER);
         }
         if (filter.categoryId() != null) {
             query.append(" AND category_id = :categoryId");
@@ -123,9 +143,18 @@ public class TransactionsService {
         return count == null ? 0 : count;
     }
 
-    public int countNeedsTransferred() {
-        Integer count = jdbc.queryForObject("SELECT count(*) FROM transactions WHERE needs_transferred = 1", Map.of(), Integer.class);
-        return count == null ? 0 : count;
+    /** How many transactions wait for a transfer, and the total to move (debits add, credits subtract). */
+    public record TransferSummary(int count, BigDecimal amount) {
+    }
+
+    public TransferSummary transferSummary() {
+        return jdbc.queryForObject("""
+                        SELECT count(*) AS count,
+                               coalesce(sum(CASE WHEN transaction_type = 'credit' THEN -amount ELSE amount END), 0) AS cents
+                        FROM transactions
+                        WHERE %s
+                        """.formatted(WAITING_FOR_TRANSFER), Map.of(),
+                (resultSet, rowNum) -> new TransferSummary(resultSet.getInt("count"), Tools.fromDatabaseInt(resultSet.getInt("cents"))));
     }
 
     public List<Transaction> listNeedTransferred() {
@@ -162,7 +191,18 @@ public class TransactionsService {
     }
 
     public void updateCategory(UUID transactionId, UUID categoryId) {
-        update(transactionId, "category_id", Db.id(categoryId));
+        jdbc.update("UPDATE transactions SET category_id = :categoryId, needs_transferred = " + NEEDS_TRANSFERRED_FOR_NEW_CATEGORY + " WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("id", Db.id(transactionId))
+                        .addValue("categoryId", Db.id(categoryId)));
+    }
+
+    /** The account this transaction's budget transfers from, or null. */
+    public String transferAccountFor(UUID transactionId) {
+        List<String> accounts = jdbc.queryForList(
+                "SELECT " + TRANSFER_ACCOUNT_OF.formatted("transactions.category_id") + " FROM transactions WHERE id = :id",
+                new MapSqlParameterSource("id", Db.id(transactionId)), String.class);
+        return accounts.isEmpty() ? null : accounts.getFirst();
     }
 
     public void updateAmount(UUID transactionId, BigDecimal amount) {
@@ -189,8 +229,12 @@ public class TransactionsService {
         update(transactionId, "tags", tags == null || tags.isBlank() ? null : tags);
     }
 
+    /** Switched on or off by hand on a transaction's page. Off counts as paid back from its budget's account. */
     public void needsTransferred(UUID transactionId, boolean needsTransferred) {
-        update(transactionId, "needs_transferred", needsTransferred ? 1 : 0);
+        String set = needsTransferred
+                ? "needs_transferred = 1, transferred_from = NULL"
+                : "needs_transferred = 0, transferred_from = " + TRANSFER_ACCOUNT_OF.formatted("transactions.category_id");
+        jdbc.update("UPDATE transactions SET " + set + " WHERE id = :id", new MapSqlParameterSource("id", Db.id(transactionId)));
     }
 
     private void update(UUID transactionId, String column, Object value) {
@@ -206,9 +250,10 @@ public class TransactionsService {
                 SET description = :description,
                     category_id = :categoryId,
                     amount = :amount,
-                    split_index = :splitIndex
+                    split_index = :splitIndex,
+                    needs_transferred = %s
                 WHERE id = :id
-                """;
+                """.formatted(NEEDS_TRANSFERRED_FOR_NEW_CATEGORY);
 
         jdbc.update(query, new MapSqlParameterSource()
                 .addValue("id", Db.id(splitTransaction.id))
@@ -218,17 +263,22 @@ public class TransactionsService {
                 .addValue("categoryId", Db.id(splitTransaction.categoryId)));
     }
 
-    public void addSplitTransaction(BankTransaction bankTransaction, SplitTransaction splitTransaction) {
+    /**
+     * transferredFrom: the account the original transaction was already paid back from, or null. A new split
+     * row of an already paid-back transaction counts as paid back too.
+     */
+    public void addSplitTransaction(BankTransaction bankTransaction, SplitTransaction splitTransaction, String transferredFrom) {
         String query = """
                 INSERT INTO transactions (
                     id, bank_transaction_id, split_index, account, transaction_type, transaction_date,
-                    description, amount, category_id
+                    description, amount, category_id, transferred_from, needs_transferred
                 )
                 VALUES (
                     :id, :bankTransactionId, :splitIndex, :account, :transactionType, :transactionDate,
-                    :description, :amount, :categoryId
+                    :description, :amount, :categoryId, :transferredFrom,
+                    CASE WHEN :transferredFrom IS NOT NULL THEN 0 WHEN %s IS NOT NULL THEN 1 ELSE 0 END
                 )
-                """;
+                """.formatted(TRANSFER_ACCOUNT_OF.formatted(":categoryId"));
 
         jdbc.update(query, new MapSqlParameterSource()
                 .addValue("id", Db.id(UUID.randomUUID()))
@@ -239,7 +289,8 @@ public class TransactionsService {
                 .addValue("transactionDate", Db.date(bankTransaction.transactionDate))
                 .addValue("description", splitTransaction.description)
                 .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount))
-                .addValue("categoryId", Db.id(splitTransaction.categoryId)));
+                .addValue("categoryId", Db.id(splitTransaction.categoryId))
+                .addValue("transferredFrom", transferredFrom));
     }
 
     public int markTransactionsTransferredForAccount(String transferAccount) {
@@ -249,8 +300,9 @@ public class TransactionsService {
 
         String query = """
                 UPDATE transactions
-                SET needs_transferred = 0
-                WHERE category_id IN (
+                SET needs_transferred = 0, transferred_from = :transferAccount
+                WHERE needs_transferred = 1
+                  AND category_id IN (
                     SELECT categories.id FROM categories
                     JOIN budgets ON budgets.id = categories.budget_id
                     WHERE budgets.transfer_account = :transferAccount
@@ -281,6 +333,7 @@ public class TransactionsService {
         transaction.tags = resultSet.getString("tags");
         transaction.notes = resultSet.getString("notes");
         transaction.needsTransferred = resultSet.getBoolean("needs_transferred");
+        transaction.transferredFrom = resultSet.getString("transferred_from");
         return transaction;
     }
 }

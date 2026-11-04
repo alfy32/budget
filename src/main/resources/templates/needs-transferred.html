@@ -10,6 +10,9 @@
         <a class="seg-link active" th:href="@{/needs-transferred}">Transfer</a>
     </div>
 
+    <p class="hint" style="margin: 0 4px 4px 4px;">
+        Spending in budgets with a transfer account, still to be moved from that account into checking.
+    </p>
     <div class="empty" th:if="${transfers.isEmpty()}">Nothing to transfer.</div>
 
     <th:block th:each="transfer : ${transfers}">
@@ -27,13 +30,13 @@
         </div>
 
         <div class="card spaced">
-            <th:block th:each="b : ${transfer.budgets}">
+            <th:block th:each="b : ${transfer.budgets}" th:if="${b.total.signum() != 0}">
                 <a class="row" th:href="@{/budgets/{id}(id=${b.budget.id})}">
                     <div class="main title" th:text="${b.budget.name}">Budget</div>
                     <div class="amount" th:text="${#numbers.formatCurrency(b.total)}">$0.00</div>
                     <svg th:replace="~{layout :: chevron}"></svg>
                 </a>
-                <a class="row" th:each="c : ${b.categories}" th:href="@{/transactions(query=|category,${c.category.id},needsTransferred|)}"
+                <a class="row" th:each="c : ${b.categories}" th:if="${c.total.signum() != 0}" th:href="@{/transactions(query=|category,${c.category.id},needsTransferred|)}"
                    style="padding-left: 28px;">
                     <div class="main small muted" th:text="${c.category.name}">Category</div>
                     <div class="amount small muted" th:text="${#numbers.formatCurrency(c.total)}">$0.00</div>
