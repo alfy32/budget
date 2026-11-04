@@ -98,14 +98,14 @@ public class PlansService {
                 SELECT :id, :start, gross_salary, savings_target, hsa_limit FROM plans WHERE id = :from
                 """, params);
         jdbc.update("""
-                INSERT INTO plan_lines (plan_id, category_id, budget_id, amount)
-                SELECT :id, category_id, budget_id, amount FROM plan_lines WHERE plan_id = :from
+                INSERT INTO plan_lines (plan_id, category_id, budget_id, amount, unit)
+                SELECT :id, category_id, budget_id, amount, unit FROM plan_lines WHERE plan_id = :from
                 """, params);
         jdbc.update("""
-                INSERT INTO plan_pay_items (id, plan_id, section, name, kind, base, value, retirement, hsa, sort)
+                INSERT INTO plan_pay_items (id, plan_id, section, name, kind, base, value, retirement, hsa, unit, sort)
                 SELECT lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' ||
                              hex(randomblob(2)) || '-' || hex(randomblob(6))),
-                       :id, section, name, kind, base, value, retirement, hsa, sort
+                       :id, section, name, kind, base, value, retirement, hsa, unit, sort
                 FROM plan_pay_items WHERE plan_id = :from
                 """, params);
 
@@ -218,6 +218,7 @@ public class PlansService {
                     item.value = Tools.fromDatabaseInt(resultSet.getInt("value"));
                     item.retirement = resultSet.getBoolean("retirement");
                     item.hsa = resultSet.getBoolean("hsa");
+                    item.unit = resultSet.getString("unit");
                     return item;
                 });
     }
@@ -239,6 +240,27 @@ public class PlansService {
                         .addValue("value", Tools.toDatabaseInt(value == null ? BigDecimal.ZERO : value.abs()))
                         .addValue("retirement", retirement ? 1 : 0)
                         .addValue("hsa", hsa ? 1 : 0));
+    }
+
+    /** The unit a line is entered in (year, month or paycheck); only changes how the worksheet shows it. */
+    public void setLineUnit(UUID planId, UUID categoryId, String unit) {
+        jdbc.update("UPDATE plan_lines SET unit = :unit WHERE plan_id = :planId AND category_id = :categoryId",
+                new MapSqlParameterSource()
+                        .addValue("planId", Db.id(planId))
+                        .addValue("categoryId", Db.id(categoryId))
+                        .addValue("unit", validUnit(unit)));
+    }
+
+    public void setPayUnit(UUID planId, UUID itemId, String unit) {
+        jdbc.update("UPDATE plan_pay_items SET unit = :unit WHERE plan_id = :planId AND id = :id",
+                new MapSqlParameterSource()
+                        .addValue("planId", Db.id(planId))
+                        .addValue("id", Db.id(itemId))
+                        .addValue("unit", validUnit(unit)));
+    }
+
+    private static String validUnit(String unit) {
+        return "month".equals(unit) || "paycheck".equals(unit) ? unit : "year";
     }
 
     public void setHsaLimit(UUID planId, BigDecimal limit) {
@@ -449,6 +471,7 @@ public class PlansService {
         line.budgetName = resultSet.getString("budget_name");
         line.group = PlanGroup.fromDb(resultSet.getString("plan_group"));
         line.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
+        line.unit = resultSet.getString("unit");
         return line;
     }
 

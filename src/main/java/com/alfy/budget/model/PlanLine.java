@@ -17,6 +17,8 @@ public class PlanLine {
     public PlanGroup group;
     /** Per year. */
     public BigDecimal amount = BigDecimal.ZERO;
+    /** The unit the amount is entered in on the worksheet: year, month or paycheck. */
+    public String unit = "year";
 
     public BigDecimal perMonth() {
         return amount.divide(BigDecimal.valueOf(12), 2, RoundingMode.HALF_UP);

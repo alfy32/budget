@@ -1200,8 +1200,8 @@ label.main {
 }
 
 .pay-row select {
-    flex: 0 0 112px;
-    width: 112px;
+    flex: 0 0 auto;
+    width: auto;
     min-height: 38px;
     padding: 4px 6px;
     font-size: 15px;
@@ -1376,4 +1376,53 @@ label.main {
     justify-content: space-between;
     gap: 6px;
     margin-top: 6px;
+}
+
+/* A box and its unit (/yr, /mo, /check) side by side */
+.amount-entry {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+    min-width: 0;
+}
+
+.amount-entry input {
+    flex: 1;
+    min-width: 0;
+}
+
+.amount-entry select, .pay-row select.unit {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 38px;
+    padding: 4px 4px;
+    font-size: 14px;
+}
+
+.plan-line .pct {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.2;
+}
+
+.pay-row select.kind {
+    flex: 0 0 96px;
+    width: 96px;
+}
+
+.pay-row input.value {
+    flex: 1 1 110px;
+    min-width: 90px;
+}
+
+.pay-row.options {
+    gap: 14px;
+    margin-top: 2px;
+}
+
+.pay-row.options .link-button {
+    min-height: 28px;
+    padding: 2px 4px;
+    font-size: 13px;
 }

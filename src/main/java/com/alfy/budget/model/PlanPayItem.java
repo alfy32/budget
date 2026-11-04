@@ -21,6 +21,8 @@ public class PlanPayItem {
     public boolean retirement;
     /** Counts toward the HSA total (checked against the plan's HSA limit). */
     public boolean hsa;
+    /** For a dollar amount: the unit it's entered in on the worksheet (year, month or paycheck). */
+    public String unit = "year";
 
     /** Dollars per year. */
     public BigDecimal amount(BigDecimal gross, BigDecimal taxable) {

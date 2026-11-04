@@ -503,6 +503,15 @@ class BudgetApplicationTests {
             mvc.perform(get(location)).andExpect(status().isOk())
                     .andExpect(content().string(org.hamcrest.Matchers.containsString("Proposed")));
 
+            // Each line remembers the unit it's entered in, and a new proposal copies it.
+            mvc.perform(post(location).param("lineUnit_" + category.id, "paycheck"));
+            assertEquals("paycheck", plansService.lines(proposalId).stream()
+                    .filter(line -> line.categoryId.equals(category.id)).findFirst().orElseThrow().unit);
+            UUID copyId = plansService.copy(proposalId, null);
+            assertEquals("paycheck", plansService.lines(copyId).stream()
+                    .filter(line -> line.categoryId.equals(category.id)).findFirst().orElseThrow().unit);
+            plansService.delete(copyId);
+
             // Editing it doesn't touch the current plan.
             mvc.perform(post(location).param("line_" + category.id, "99999"));
             assertEquals(new BigDecimal("8400.00"), plansService.lines(current.id).stream()

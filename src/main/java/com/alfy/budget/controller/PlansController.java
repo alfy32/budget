@@ -118,7 +118,8 @@ public class PlansController {
                     "id", line.categoryId.toString(),
                     "budget", line.budgetId.toString(),
                     "group", line.group.dbValue,
-                    "amount", line.amount.toPlainString()));
+                    "amount", line.amount.toPlainString(),
+                    "unit", line.unit));
         }
         List<PlanPayItem> payItems = plansService.payItems(plan.id);
         Map<PaySection, List<PlanPayItem>> payBySection = new LinkedHashMap<>();
@@ -134,7 +135,8 @@ public class PlansController {
                     "kind", item.percent ? (item.ofTaxable ? "taxable" : "gross") : "amount",
                     "value", item.value.toPlainString(),
                     "retirement", String.valueOf(item.retirement),
-                    "hsa", String.valueOf(item.hsa)));
+                    "hsa", String.valueOf(item.hsa),
+                    "unit", item.unit));
         }
         boolean hasDonationLines = !payBySection.get(PaySection.DONATION).isEmpty();
 
@@ -197,6 +199,10 @@ public class PlansController {
                 plansService.updatePayItem(plan.id, itemId, form.get("payName_" + itemId), !kind.equals("amount"),
                         kind.equals("taxable"), money(entry.getValue()), form.containsKey("payRetirement_" + itemId),
                         form.containsKey("payHsa_" + itemId));
+            } else if (entry.getKey().startsWith("lineUnit_")) {
+                plansService.setLineUnit(plan.id, UUID.fromString(entry.getKey().substring("lineUnit_".length())), entry.getValue());
+            } else if (entry.getKey().startsWith("payUnit_")) {
+                plansService.setPayUnit(plan.id, UUID.fromString(entry.getKey().substring("payUnit_".length())), entry.getValue());
             } else if (entry.getKey().startsWith("budget_") && !entry.getValue().isBlank()) {
                 plansService.putLine(plan.id, UUID.fromString(entry.getKey().substring(7)), UUID.fromString(entry.getValue()));
             }
