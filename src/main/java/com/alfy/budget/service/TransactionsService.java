@@ -114,6 +114,18 @@ public class TransactionsService {
         return jdbc.query(query, new MapSqlParameterSource("categoryId", Db.id(categoryId)), TransactionsService::map);
     }
 
+    /** Oldest first, so a running balance can be added up in order. */
+    public List<Transaction> listForAccount(UUID accountId) {
+        String query = """
+                SELECT transactions.* FROM transactions
+                JOIN categories ON categories.id = transactions.category_id
+                WHERE categories.account_id = :accountId
+                ORDER BY transactions.transaction_date, transactions.description, transactions.id
+                """;
+
+        return jdbc.query(query, new MapSqlParameterSource("accountId", Db.id(accountId)), TransactionsService::map);
+    }
+
     public List<Transaction> listByDate(LocalDate start, LocalDate end) {
         String query = """
                 SELECT * FROM transactions

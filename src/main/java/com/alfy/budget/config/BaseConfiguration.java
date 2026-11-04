@@ -34,6 +34,11 @@ public class BaseConfiguration {
     }
 
     @Bean
+    public AccountsService accountsService(NamedParameterJdbcTemplate jdbc, TransactionsService transactionsService) {
+        return new AccountsService(jdbc, transactionsService);
+    }
+
+    @Bean
     public BudgetReportsService budgetReportsService(
             BudgetsService budgetsService,
             CategoriesService categoriesService,

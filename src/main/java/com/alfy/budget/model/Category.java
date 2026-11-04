@@ -7,6 +7,8 @@ public class Category {
     public UUID id;
     public String name;
     public Budget budget;
+    /** The account this category counts toward, or null. */
+    public UUID accountId;
 
     public static Category create(String name) {
         return create(name, null);

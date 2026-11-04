@@ -285,3 +285,29 @@ progress.progress-normal {
     padding: 8px 0;
     border-bottom: 1px solid #ccc;
 }
+
+/* ---- Accounts --------------------------------------------------------------------------- */
+
+.account-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 12px 5px;
+    border-bottom: 1px solid #ccc;
+    color: inherit;
+    text-decoration: none;
+    font-size: x-large;
+}
+
+.negative {
+    color: crimson;
+}
+
+.tag.small {
+    font-size: large;
+    gap: 10px;
+}
+
+.hint {
+    font-size: small;
+    color: #888;
+}

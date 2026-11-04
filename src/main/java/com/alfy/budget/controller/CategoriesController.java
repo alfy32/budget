@@ -1,6 +1,7 @@
 package com.alfy.budget.controller;
 
 import com.alfy.budget.model.Category;
+import com.alfy.budget.service.AccountsService;
 import com.alfy.budget.service.AutoCategorizeService;
 import com.alfy.budget.service.BudgetsService;
 import com.alfy.budget.service.CategoriesService;
@@ -17,15 +18,18 @@ public class CategoriesController {
     private final CategoriesService categoriesService;
     private final BudgetsService budgetsService;
     private final AutoCategorizeService autoCategorizeService;
+    private final AccountsService accountsService;
 
     public CategoriesController(
             CategoriesService categoriesService,
             BudgetsService budgetsService,
-            AutoCategorizeService autoCategorizeService
+            AutoCategorizeService autoCategorizeService,
+            AccountsService accountsService
     ) {
         this.categoriesService = categoriesService;
         this.budgetsService = budgetsService;
         this.autoCategorizeService = autoCategorizeService;
+        this.accountsService = accountsService;
     }
 
     // ---- Categories --------------------------------------------------------------------------
@@ -47,6 +51,7 @@ public class CategoriesController {
     public String category(@PathVariable UUID id, Model model) {
         model.addAttribute("category", categoriesService.get(id));
         model.addAttribute("budgets", budgetsService.list());
+        model.addAttribute("accounts", accountsService.list());
         return "category";
     }
 
@@ -60,6 +65,12 @@ public class CategoriesController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void setBudget(@PathVariable UUID id, @RequestParam(required = false) UUID budgetId) {
         categoriesService.setBudget(id, budgetId);
+    }
+
+    @PostMapping("/categories/{id}/account")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setAccount(@PathVariable UUID id, @RequestParam(required = false) UUID accountId) {
+        categoriesService.setAccount(id, accountId);
     }
 
     @PostMapping("/categories/{id}/delete")

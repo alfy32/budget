@@ -68,6 +68,13 @@ public class CategoriesService {
                         .addValue("budgetId", Db.id(budgetId)));
     }
 
+    public void setAccount(UUID id, UUID accountId) {
+        jdbc.update("UPDATE categories SET account_id = :accountId WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("id", Db.id(id))
+                        .addValue("accountId", Db.id(accountId)));
+    }
+
     public void delete(UUID id) {
         jdbc.update("DELETE FROM categories WHERE id = :id", new MapSqlParameterSource("id", Db.id(id)));
     }
@@ -83,6 +90,7 @@ public class CategoriesService {
             category.budget.id = budgetId;
         }
 
+        category.accountId = Db.getId(resultSet, "account_id");
         return category;
     }
 }

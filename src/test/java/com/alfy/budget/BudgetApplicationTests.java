@@ -40,6 +40,8 @@ class BudgetApplicationTests {
     TransactionsService transactionsService;
     @Autowired
     AutoCategorizeService autoCategorizeService;
+    @Autowired
+    AccountsService accountsService;
 
     Budget budget;
     Category category;
@@ -94,6 +96,7 @@ class BudgetApplicationTests {
                 "/categories/" + category.id,
                 "/rules",
                 "/transactions-upload",
+                "/accounts",
         };
 
         for (String page : pages) {
@@ -143,6 +146,55 @@ class BudgetApplicationTests {
     void deletingACategoryUncategorizesItsTransactions() throws Exception {
         mvc.perform(post("/categories/" + category.id + "/delete")).andExpect(redirectedUrl("/categories"));
         assertNull(transactionsService.get(transactionId).category);
+    }
+
+    @Test
+    void accountAddsCreditsAndSubtractsDebits() throws Exception {
+        UUID accountId = accountsService.add("Gift Money Alan");
+        mvc.perform(post("/accounts/" + accountId + "/categories").param("categoryId", category.id.toString()))
+                .andExpect(redirectedUrl("/accounts/" + accountId));
+
+        BankTransaction gift = new BankTransaction();
+        gift.account = "SBSU Checking";
+        gift.transactionType = "credit";
+        gift.transactionDate = LocalDate.now().minusDays(1);
+        gift.description = "Birthday money";
+        gift.amount = new BigDecimal("100.00");
+        bankTransactionsService.add(gift);
+        transactionsService.updateCategory(transactionsService.addFrom(gift), category.id);
+
+        // +100.00 the day before, then -42.50 from addData()
+        assertEquals(new BigDecimal("57.50"), accountsService.get(accountId).balance);
+
+        var history = accountsService.history(accountId);
+        assertEquals(2, history.size());
+        assertEquals(new BigDecimal("57.50"), history.get(0).balanceAfter()); // newest first
+        assertEquals(new BigDecimal("100.00"), history.get(1).balanceAfter());
+
+        mvc.perform(get("/accounts")).andExpect(content().string(org.hamcrest.Matchers.containsString("$57.50")));
+        mvc.perform(get("/accounts/" + accountId)).andExpect(status().isOk());
+        mvc.perform(get("/categories/" + category.id)).andExpect(status().isOk());
+
+        // Its category has a budget, so it still shows on the yearly page.
+        categoriesService.setName(category.id, "Account Only Category");
+        mvc.perform(get("/yearly")).andExpect(content().string(org.hamcrest.Matchers.containsString("Account Only Category: ")));
+
+        // With no budget, an account's category is left off the yearly page (not even as Not Categorized).
+        String notCategorizedBefore = notCategorizedOnYearly();
+        mvc.perform(post("/categories/" + category.id + "/budget"));
+        mvc.perform(get("/yearly"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Account Only Category"))));
+        assertEquals(notCategorizedBefore, notCategorizedOnYearly());
+
+        // Spending more than is in it goes negative.
+        transactionsService.updateAmount(transactionId, new BigDecimal("150.00"));
+        assertEquals(new BigDecimal("-50.00"), accountsService.get(accountId).balance);
+    }
+
+    private String notCategorizedOnYearly() throws Exception {
+        String html = mvc.perform(get("/yearly")).andReturn().getResponse().getContentAsString();
+        var matcher = java.util.regex.Pattern.compile("Not Categorized: [^<]*").matcher(html);
+        return matcher.find() ? matcher.group() : "";
     }
 
     @Test

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${account.name})}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <div class="big-description" th:text="${account.name}">Account</div>
+    <div class="big-amount" th:classappend="${account.balance.signum() < 0} ? negative"
+         th:text="${#numbers.formatCurrency(account.balance)}">$0.00</div>
+
+    <!-- Settings are tucked away; tap to open. -->
+    <div th:x-data="|{ open: ${account.categoryCount == 0} }|">
+        <button class="button small" type="button" @click="open = !open"
+                x-text="open ? 'Hide settings' : 'Settings: name and categories'">Settings</button>
+
+        <div x-show="open" x-cloak>
+            <div x-data="{ saved: false }" @htmx:after-request="if ($event.detail.successful) { saved = true; setTimeout(() => saved = false, 1500) }">
+                <div class="label">Name <span class="saved" x-show="saved" x-cloak>saved</span></div>
+                <input type="text" name="name" th:value="${account.name}"
+                       th:hx-post="@{/accounts/{id}/name(id=${account.id})}" hx-swap="none">
+            </div>
+
+            <form method="post" th:action="@{/accounts/{id}/categories(id=${account.id})}">
+                <div class="label">Categories that count toward this account</div>
+                <label class="tag small" th:each="category : ${categories}">
+                    <input type="checkbox" name="categoryId" th:value="${category.id}"
+                           th:checked="${category.accountId == account.id}">
+                    <span>
+                        <span th:text="${category.name}">Category</span>
+                        <span class="hint" th:if="${category.accountId != null && category.accountId != account.id}"
+                              th:text="|(in ${accountNames[category.accountId]})|"></span>
+                    </span>
+                </label>
+                <button class="button" type="submit">Save Categories</button>
+            </form>
+
+            <div x-data="{ sure: false }">
+                <button class="button-red small" type="button" x-show="!sure" @click="sure = true">Delete Account</button>
+                <form x-show="sure" x-cloak method="post" th:action="@{/accounts/{id}/delete(id=${account.id})}">
+                    <p>Transactions and categories stay; they just stop counting toward this account.</p>
+                    <button class="button-red small" type="submit">Yes delete for sure</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="title">History</div>
+    <div class="empty" th:if="${history.isEmpty()}">No transactions yet. Pick categories in Settings.</div>
+
+    <a class="transaction-row" th:each="entry : ${history}" th:with="t=${entry.transaction()}"
+       th:href="@{/transactions/{id}(id=${t.id})}">
+        <div class="description" th:text="${t.description}">Description</div>
+        <div class="line">
+            <span th:text="|${#temporals.format(t.transactionDate, 'MMM d, yyyy')} · ${categoryNames[t.category.id]}|">Date · Category</span>
+            <span th:classappend="${t.credit()} ? credit"
+                  th:text="${(t.credit() ? '+' : '-') + #numbers.formatCurrency(t.amount)}">+$0.00</span>
+        </div>
+        <div class="line">
+            <span></span>
+            <span class="hint" th:classappend="${entry.balanceAfter().signum() < 0} ? negative"
+                  th:text="|Balance ${#numbers.formatCurrency(entry.balanceAfter())}|">Balance $0.00</span>
+        </div>
+    </a>
+</main>
+</body>
+</html>

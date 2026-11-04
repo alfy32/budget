@@ -125,6 +125,9 @@ public class BudgetReportsService {
             budgetInfoById.put(budget.id, budgetInfo);
         }
 
+        // Categories with no budget that belong to an account are tracked on the Accounts page instead.
+        Set<UUID> accountOnlyCategoryIds = new HashSet<>();
+
         boolean foundBudget;
         List<Category> categories = categoriesService.list();
         for (Category category : categories) {
@@ -139,6 +142,11 @@ public class BudgetReportsService {
                     budgetInfo.categories.add(categoryInfo);
                     foundBudget = true;
                 }
+            }
+
+            if (!foundBudget && category.accountId != null) {
+                accountOnlyCategoryIds.add(category.id);
+                continue;
             }
 
             if (!foundBudget) {
@@ -159,6 +167,10 @@ public class BudgetReportsService {
         List<Transaction> transactions = transactionsService.listByDate(start, end);
         for (Transaction transaction : transactions) {
             if (transaction.category != null && transaction.category.id != null) {
+                if (accountOnlyCategoryIds.contains(transaction.category.id)) {
+                    continue;
+                }
+
                 CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
                 if (categoryInfo != null) {
                     addTransactionToTotal(categoryInfo, transaction);

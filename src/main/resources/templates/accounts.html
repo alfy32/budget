@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Accounts')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Accounts</h2>
+
+    <div class="empty" th:if="${accounts.isEmpty()}">No accounts yet</div>
+
+    <a class="account-row" th:each="account : ${accounts}" th:href="@{/accounts/{id}(id=${account.id})}">
+        <span th:text="${account.name}">Gift Money Alan</span>
+        <span th:classappend="${account.balance.signum() < 0} ? negative"
+              th:text="${#numbers.formatCurrency(account.balance)}">$0.00</span>
+    </a>
+
+    <br>
+    <form method="post" th:action="@{/accounts}">
+        <input type="text" name="name" placeholder="New account name" required>
+        <button class="button" type="submit">Add Account</button>
+    </form>
+</main>
+</body>
+</html>

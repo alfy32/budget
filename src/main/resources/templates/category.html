@@ -16,6 +16,13 @@
             <option th:each="budget : ${budgets}" th:value="${budget.id}" th:text="${budget.name}"
                     th:selected="${category.budget != null && category.budget.id == budget.id}"></option>
         </select>
+
+        <div class="label">Account <span class="saved" x-show="saved === 'accountId'" x-cloak>saved</span></div>
+        <select name="accountId" th:hx-post="@{/categories/{id}/account(id=${category.id})}" hx-swap="none">
+            <option value="">No Account</option>
+            <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"
+                    th:selected="${category.accountId == account.id}"></option>
+        </select>
     </div>
 
     <br>
