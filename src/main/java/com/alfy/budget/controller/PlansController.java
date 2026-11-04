@@ -133,7 +133,8 @@ public class PlansController {
                     "section", item.section.dbValue,
                     "kind", item.percent ? (item.ofTaxable ? "taxable" : "gross") : "amount",
                     "value", item.value.toPlainString(),
-                    "retirement", String.valueOf(item.retirement)));
+                    "retirement", String.valueOf(item.retirement),
+                    "hsa", String.valueOf(item.hsa)));
         }
         boolean hasDonationLines = !payBySection.get(PaySection.DONATION).isEmpty();
 
@@ -194,12 +195,16 @@ public class PlansController {
                 UUID itemId = UUID.fromString(entry.getKey().substring("payValue_".length()));
                 String kind = form.getOrDefault("payKind_" + itemId, "amount");
                 plansService.updatePayItem(plan.id, itemId, form.get("payName_" + itemId), !kind.equals("amount"),
-                        kind.equals("taxable"), money(entry.getValue()), form.containsKey("payRetirement_" + itemId));
+                        kind.equals("taxable"), money(entry.getValue()), form.containsKey("payRetirement_" + itemId),
+                        form.containsKey("payHsa_" + itemId));
             } else if (entry.getKey().startsWith("budget_") && !entry.getValue().isBlank()) {
                 plansService.putLine(plan.id, UUID.fromString(entry.getKey().substring(7)), UUID.fromString(entry.getValue()));
             }
         }
         plansService.setAmounts(plan.id, amounts);
+        if (form.containsKey("hsaLimit")) {
+            plansService.setHsaLimit(plan.id, moneyOrNull(form.get("hsaLimit")));
+        }
         plansService.syncDonations(plan.id);
 
         String action = form.getOrDefault("action", "save");
@@ -246,7 +251,10 @@ public class PlansController {
             plansService.addPayItem(plan.id, PaySection.fromDb(section), form.get("newPayName_" + section));
         } else if (action.startsWith("removePay:")) {
             plansService.removePayItem(plan.id, UUID.fromString(action.substring("removePay:".length())));
-            plansService.syncDonations(plan.id);
+            if (form.containsKey("hsaLimit")) {
+            plansService.setHsaLimit(plan.id, moneyOrNull(form.get("hsaLimit")));
+        }
+        plansService.syncDonations(plan.id);
         } else if (action.equals("start")) {
             // Commit a proposal to a start month (or move a plan's start month).
             LocalDate start = parseMonth(form.get("startMonth"));

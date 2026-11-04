@@ -451,10 +451,41 @@ class BudgetApplicationTests {
         }
     }
 
+    @Test
+    void hsaCheckKeepsAPaycheckUnderTheLimit() {
+        // Made-up numbers: limit 5,000; yours 4,200/yr (175 a paycheck); employer 600/yr (25 a paycheck).
+        UUID planId = plansService.copy(plansService.current().id, null);
+        try {
+            plansService.update(planId, null, new BigDecimal("80000"), null);
+            plansService.setHsaLimit(planId, new BigDecimal("5000"));
+            plansService.addPayItem(planId, PaySection.PRETAX, "HSA mine");
+            plansService.addPayItem(planId, PaySection.INFO, "HSA employer");
+            for (var item : plansService.payItems(planId)) {
+                String value = item.name.equals("HSA mine") ? "4200" : "600";
+                plansService.updatePayItem(planId, item.id, item.name, false, false, new BigDecimal(value), false, true);
+            }
+
+            var check = plansService.hsaCheck(plansService.get(planId));
+            assertEquals(new BigDecimal("4800.00"), check.total());
+            assertEquals(new BigDecimal("200.00"), check.spare());
+            assertEquals(new BigDecimal("200.00"), check.onePaycheck());
+            assertTrue(check.ok(), "exactly one paycheck to spare is enough");
+            // 25 paychecks of (x + 25) must fit in 5,000: x <= 200 - 25 = 175
+            assertEquals(new BigDecimal("175.00"), check.mostPerPaycheck());
+            // Only the before-tax line comes out of gross.
+            assertEquals(new BigDecimal("75800.00"), plansService.totals(plansService.get(planId)).taxable());
+
+            plansService.setHsaLimit(planId, new BigDecimal("4900"));
+            assertFalse(plansService.hsaCheck(plansService.get(planId)).ok());
+        } finally {
+            plansService.delete(planId);
+        }
+    }
+
     private void addPay(UUID planId, PaySection section, String name, boolean percent, boolean ofTaxable, String value, boolean retirement) {
         plansService.addPayItem(planId, section, name);
         var item = plansService.payItems(planId).stream().filter(i -> i.name.equals(name)).findFirst().orElseThrow();
-        plansService.updatePayItem(planId, item.id, name, percent, ofTaxable, new BigDecimal(value), retirement);
+        plansService.updatePayItem(planId, item.id, name, percent, ofTaxable, new BigDecimal(value), retirement, false);
     }
 
     @Test

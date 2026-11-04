@@ -69,6 +69,33 @@
                 <th:block th:if="${section.name() == 'PRETAX' || section.name() == 'TAX' || section.name() == 'POSTTAX'}">
                     <div th:replace="~{plan-fragments :: paySection(${section}, ${sectionEntry.value})}"></div>
                 </th:block>
+                <!--
+                  HSA check and decider: yours + the employer's must stay under the legal limit with one whole paycheck
+                  to spare (payroll once put an extra paycheck in the wrong year). Lines count when their HSA box is checked.
+                -->
+                <div class="hsa-check" th:if="${section.name() == 'PRETAX'}" :class="hsaLimit > 0 && !hsaOk && 'bad'">
+                    <div class="hsa-head">
+                        <strong>HSA this year</strong>
+                        <label class="hsa-limit">Legal limit
+                            <input type="number" step="0.01" min="0" inputmode="decimal" name="hsaLimit" x-model.number="hsaLimit" placeholder="e.g. 8750">
+                        </label>
+                    </div>
+                    <div class="small">
+                        Yours <span x-text="money(hsaYours)"></span> + employer <span x-text="money(hsaEmployer)"></span>
+                        = <strong x-text="money(hsaTotal)"></strong><span x-show="hsaLimit > 0"> of <span x-text="money(hsaLimit)"></span></span>
+                    </div>
+                    <div class="small" x-show="hsaLimit > 0">
+                        <span x-text="money(hsaLimit - hsaTotal)"></span> to spare; one paycheck is <span x-text="money(hsaTotal / 24)"></span>
+                        <strong x-text="hsaOk ? '✓' : '— less than one paycheck to spare'"></strong>
+                    </div>
+                    <div class="hsa-decide" x-show="hsaLimit > 0">
+                        <span class="small">Most you can put in and keep a paycheck spare:
+                            <strong x-text="money(hsaMostPerPaycheck) + '/paycheck'"></strong>
+                            (<span x-text="money(hsaMostPerPaycheck * 24) + '/yr'"></span>)</span>
+                        <button class="btn inline secondary" type="button" x-show="hsaYourLine" @click="useHsaMost()">Use this</button>
+                    </div>
+                    <div class="hint" x-show="!hsaYours && !hsaEmployer">Check "HSA" on your HSA line (before tax) and the employer's (from the employer).</div>
+                </div>
                 <div class="pay-total" th:if="${section.name() == 'PRETAX'}">
                     <div class="label">= Taxable salary <span class="muted small" x-text="money(taxable / 2080) + '/hr'"></span></div>
                     <div class="value"><span x-text="money(perUnit(taxable))"></span> <span class="muted small" x-text="pct(taxable)"></span></div>
@@ -302,7 +329,8 @@
                     [line.id, {budget: line.budget, group: line.group, amount: Number(line.amount)}])),
                 // pay line id -> { section, kind: amount | gross | taxable, value (per year, or a percent), retirement }
                 pay: Object.fromEntries((/*[[${payData}]]*/ []).map(item =>
-                    [item.id, {section: item.section, kind: item.kind, value: Number(item.value), retirement: item.retirement === 'true'}])),
+                    [item.id, {section: item.section, kind: item.kind, value: Number(item.value), retirement: item.retirement === 'true', hsa: item.hsa === 'true'}])),
+                hsaLimit: Number(/*[[${plan.hsaLimit}]]*/ 0) || null,
 
                 // Units: everything is stored per year.
                 get factor() { return {year: 1, month: 12, paycheck: 24}[this.unit]; },
@@ -336,6 +364,23 @@
                     return Object.keys(this.pay).filter(id => this.pay[id].retirement)
                         .reduce((sum, id) => sum + this.payAmount(id), 0);
                 },
+                // HSA (see PlansService.hsaCheck): with 24 paychecks, 25 paychecks' worth of yours + the employer's must fit.
+                hsaIds(section) { return Object.keys(this.pay).filter(id => this.pay[id].hsa && (this.pay[id].section === 'pretax') === (section === 'yours')); },
+                get hsaYours() { return this.hsaIds('yours').reduce((sum, id) => sum + this.payAmount(id), 0); },
+                get hsaEmployer() { return this.hsaIds('employer').reduce((sum, id) => sum + this.payAmount(id), 0); },
+                get hsaTotal() { return this.hsaYours + this.hsaEmployer; },
+                get hsaOk() { return !(this.hsaLimit > 0) || this.hsaLimit - this.hsaTotal >= this.hsaTotal / 24 - 0.005; },
+                get hsaMostPerPaycheck() {
+                    return Math.max(0, Math.floor((this.hsaLimit - this.hsaEmployer * 25 / 24) / 25 * 100) / 100);
+                },
+                // The one before-tax HSA line "Use this" fills in (only when there's exactly one).
+                get hsaYourLine() { const ids = this.hsaIds('yours'); return ids.length === 1 ? ids[0] : null; },
+                useHsaMost() {
+                    const item = this.pay[this.hsaYourLine];
+                    item.kind = 'amount';
+                    item.value = Math.round(this.hsaMostPerPaycheck * 24 * 100) / 100;
+                },
+
                 // Direct deposit: checking pays monthly budgets, donations and what passes through to elsewhere.
                 get checking() { return this.groupTotal('monthly') + this.donations + this.transfers; },
 

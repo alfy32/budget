@@ -1332,3 +1332,48 @@ label.main {
 .savings-bar .top.second {
     margin-top: 6px;
 }
+
+/* ---- Plan worksheet: HSA check -------------------------------------------------------- */
+
+.hsa-check {
+    margin: 4px 14px 10px 14px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: var(--accent-soft);
+}
+
+.hsa-check.bad {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.hsa-check .hsa-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.hsa-check .hsa-limit {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.hsa-check .hsa-limit input {
+    width: 104px;
+    min-height: 34px;
+    padding: 4px 8px;
+}
+
+.hsa-check .hsa-decide {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 6px;
+}

@@ -16,6 +16,8 @@ public class Plan {
     public LocalDate end;
     /** Gross salary per year. */
     public BigDecimal grossSalary = BigDecimal.ZERO;
+    /** The legal HSA contribution limit for the plan's year (yours + employer's), or null. */
+    public BigDecimal hsaLimit;
     /** The savings per month to stay at or above, or null. */
     public BigDecimal savingsTarget;
     public String notes;

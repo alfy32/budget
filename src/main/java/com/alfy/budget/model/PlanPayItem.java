@@ -19,6 +19,8 @@ public class PlanPayItem {
     public BigDecimal value = BigDecimal.ZERO;
     /** Counts toward the retirement total. */
     public boolean retirement;
+    /** Counts toward the HSA total (checked against the plan's HSA limit). */
+    public boolean hsa;
 
     /** Dollars per year. */
     public BigDecimal amount(BigDecimal gross, BigDecimal taxable) {

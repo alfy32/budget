@@ -24,7 +24,8 @@
                    :value="pay[id].kind === 'amount' ? perUnit(pay[id].value).toFixed(2) : pay[id].value"
                    @change="pay[id].value = pay[id].kind === 'amount' ? toYear($event.target.value) : Number($event.target.value)">
             <input type="hidden" th:name="|payValue_${item.id}|" :value="pay[id].value">
-            <label class="retire"><input type="checkbox" th:name="|payRetirement_${item.id}|" x-model="pay[id].retirement"> Retirement</label>
+            <label class="retire"><input type="checkbox" th:name="|payRetirement_${item.id}|" x-model="pay[id].retirement"> Retire.</label>
+            <label class="retire" th:if="${section.name() == 'PRETAX' || section.name() == 'INFO'}"><input type="checkbox" th:name="|payHsa_${item.id}|" x-model="pay[id].hsa"> HSA</label>
             <button class="link-button danger-text" type="submit" name="action" th:value="|removePay:${item.id}|" aria-label="Remove">✕</button>
         </div>
     </div>

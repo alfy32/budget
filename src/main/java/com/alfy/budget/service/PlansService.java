@@ -94,18 +94,18 @@ public class PlansService {
                 .addValue("start", startMonth == null ? null : Db.date(startMonth.withDayOfMonth(1)));
 
         jdbc.update("""
-                INSERT INTO plans (id, start_month, gross_salary, savings_target)
-                SELECT :id, :start, gross_salary, savings_target FROM plans WHERE id = :from
+                INSERT INTO plans (id, start_month, gross_salary, savings_target, hsa_limit)
+                SELECT :id, :start, gross_salary, savings_target, hsa_limit FROM plans WHERE id = :from
                 """, params);
         jdbc.update("""
                 INSERT INTO plan_lines (plan_id, category_id, budget_id, amount)
                 SELECT :id, category_id, budget_id, amount FROM plan_lines WHERE plan_id = :from
                 """, params);
         jdbc.update("""
-                INSERT INTO plan_pay_items (id, plan_id, section, name, kind, base, value, retirement, sort)
+                INSERT INTO plan_pay_items (id, plan_id, section, name, kind, base, value, retirement, hsa, sort)
                 SELECT lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' ||
                              hex(randomblob(2)) || '-' || hex(randomblob(6))),
-                       :id, section, name, kind, base, value, retirement, sort
+                       :id, section, name, kind, base, value, retirement, hsa, sort
                 FROM plan_pay_items WHERE plan_id = :from
                 """, params);
 
@@ -217,15 +217,17 @@ public class PlansService {
                     item.ofTaxable = "taxable".equals(resultSet.getString("base"));
                     item.value = Tools.fromDatabaseInt(resultSet.getInt("value"));
                     item.retirement = resultSet.getBoolean("retirement");
+                    item.hsa = resultSet.getBoolean("hsa");
                     return item;
                 });
     }
 
     /** Saves a pay line's settings (value is dollars per year, or a percent like 6.2). */
-    public void updatePayItem(UUID planId, UUID itemId, String name, boolean percent, boolean ofTaxable, BigDecimal value, boolean retirement) {
+    public void updatePayItem(UUID planId, UUID itemId, String name, boolean percent, boolean ofTaxable, BigDecimal value,
+                              boolean retirement, boolean hsa) {
         jdbc.update("""
                         UPDATE plan_pay_items
-                        SET name = coalesce(:name, name), kind = :kind, base = :base, value = :value, retirement = :retirement
+                        SET name = coalesce(:name, name), kind = :kind, base = :base, value = :value, retirement = :retirement, hsa = :hsa
                         WHERE plan_id = :planId AND id = :id
                         """,
                 new MapSqlParameterSource()
@@ -235,7 +237,54 @@ public class PlansService {
                         .addValue("kind", percent ? "percent" : "amount")
                         .addValue("base", ofTaxable ? "taxable" : "gross")
                         .addValue("value", Tools.toDatabaseInt(value == null ? BigDecimal.ZERO : value.abs()))
-                        .addValue("retirement", retirement ? 1 : 0));
+                        .addValue("retirement", retirement ? 1 : 0)
+                        .addValue("hsa", hsa ? 1 : 0));
+    }
+
+    public void setHsaLimit(UUID planId, BigDecimal limit) {
+        jdbc.update("UPDATE plans SET hsa_limit = :limit WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("id", Db.id(planId))
+                        .addValue("limit", limit == null ? null : Tools.toDatabaseInt(limit.abs())));
+    }
+
+    /**
+     * The HSA check: yours + the employer's against the legal limit, and the most you can put in per paycheck while
+     * keeping one whole paycheck (yours + the employer's) under the limit, in case payroll puts an extra paycheck
+     * in the year. With p paychecks a year, (p + 1) of yours + (p + 1) of the employer's must fit:
+     * yours per paycheck <= (limit - employer per year * (p + 1) / p) / (p + 1).
+     */
+    public record HsaCheck(BigDecimal yours, BigDecimal employer, BigDecimal total, BigDecimal limit, BigDecimal spare,
+                           BigDecimal onePaycheck, boolean ok, BigDecimal mostPerPaycheck) {
+    }
+
+    public static final int PAYCHECKS_PER_YEAR = 24;
+
+    public HsaCheck hsaCheck(Plan plan) {
+        BigDecimal gross = plan.grossSalary;
+        BigDecimal yours = BigDecimal.ZERO;
+        BigDecimal employer = BigDecimal.ZERO;
+        for (PlanPayItem item : payItems(plan.id)) {
+            if (item.hsa) {
+                BigDecimal amount = item.amount(gross, gross);
+                if (item.section == PaySection.PRETAX) {
+                    yours = yours.add(amount);
+                } else {
+                    employer = employer.add(amount);
+                }
+            }
+        }
+        BigDecimal total = yours.add(employer);
+        BigDecimal paychecks = BigDecimal.valueOf(PAYCHECKS_PER_YEAR);
+        BigDecimal onePaycheck = total.divide(paychecks, 2, java.math.RoundingMode.HALF_UP);
+        if (plan.hsaLimit == null) {
+            return new HsaCheck(yours, employer, total, null, null, onePaycheck, true, null);
+        }
+        BigDecimal spare = plan.hsaLimit.subtract(total);
+        BigDecimal employerWithExtra = employer.multiply(paychecks.add(BigDecimal.ONE)).divide(paychecks, 6, java.math.RoundingMode.HALF_UP);
+        BigDecimal most = plan.hsaLimit.subtract(employerWithExtra)
+                .divide(paychecks.add(BigDecimal.ONE), 2, java.math.RoundingMode.FLOOR).max(BigDecimal.ZERO);
+        return new HsaCheck(yours, employer, total, plan.hsaLimit, spare, onePaycheck, spare.compareTo(onePaycheck) >= 0, most);
     }
 
     public void addPayItem(UUID planId, PaySection section, String name) {
@@ -383,6 +432,8 @@ public class PlansService {
         plan.id = Db.getId(resultSet, "id");
         plan.startMonth = Db.getDate(resultSet, "start_month");
         plan.grossSalary = Tools.fromDatabaseInt(resultSet.getInt("gross_salary"));
+        int hsaLimit = resultSet.getInt("hsa_limit");
+        plan.hsaLimit = resultSet.wasNull() ? null : Tools.fromDatabaseInt(hsaLimit);
         int target = resultSet.getInt("savings_target");
         plan.savingsTarget = resultSet.wasNull() ? null : Tools.fromDatabaseInt(target);
         plan.notes = resultSet.getString("notes");
