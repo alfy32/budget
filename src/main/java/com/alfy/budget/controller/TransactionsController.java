@@ -1,5 +1,6 @@
 package com.alfy.budget.controller;
 
+import com.alfy.budget.model.BankAccounts;
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Category;
 import com.alfy.budget.model.Transaction;
@@ -19,9 +20,6 @@ import java.util.*;
 
 @Controller
 public class TransactionsController {
-
-    /** Accounts you can pick when entering a transaction by hand. */
-    static final List<String> MANUAL_ACCOUNTS = List.of("Cash", "Gunnison Checking", "Cash Back Visa", "First Choice Platinum");
 
     /** Tags you can put on a transaction. */
     static final List<String> TAGS = List.of("Medical", "Car", "Home Improvement", "Savings", "Gift");
@@ -296,7 +294,7 @@ public class TransactionsController {
 
     @GetMapping("/create-transaction")
     public String createForm(Model model) {
-        model.addAttribute("accounts", MANUAL_ACCOUNTS);
+        model.addAttribute("accounts", BankAccounts.ALL);
         model.addAttribute("today", LocalDate.now());
         return "transaction-create";
     }

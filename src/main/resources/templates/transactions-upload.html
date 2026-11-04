@@ -6,7 +6,7 @@
 <main>
     <!-- Picking a file guesses the account from the file name, like the old page did. -->
     <form method="post" enctype="multipart/form-data" th:action="@{/transactions-upload}"
-          x-data="{ account: 'SBSU Checking' }">
+          th:x-data="|{ account: '${accounts[0]}' }|">
         <div class="card padded">
             <label class="field">
                 <span class="field-label">Export file</span>

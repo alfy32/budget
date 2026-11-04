@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import com.alfy.budget.model.BankAccounts;
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.TransactionUploadResults;
 import com.alfy.budget.service.AutoCategorizeService;
@@ -24,7 +25,6 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.UUID;
 
 @Controller
@@ -50,12 +50,9 @@ public class TransactionsUploadController {
         this.autoCategorizeService = autoCategorizeService;
     }
 
-    /** Accounts offered on the upload page. Other supported formats: "Zions Cash Back Visa V1", "First Choice Platinum", "Zions All". */
-    static final List<String> UPLOAD_ACCOUNTS = List.of("SBSU Checking", "Zions Agility Cash Visa", "Zions Amazing Cash Visa");
-
     @GetMapping("/transactions-upload")
     public String uploadForm(Model model) {
-        model.addAttribute("accounts", UPLOAD_ACCOUNTS);
+        model.addAttribute("accounts", BankAccounts.UPLOADABLE);
         return "transactions-upload";
     }
 

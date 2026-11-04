@@ -121,6 +121,17 @@ class BudgetApplicationTests {
             assertTrue(followed > 0, report + " has category links");
         }
         mvc.perform(get("/monthly")).andExpect(content().string(org.hamcrest.Matchers.containsString("$42.50 of $700.00")));
+
+        // Both ways of adding transactions offer the same bank accounts (upload only the ones with a CSV format).
+        String manual = mvc.perform(get("/create-transaction")).andReturn().getResponse().getContentAsString();
+        String upload = mvc.perform(get("/transactions-upload")).andReturn().getResponse().getContentAsString();
+        for (String account : com.alfy.budget.model.BankAccounts.ALL) {
+            assertTrue(manual.contains(">" + account + "<"), "add by hand offers " + account);
+        }
+        for (String account : com.alfy.budget.model.BankAccounts.UPLOADABLE) {
+            assertTrue(upload.contains(">" + account + "<"), "upload offers " + account);
+            assertTrue(com.alfy.budget.model.BankAccounts.ALL.contains(account), account + " is in the full list");
+        }
     }
 
     @Test
