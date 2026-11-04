@@ -165,7 +165,18 @@ public class PlansController {
 
         Map<UUID, BigDecimal> amounts = new HashMap<>();
         Map<UUID, BigDecimal> incomeAmounts = new HashMap<>();
+        Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
         for (Map.Entry<String, String> entry : form.entrySet()) {
+            if (entry.getKey().startsWith("rename_")) {
+                // Renames the category everywhere (it's the same category in every plan).
+                UUID categoryId = UUID.fromString(entry.getKey().substring(7));
+                String name = blankToNull(entry.getValue());
+                Category category = categoriesById.get(categoryId);
+                if (name != null && category != null && !name.equals(category.name)) {
+                    categoriesService.setName(categoryId, name);
+                }
+                continue;
+            }
             if (entry.getKey().startsWith("line_")) {
                 amounts.put(UUID.fromString(entry.getKey().substring(5)), money(entry.getValue()));
             } else if (entry.getKey().startsWith("income_")) {
@@ -200,6 +211,22 @@ public class PlansController {
             }
         } else if (action.startsWith("removeLine:")) {
             plansService.removeLine(plan.id, UUID.fromString(action.substring("removeLine:".length())));
+        } else if (action.startsWith("split:")) {
+            // Split off a new category: it joins this line's budget and takes that much of this line's amount.
+            UUID categoryId = UUID.fromString(action.substring("split:".length()));
+            String name = blankToNull(form.get("splitName_" + categoryId));
+            BigDecimal amount = money(form.get("splitAmount_" + categoryId)).abs();
+            PlanLine line = plansService.lines(plan.id).stream()
+                    .filter(l -> l.categoryId.equals(categoryId)).findFirst().orElse(null);
+            if (name == null || line == null) {
+                return error("/plans/" + id, "Give the new category a name to split it off.");
+            }
+            Category category = Category.create(name);
+            categoriesService.add(category);
+            plansService.putLine(plan.id, category.id, line.budgetId);
+            plansService.setAmounts(plan.id, Map.of(
+                    category.id, amount.min(line.amount),
+                    categoryId, line.amount.subtract(amount).max(BigDecimal.ZERO)));
         } else if (action.equals("addIncome")) {
             plansService.addIncomeItem(plan.id, form.get("newIncomeName"), money(form.get("newIncomeAmount")));
         } else if (action.startsWith("removeIncome:")) {

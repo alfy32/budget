@@ -448,6 +448,38 @@ class BudgetApplicationTests {
     }
 
     @Test
+    void aPlanLineCanBeRenamedAndSplit() throws Exception {
+        var current = plansService.current();
+        Budget utilities = budgetsService.add(Budget.create("SplitTest Utilities", BigDecimal.ZERO));
+        Category power = Category.create("SplitTest Power", utilities);
+        categoriesService.add(power);
+        plansService.setAmounts(current.id, Map.of(power.id, new BigDecimal("1800")));
+
+        // Split $600 off into a new "Solar" line in the same budget.
+        mvc.perform(post("/plans/" + current.id)
+                        .param("takeHome", current.takeHome.toPlainString())
+                        .param("line_" + power.id, "1800")
+                        .param("action", "split:" + power.id)
+                        .param("splitName_" + power.id, "SplitTest Solar")
+                        .param("splitAmount_" + power.id, "600"))
+                .andExpect(redirectedUrl("/plans/" + current.id));
+        var lines = plansService.lines(current.id);
+        var powerLine = lines.stream().filter(l -> l.categoryId.equals(power.id)).findFirst().orElseThrow();
+        var solarLine = lines.stream().filter(l -> l.categoryName.equals("SplitTest Solar")).findFirst().orElseThrow();
+        assertEquals(new BigDecimal("1200.00"), powerLine.amount);
+        assertEquals(new BigDecimal("600.00"), solarLine.amount);
+        assertEquals(utilities.id, solarLine.budgetId);
+
+        // Rename from the worksheet; it's the same category everywhere.
+        mvc.perform(post("/plans/" + current.id)
+                .param("takeHome", current.takeHome.toPlainString())
+                .param("rename_" + power.id, "SplitTest Electric"));
+        assertEquals("SplitTest Electric", categoriesService.get(power.id).name);
+        assertEquals(new BigDecimal("1200.00"), plansService.lines(current.id).stream()
+                .filter(l -> l.categoryId.equals(power.id)).findFirst().orElseThrow().amount);
+    }
+
+    @Test
     void autoCategorizeUsesRules() {
         autoCategorizeService.add("VANGUARD BUY/INVESTMENT", MatchType.EQUALS, category.id);
         autoCategorizeService.updateCachedData();

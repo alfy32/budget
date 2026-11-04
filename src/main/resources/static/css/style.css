@@ -1063,6 +1063,26 @@ label.main {
     color: var(--muted);
 }
 
+.plan-line .more .wide {
+    flex: 1 1 100%;
+}
+
+.plan-line .more input[type=text], .plan-line .more input[type=number] {
+    min-height: 38px;
+    padding: 6px 8px;
+    margin-top: 2px;
+}
+
+.plan-line .more .split-fields {
+    display: flex;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.plan-line .more .split-fields input[type=number] {
+    flex: 0 0 96px;
+}
+
 .plan-line .more select {
     min-height: 38px;
     padding: 4px 8px;

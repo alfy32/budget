@@ -144,6 +144,18 @@
                               :class="lines[id].amount > last + 0.004 ? 'up' : (lines[id].amount < last - 0.004 ? 'down' : '')"></span>
                     </div>
                     <div class="more" x-show="more" x-cloak>
+                        <label class="wide">Rename
+                            <input type="text" th:name="|rename_${line.categoryId}|" th:value="${line.categoryName}" autocomplete="off">
+                            <span class="hint">Renames it everywhere, past plans and transactions too.</span>
+                        </label>
+                        <div class="wide split">
+                            <span>Split off a new category (moves that much of this line into it)</span>
+                            <div class="split-fields">
+                                <input type="text" th:name="|splitName_${line.categoryId}|" placeholder="New category" aria-label="New category name" autocomplete="off">
+                                <input type="number" step="0.01" min="0" inputmode="decimal" th:name="|splitAmount_${line.categoryId}|" placeholder="Per year" aria-label="Amount per year">
+                                <button class="btn inline secondary" type="submit" name="action" th:value="|split:${line.categoryId}|">Split</button>
+                            </div>
+                        </div>
                         <label>Move to
                             <select th:name="|budget_${line.categoryId}|">
                                 <option value="">(keep in this budget)</option>
