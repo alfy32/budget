@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${title})}"></head>
+<body>
+<header th:replace="~{layout :: topbar(${title}, @{/rules})}"></header>
+<main>
+    <div class="card padded saved" th:if="${applied != null}" style="margin-bottom: 12px;"
+         th:text="${applied == 1 ? 'Categorized 1 transaction.' : 'Categorized ' + applied + ' transactions.'}">Done</div>
+    <div class="card padded saved" th:if="${saved == true && applied == null}" style="margin-bottom: 12px;">Saved.</div>
+
+    <!--
+      Typing or changing the match type asks the server what the rule would match (htmx GET /rules/preview)
+      and swaps the answer into #preview below. Nothing is saved until you tap Save.
+    -->
+    <form method="post" th:action="${rule.id == null} ? @{/rules} : @{/rules/{id}(id=${rule.id})}">
+        <input type="hidden" name="id" th:value="${rule.id}" th:if="${rule.id != null}">
+
+        <!-- On a div, not the form, so the preview works before a category is picked (the form requires one). -->
+        <div class="card padded"
+             th:hx-get="@{/rules/preview}" hx-include="closest form"
+             hx-trigger="input changed delay:300ms from:find input[name=description], change"
+             hx-target="#preview" hx-select="#preview" hx-swap="outerHTML" hx-sync="this:replace">
+            <span class="field-label">When the bank description</span>
+            <div class="segmented">
+                <label th:each="type : ${matchTypes}">
+                    <input type="radio" name="matchType" th:value="${type}" th:checked="${rule.matchType == type}">
+                    <span th:text="${type.label}">Contains</span>
+                </label>
+            </div>
+
+            <label class="field spaced">
+                <span class="field-label">this text</span>
+                <input type="text" name="description" th:value="${rule.description}" required autocomplete="off"
+                       placeholder="e.g. AMAZON MKTPL">
+            </label>
+
+            <label class="field">
+                <span class="field-label">put it in</span>
+                <select name="categoryId" required>
+                    <option value="">Pick a category</option>
+                    <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"
+                            th:selected="${category.id == rule.categoryId}"></option>
+                </select>
+            </label>
+        </div>
+
+        <div th:fragment="preview" id="preview">
+            <div class="section-title">Would match</div>
+            <div class="card">
+                <div class="row muted" th:if="${preview.matches() == 0}">No transactions so far</div>
+                <th:block th:if="${preview.matches() > 0}">
+                    <div class="row">
+                        <div class="main" th:text="${preview.matches() == 1 ? '1 transaction' : preview.matches() + ' transactions'}">0 transactions</div>
+                        <span class="badge" th:if="${preview.needsCategory() > 0}" th:text="|${preview.needsCategory()} need a category|">0</span>
+                    </div>
+                    <div class="row" th:each="example : ${preview.examples()}">
+                        <div class="main small" style="overflow-wrap: anywhere;" th:text="${example.description()}">Description</div>
+                        <div class="amount small muted" th:text="|×${example.count()}|">×1</div>
+                    </div>
+                </th:block>
+            </div>
+            <p class="hint" style="margin: 8px 4px;" th:if="${preview.matches() > 0}">
+                If another rule is more specific for a transaction, that rule wins and it isn't counted here.
+            </p>
+        </div>
+
+        <div class="buttons">
+            <button class="btn" type="submit" th:text="${rule.id == null ? 'Add rule' : 'Save'}">Save</button>
+        </div>
+    </form>
+
+    <form th:if="${savedPreview != null && savedPreview.needsCategory() > 0}" class="spaced"
+          method="post" th:action="@{/rules/{id}/apply(id=${rule.id})}">
+        <button class="btn secondary" type="submit"
+                th:text="${savedPreview.needsCategory() == 1 ? 'Categorize the 1 that needs a category' : 'Categorize the ' + savedPreview.needsCategory() + ' that need a category'}">
+            Categorize them
+        </button>
+        <p class="hint" style="margin: 6px 4px;">Uses the saved rule. Transactions that already have a category aren't changed.</p>
+    </form>
+
+    <div class="danger-zone" th:if="${rule.id != null}" x-data="{ sure: false }">
+        <button class="btn danger" type="button" x-show="!sure" @click="sure = true">Delete rule</button>
+        <form x-show="sure" x-cloak method="post" th:action="@{/rules/{id}/delete(id=${rule.id})}">
+            <div class="buttons">
+                <button class="btn secondary" type="button" @click="sure = false">Keep it</button>
+                <button class="btn danger solid" type="submit">Delete</button>
+            </div>
+        </form>
+    </div>
+</main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
+</body>
+</html>

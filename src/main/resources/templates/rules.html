@@ -4,37 +4,24 @@
 <body>
 <header th:replace="~{layout :: topbar('Auto-categorize', @{/})}"></header>
 <main>
-    <p class="hint" style="margin: 0 4px 12px 4px;">When you upload a bank CSV, new transactions whose bank description matches a rule exactly get its category.</p>
+    <p class="hint" style="margin: 0 4px 12px 4px;">
+        When you upload a bank CSV, new transactions get a category from the first rule that matches their bank
+        description. Upper/lower case doesn't matter.
+    </p>
 
-    <div class="card">
+    <a class="btn" th:href="@{/rules/new}">New rule</a>
+
+    <div class="card spaced">
         <div class="row muted" th:if="${rules.isEmpty()}">No rules yet</div>
-        <div class="row" th:each="rule : ${rules}">
+        <a class="row" th:each="rule : ${rules}" th:href="@{/rules/{id}(id=${rule.id})}">
             <div class="main">
-                <div class="title" th:text="${rule.description}">Description</div>
-                <div class="sub" th:text="|→ ${rule.categoryName}|">Category</div>
+                <div class="sub" th:text="${rule.matchType.label}">Contains</div>
+                <div class="title" th:text="${rule.description}">AMAZON MKTPL</div>
             </div>
-            <form method="post" th:action="@{/rules/{id}/delete(id=${rule.id})}">
-                <button class="icon-delete" type="submit" aria-label="Delete rule"><svg th:replace="~{layout :: trash}"></svg></button>
-            </form>
-        </div>
+            <div class="value small" th:text="${rule.categoryName}">Category</div>
+            <svg th:replace="~{layout :: chevron}"></svg>
+        </a>
     </div>
-
-    <div class="section-title">New rule</div>
-    <form class="card padded" method="post" th:action="@{/rules}">
-        <label class="field">
-            <span class="field-label">Bank description</span>
-            <input type="text" name="description" th:value="${description}" required>
-        </label>
-        <label class="field">
-            <span class="field-label">Category</span>
-            <select name="categoryId" required>
-                <option value="">Pick a category</option>
-                <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"
-                        th:selected="${category.id == categoryId}"></option>
-            </select>
-        </label>
-        <div class="buttons"><button class="btn" type="submit">Add rule</button></div>
-    </form>
 </main>
 <nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>

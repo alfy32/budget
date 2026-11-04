@@ -2,7 +2,6 @@ package com.alfy.budget.controller;
 
 import com.alfy.budget.model.Category;
 import com.alfy.budget.service.AccountsService;
-import com.alfy.budget.service.AutoCategorizeService;
 import com.alfy.budget.service.BudgetsService;
 import com.alfy.budget.service.CategoriesService;
 import org.springframework.http.HttpStatus;
@@ -17,18 +16,15 @@ public class CategoriesController {
 
     private final CategoriesService categoriesService;
     private final BudgetsService budgetsService;
-    private final AutoCategorizeService autoCategorizeService;
     private final AccountsService accountsService;
 
     public CategoriesController(
             CategoriesService categoriesService,
             BudgetsService budgetsService,
-            AutoCategorizeService autoCategorizeService,
             AccountsService accountsService
     ) {
         this.categoriesService = categoriesService;
         this.budgetsService = budgetsService;
-        this.autoCategorizeService = autoCategorizeService;
         this.accountsService = accountsService;
     }
 
@@ -82,33 +78,6 @@ public class CategoriesController {
     public String delete(@PathVariable UUID id) {
         categoriesService.delete(id);
         return "redirect:/categories";
-    }
-
-    // ---- Auto-categorize rules ---------------------------------------------------------------
-
-    @GetMapping("/rules")
-    public String rules(
-            @RequestParam(required = false) String description,
-            @RequestParam(required = false) UUID categoryId,
-            Model model
-    ) {
-        model.addAttribute("rules", autoCategorizeService.list());
-        model.addAttribute("categories", categoriesService.list());
-        model.addAttribute("description", description);
-        model.addAttribute("categoryId", categoryId);
-        return "rules";
-    }
-
-    @PostMapping("/rules")
-    public String createRule(@RequestParam String description, @RequestParam UUID categoryId) {
-        autoCategorizeService.add(description, categoryId);
-        return "redirect:/rules";
-    }
-
-    @PostMapping("/rules/{id}/delete")
-    public String deleteRule(@PathVariable UUID id) {
-        autoCategorizeService.delete(id);
-        return "redirect:/rules";
     }
 
 }

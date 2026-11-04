@@ -43,7 +43,7 @@
             </form>
         </div>
         <a class="hint" th:if="${t.category != null}" style="display:block; margin: 8px 4px 0 4px;"
-           th:href="@{/rules(description=${bank.description}, categoryId=${t.category.id})}">
+           th:href="@{/rules/new(description=${bank.description}, categoryId=${t.category.id})}">
             Always put "<span th:text="${bank.description}"></span>" in <span th:text="${t.category.name}"></span>
         </a>
 

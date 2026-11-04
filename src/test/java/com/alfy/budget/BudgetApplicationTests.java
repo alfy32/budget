@@ -3,6 +3,7 @@ package com.alfy.budget;
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Budget;
 import com.alfy.budget.model.Category;
+import com.alfy.budget.model.CategorizeRule.MatchType;
 import com.alfy.budget.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -95,6 +96,8 @@ class BudgetApplicationTests {
                 "/categories",
                 "/categories/" + category.id,
                 "/rules",
+                "/rules/new",
+                "/rules/new?description=GUNNISON%20MARKET&categoryId=" + category.id,
                 "/transactions-upload",
                 "/accounts",
         };
@@ -244,7 +247,7 @@ class BudgetApplicationTests {
 
     @Test
     void autoCategorizeUsesRules() {
-        autoCategorizeService.add("VANGUARD BUY/INVESTMENT", category.id);
+        autoCategorizeService.add("VANGUARD BUY/INVESTMENT", MatchType.EQUALS, category.id);
         autoCategorizeService.updateCachedData();
 
         BankTransaction vanguard = new BankTransaction();
@@ -254,6 +257,58 @@ class BudgetApplicationTests {
         BankTransaction other = new BankTransaction();
         other.description = "Something else";
         assertFalse(autoCategorizeService.autoCategorize(other, transactionId));
+    }
+
+    @Test
+    void ruleCanBePreviewedEditedAndApplied() throws Exception {
+        // Three uncategorized "RuleTest Shop" charges with different order codes, plus one already categorized.
+        UUID[] ids = new UUID[4];
+        for (int i = 0; i < 4; i++) {
+            BankTransaction t = new BankTransaction();
+            t.account = "SBSU Checking";
+            t.transactionType = "debit";
+            t.transactionDate = LocalDate.of(2021, 6, 1 + i);
+            t.description = "RULETEST SHOP*" + (1000 + i) + "  Online WA";
+            t.amount = new BigDecimal("5.00");
+            bankTransactionsService.add(t);
+            ids[i] = transactionsService.addFrom(t);
+        }
+        Category other = Category.create("RuleTest Other");
+        categoriesService.add(other);
+        transactionsService.updateCategory(ids[3], other.id);
+
+        // Exact text doesn't catch the others; "contains" does.
+        UUID ruleId = autoCategorizeService.add("RULETEST SHOP*1000  Online WA", MatchType.EQUALS, category.id);
+        assertEquals(1, autoCategorizeService.preview(autoCategorizeService.get(ruleId)).matches());
+
+        mvc.perform(post("/rules/" + ruleId)
+                        .param("description", "ruletest shop")
+                        .param("matchType", "CONTAINS")
+                        .param("categoryId", category.id.toString()))
+                .andExpect(redirectedUrl("/rules/" + ruleId + "?saved=true"));
+
+        var preview = autoCategorizeService.preview(autoCategorizeService.get(ruleId));
+        assertEquals(4, preview.matches());
+        assertEquals(3, preview.needsCategory());
+
+        // The live preview and the edit page render.
+        mvc.perform(get("/rules/preview").param("description", "RULETEST").param("matchType", "STARTS_WITH"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("4 transactions")));
+        mvc.perform(get("/rules/" + ruleId)).andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Categorize the 3 that need a category")));
+
+        // Apply only fills in the uncategorized ones.
+        mvc.perform(post("/rules/" + ruleId + "/apply")).andExpect(redirectedUrl("/rules/" + ruleId + "?applied=3"));
+        assertEquals(category.id, transactionsService.get(ids[0]).category.id);
+        assertEquals(category.id, transactionsService.get(ids[2]).category.id);
+        assertEquals(other.id, transactionsService.get(ids[3]).category.id);
+
+        // A more specific rule wins over the broad one.
+        autoCategorizeService.add("RULETEST SHOP*1002", MatchType.STARTS_WITH, other.id);
+        assertEquals(3, autoCategorizeService.preview(autoCategorizeService.get(ruleId)).matches());
+
+        mvc.perform(post("/rules/" + ruleId + "/delete")).andExpect(redirectedUrl("/rules"));
     }
 
 }
