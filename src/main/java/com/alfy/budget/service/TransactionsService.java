@@ -78,8 +78,44 @@ public class TransactionsService {
         return possibleDuplicates;
     }
 
-    public List<Transaction> listAll() {
-        return jdbc.query("SELECT * FROM transactions" + ORDER, TransactionsService::map);
+    /**
+     * One page of a transaction list, newest first. search matches description or notes, ignoring case.
+     */
+    public List<Transaction> page(TransactionFilter filter, String search, int limit, int offset) {
+        StringBuilder query = new StringBuilder("SELECT * FROM transactions WHERE 1 = 1");
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("limit", limit)
+                .addValue("offset", offset);
+
+        if (filter.needsCategorized()) {
+            query.append(" AND category_id IS NULL");
+        }
+        if (filter.needsTransferred()) {
+            query.append(" AND needs_transferred = 1");
+        }
+        if (filter.categoryId() != null) {
+            query.append(" AND category_id = :categoryId");
+            params.addValue("categoryId", Db.id(filter.categoryId()));
+        }
+        if (filter.start() != null) {
+            query.append(" AND transaction_date >= :start");
+            params.addValue("start", Db.date(filter.start()));
+        }
+        if (filter.end() != null) {
+            query.append(" AND transaction_date <= :end");
+            params.addValue("end", Db.date(filter.end()));
+        }
+        if (search != null && !search.isBlank()) {
+            // SQLite's LIKE ignores case. Escape % and _ so they're searched for literally.
+            String pattern = "%" + search.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+            query.append(" AND (description LIKE :search ESCAPE '\\' OR notes LIKE :search ESCAPE '\\')");
+            params.addValue("search", pattern);
+        }
+
+        // id last so the order never changes between pages
+        query.append(" ORDER BY transaction_date DESC, description, id LIMIT :limit OFFSET :offset");
+
+        return jdbc.query(query.toString(), params, TransactionsService::map);
     }
 
     public int countNeedsCategorized() {
@@ -92,36 +128,8 @@ public class TransactionsService {
         return count == null ? 0 : count;
     }
 
-    public List<Transaction> listNeedsCategorized() {
-        return jdbc.query("SELECT * FROM transactions WHERE category_id IS NULL" + ORDER, TransactionsService::map);
-    }
-
     public List<Transaction> listNeedTransferred() {
         return jdbc.query("SELECT * FROM transactions WHERE needs_transferred = 1" + ORDER, TransactionsService::map);
-    }
-
-    public List<Transaction> listWithCategory(UUID categoryId, LocalDate startDate, LocalDate endDate) {
-        String query = """
-                SELECT * FROM transactions
-                WHERE category_id = :categoryId
-                  AND transaction_date >= :startDate
-                  AND transaction_date <= :endDate
-                """ + ORDER;
-
-        return jdbc.query(query, new MapSqlParameterSource()
-                .addValue("categoryId", Db.id(categoryId))
-                .addValue("startDate", Db.date(startDate))
-                .addValue("endDate", Db.date(endDate)), TransactionsService::map);
-    }
-
-    public List<Transaction> listWithCategoryNeedsTransferred(UUID categoryId) {
-        String query = """
-                SELECT * FROM transactions
-                WHERE category_id = :categoryId
-                  AND needs_transferred = 1
-                """ + ORDER;
-
-        return jdbc.query(query, new MapSqlParameterSource("categoryId", Db.id(categoryId)), TransactionsService::map);
     }
 
     /** Oldest first, so a running balance can be added up in order. */

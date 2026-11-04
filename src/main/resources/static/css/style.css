@@ -907,3 +907,19 @@ label.main {
     background: var(--card);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
+
+/* ---- Load-as-you-scroll ----------------------------------------------------------------- */
+
+/* A day that carries on from the previous batch joins up with the card above it. */
+.card.continued {
+    margin-top: 0;
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+    border-top: 1px solid var(--line);
+}
+
+.loading-more {
+    padding: 20px;
+    color: var(--muted);
+    text-align: center;
+}

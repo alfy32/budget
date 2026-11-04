@@ -14,26 +14,33 @@
     </form>
 
     <div id="list">
-        <div class="empty" th:if="${transactions.isEmpty()}"
+        <div class="empty" th:if="${days.isEmpty()}"
              th:text="${search != null ? 'No matches' : (query == 'needsCategorized' ? 'All caught up. Nothing to categorize.' : (query == 'needsTransferred' ? 'Nothing to transfer.' : 'No transactions'))}">
             No transactions
         </div>
 
-        <th:block th:each="day : ${days}">
-            <div class="day" th:text="${day.label()}">Today</div>
-            <div class="card">
-                <a class="row" th:each="t : ${day.transactions()}" th:href="@{/transactions/{id}(id=${t.id}, query=${query})}">
-                    <div class="main">
-                        <div class="title clamp" th:text="${t.description}">Description</div>
-                        <div class="sub">
-                            <span th:if="${t.category != null}" th:text="${t.category.name}">Category</span>
-                            <span th:if="${t.category == null}" class="badge">Needs category</span>
-                            <span th:if="${t.splitIndex > 0}"> · Split</span>
+        <!-- One batch of transactions. Later batches are fetched on their own as you scroll. -->
+        <th:block th:fragment="batch">
+            <th:block th:each="day : ${days}">
+                <div class="day" th:unless="${day.continued()}" th:text="${day.label()}">Today</div>
+                <div class="card" th:classappend="${day.continued()} ? continued">
+                    <a class="row" th:each="t : ${day.transactions()}" th:href="@{/transactions/{id}(id=${t.id}, query=${query})}">
+                        <div class="main">
+                            <div class="title clamp" th:text="${t.description}">Description</div>
+                            <div class="sub">
+                                <span th:if="${t.category != null}" th:text="${t.category.name}">Category</span>
+                                <span th:if="${t.category == null}" class="badge">Needs category</span>
+                                <span th:if="${t.splitIndex > 0}"> · Split</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="amount"><span th:replace="~{layout :: money(${t})}"></span></div>
-                </a>
-            </div>
+                        <div class="amount"><span th:replace="~{layout :: money(${t})}"></span></div>
+                    </a>
+                </div>
+            </th:block>
+
+            <!-- When this scrolls into view, htmx replaces it with the next batch (which ends with its own placeholder). -->
+            <div class="loading-more" th:if="${nextUrl != null}"
+                 th:hx-get="${nextUrl}" hx-trigger="revealed" hx-swap="outerHTML">Loading more…</div>
         </th:block>
     </div>
 </main>

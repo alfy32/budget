@@ -4,6 +4,7 @@ import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Category;
 import com.alfy.budget.model.PossibleDuplicateTransactions;
 import com.alfy.budget.model.Transaction;
+import com.alfy.budget.model.TransactionFilter;
 import com.alfy.budget.service.BankTransactionsService;
 import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;
@@ -42,23 +43,40 @@ public class TransactionsController {
 
     // ---- List --------------------------------------------------------------------------------
 
+    /** How many transactions to load at a time as you scroll. */
+    static final int PAGE_SIZE = 50;
+
     /**
      * query is one of: needsCategorized, needsTransferred, possibleDuplicates,
      * category,{id},{start},{end} or category,{id},needsTransferred. Anything else lists everything.
+     *
+     * The first request renders the whole page with the newest PAGE_SIZE transactions. At the bottom is a
+     * placeholder that htmx swaps for the next batch when it scrolls into view (page=1, 2, ...), which only
+     * renders the "batch" fragment. prevDate is the date the previous batch ended on, so a day that spans
+     * two batches doesn't get its heading twice.
      */
     @GetMapping("/transactions")
     public String list(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate prevDate,
             Model model
     ) {
-        List<Transaction> transactions = getTransactions(query);
+        page = Math.max(page, 0);
+        List<Transaction> transactions;
+        boolean hasMore;
 
-        if (search != null && !search.isBlank()) {
-            String lowerSearch = search.toLowerCase();
-            transactions = transactions.stream()
-                    .filter(transaction -> contains(transaction.description, lowerSearch) || contains(transaction.notes, lowerSearch))
-                    .toList();
+        if ("possibleDuplicates".equals(query)) {
+            // Worked out in Java by comparing transactions, and always short, so it's not paged.
+            transactions = possibleDuplicates(search);
+            hasMore = false;
+        } else {
+            transactions = new ArrayList<>(transactionsService.page(filter(query), search, PAGE_SIZE + 1, page * PAGE_SIZE));
+            hasMore = transactions.size() > PAGE_SIZE;
+            if (hasMore) {
+                transactions.removeLast();
+            }
         }
 
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
@@ -68,21 +86,77 @@ public class TransactionsController {
             }
         }
 
+        model.addAttribute("days", groupByDay(transactions, prevDate));
         model.addAttribute("query", query);
         model.addAttribute("search", search);
-        model.addAttribute("transactions", transactions);
-        model.addAttribute("days", groupByDay(transactions));
+        model.addAttribute("nextUrl", hasMore ? nextUrl(query, search, page + 1, transactions.getLast().transactionDate) : null);
+
+        if (page > 0) {
+            return "transactions :: batch";
+        }
+
         model.addAttribute("title", title(query, categoriesById));
         model.addAttribute("tab", "needsCategorized".equals(query) ? "categorize" : "transactions");
         model.addAttribute("back", query != null && query.startsWith("category,") ? "javascript:history.back()" : null);
         return "transactions";
     }
 
-    /** Transactions that share a date, with a label like "Today" or "Thu, Oct 30". */
-    public record Day(String label, List<Transaction> transactions) {
+    private static String nextUrl(String query, String search, int page, LocalDate prevDate) {
+        return UriComponentsBuilder.fromPath("/transactions")
+                .queryParamIfPresent("query", Optional.ofNullable(query))
+                .queryParamIfPresent("search", Optional.ofNullable(search))
+                .queryParam("page", page)
+                .queryParam("prevDate", prevDate)
+                .encode()
+                .toUriString();
     }
 
-    private static List<Day> groupByDay(List<Transaction> transactions) {
+    private static TransactionFilter filter(String query) {
+        if (query == null) {
+            return TransactionFilter.ALL;
+        }
+        if (query.equals("needsCategorized")) {
+            return new TransactionFilter(true, false, null, null, null);
+        }
+        if (query.equals("needsTransferred")) {
+            return new TransactionFilter(false, true, null, null, null);
+        }
+        if (query.startsWith("category,")) {
+            String[] parts = query.split(",");
+            UUID categoryId = UUID.fromString(parts[1]);
+            if (parts[2].equals("needsTransferred")) {
+                return new TransactionFilter(false, true, categoryId, null, null);
+            }
+            return new TransactionFilter(false, false, categoryId, LocalDate.parse(parts[2]), LocalDate.parse(parts[3]));
+        }
+        return TransactionFilter.ALL;
+    }
+
+    private List<Transaction> possibleDuplicates(String search) {
+        List<PossibleDuplicateTransactions> possibleDuplicates = bankTransactionsService.listPossibleDuplicates();
+        List<Transaction> transactions = new ArrayList<>(transactionsService.listPossibleDuplicates(possibleDuplicates));
+        if (search != null) {
+            String lowerSearch = search.toLowerCase();
+            transactions.removeIf(transaction -> !contains(transaction.description, lowerSearch) && !contains(transaction.notes, lowerSearch));
+        }
+        transactions.sort(Comparator
+                .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
+                .thenComparing(transaction -> transaction.description, Comparator.nullsFirst(Comparator.naturalOrder())));
+        return transactions;
+    }
+
+    private static boolean contains(String value, String lowerSearch) {
+        return value != null && value.toLowerCase().contains(lowerSearch);
+    }
+
+    /**
+     * Transactions that share a date, with a label like "Today" or "Thu, Oct 30".
+     * continued means the day started in the previous batch, so its heading is already on screen.
+     */
+    public record Day(String label, List<Transaction> transactions, boolean continued) {
+    }
+
+    private static List<Day> groupByDay(List<Transaction> transactions, LocalDate prevDate) {
         Map<LocalDate, List<Transaction>> byDate = new LinkedHashMap<>();
         for (Transaction transaction : transactions) {
             byDate.computeIfAbsent(transaction.transactionDate, date -> new ArrayList<>()).add(transaction);
@@ -90,7 +164,7 @@ public class TransactionsController {
 
         LocalDate today = LocalDate.now();
         List<Day> days = new ArrayList<>();
-        byDate.forEach((date, list) -> days.add(new Day(dayLabel(date, today), list)));
+        byDate.forEach((date, list) -> days.add(new Day(dayLabel(date, today), list, date.equals(prevDate))));
         return days;
     }
 
@@ -123,44 +197,6 @@ public class TransactionsController {
             return category == null ? "Category" : category.name;
         }
         return "Transactions";
-    }
-
-    private static boolean contains(String value, String lowerSearch) {
-        return value != null && value.toLowerCase().contains(lowerSearch);
-    }
-
-    private List<Transaction> getTransactions(String query) {
-        if (query == null) {
-            return transactionsService.listAll();
-        }
-
-        if (query.equals("needsCategorized")) {
-            return transactionsService.listNeedsCategorized();
-        }
-
-        if (query.equals("needsTransferred")) {
-            return transactionsService.listNeedTransferred();
-        }
-
-        if (query.equals("possibleDuplicates")) {
-            List<PossibleDuplicateTransactions> possibleDuplicates = bankTransactionsService.listPossibleDuplicates();
-            List<Transaction> transactions = new ArrayList<>(transactionsService.listPossibleDuplicates(possibleDuplicates));
-            transactions.sort(Comparator
-                    .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
-                    .thenComparing(transaction -> transaction.description, Comparator.nullsFirst(Comparator.naturalOrder())));
-            return transactions;
-        }
-
-        if (query.startsWith("category,")) {
-            String[] parts = query.split(",");
-            UUID categoryId = UUID.fromString(parts[1]);
-            if (parts[2].equals("needsTransferred")) {
-                return transactionsService.listWithCategoryNeedsTransferred(categoryId);
-            }
-            return transactionsService.listWithCategory(categoryId, LocalDate.parse(parts[2]), LocalDate.parse(parts[3]));
-        }
-
-        return transactionsService.listAll();
     }
 
     // ---- One transaction -------------------------------------------------------------------

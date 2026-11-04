@@ -199,6 +199,50 @@ class BudgetApplicationTests {
     }
 
     @Test
+    void longListsLoadFiftyAtATime() throws Exception {
+        LocalDate day = LocalDate.of(2020, 3, 14);
+        for (int i = 0; i < 60; i++) {
+            BankTransaction t = new BankTransaction();
+            t.account = "SBSU Checking";
+            t.transactionType = "debit";
+            t.transactionDate = day;
+            t.description = String.format("PagingTest %02d", i);
+            t.amount = new BigDecimal("1.00");
+            bankTransactionsService.add(t);
+            transactionsService.addFrom(t);
+        }
+
+        String first = mvc.perform(get("/transactions").param("search", "pagingtest"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertEquals(50, count(first, "PagingTest "));
+        assertTrue(first.contains("Sat, Mar 14, 2020"), "first batch has the day heading");
+        assertTrue(first.contains("hx-trigger=\"revealed\""), "first batch ends with a load-more placeholder");
+        assertTrue(first.contains("page=1"));
+
+        String second = mvc.perform(get("/transactions")
+                        .param("search", "pagingtest").param("page", "1").param("prevDate", day.toString()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertEquals(10, count(second, "PagingTest "));
+        assertFalse(second.contains("Sat, Mar 14, 2020"), "same day continues without a second heading");
+        assertFalse(second.contains("revealed"), "last batch has no placeholder");
+        assertFalse(second.contains("<html"), "later batches are just the rows");
+        assertTrue(second.contains("PagingTest 59") || first.contains("PagingTest 59"));
+
+        // Search is done in SQL: % is matched literally, not as a wildcard.
+        String none = mvc.perform(get("/transactions").param("search", "Paging%Test"))
+                .andReturn().getResponse().getContentAsString();
+        assertEquals(0, count(none, "PagingTest "));
+    }
+
+    private static int count(String text, String needle) {
+        int count = 0;
+        for (int i = text.indexOf(needle); i >= 0; i = text.indexOf(needle, i + 1)) {
+            count++;
+        }
+        return count;
+    }
+
+    @Test
     void autoCategorizeUsesRules() {
         autoCategorizeService.add("VANGUARD BUY/INVESTMENT", category.id);
         autoCategorizeService.updateCachedData();
