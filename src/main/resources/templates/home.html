@@ -30,16 +30,9 @@
         </a>
     </div>
 
-    <div class="section-title">Reports</div>
-    <div class="card">
-        <a class="row" th:href="@{/monthly}"><div class="main">This month</div><svg th:replace="~{layout :: chevron}"></svg></a>
-        <a class="row" th:href="@{/yearly}"><div class="main">This year</div><svg th:replace="~{layout :: chevron}"></svg></a>
-        <a class="row" th:href="@{/needs-transferred}"><div class="main">Transfers</div><svg th:replace="~{layout :: chevron}"></svg></a>
-    </div>
-
     <div class="section-title">Setup</div>
     <div class="card">
-        <a class="row" th:href="@{/budgets}"><div class="main">Budgets</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/budgets}"><div class="main">Budget settings</div><svg th:replace="~{layout :: chevron}"></svg></a>
         <a class="row" th:href="@{/categories}"><div class="main">Categories</div><svg th:replace="~{layout :: chevron}"></svg></a>
         <a class="row" th:href="@{/accounts}"><div class="main">Accounts</div><svg th:replace="~{layout :: chevron}"></svg></a>
         <a class="row" th:href="@{/rules}"><div class="main">Auto-categorize rules</div><svg th:replace="~{layout :: chevron}"></svg></a>
