@@ -21,6 +21,7 @@
 
         <!-- One batch of transactions. Later batches are fetched on their own as you scroll. -->
         <th:block th:fragment="batch">
+            <span data-batch hidden></span>
             <th:block th:each="day : ${days}">
                 <div class="day" th:unless="${day.continued()}" th:text="${day.label()}">Today</div>
                 <div class="card" th:classappend="${day.continued()} ? continued">

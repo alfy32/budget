@@ -27,7 +27,10 @@ Rules:
 - Pages are Thymeleaf templates in `src/main/resources/templates`; shared pieces (head, top bar, tab bar, icons) are in
   `layout.html`. Reuse the existing building blocks in `style.css` (`card`, `row`, `section-title`, `btn`, `hero`, ...)
   instead of adding one-off styles.
-- No npm or front-end build. htmx and Alpine come from webjars in `build.gradle`.
+- No npm or front-end build. htmx and Alpine come from webjars in `build.gradle`; our own small script is
+  `static/js/app.js` (keeps your place in transaction lists, keeps history to list → transaction).
+- Going back must return to where you were: side trips from a transaction (category, tags, split) use
+  `data-replace` so the phone's back button goes to the list, not the picker.
 - Money is stored as whole cents; `transaction_type` ('credit' / 'debit') says which way it went.
 - Schema changes go in a new `src/main/resources/db/migration/V<n>__name.sql`; never edit an applied migration.
 - `./gradlew test` renders every page against a throwaway database; keep it passing and add new pages to it.

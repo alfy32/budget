@@ -10,7 +10,7 @@
         <input type="search" placeholder="Filter categories" x-model="filter" autocomplete="off">
     </div>
 
-    <form class="card spaced" method="post" th:action="@{/transactions/{id}/category(id=${transaction.id})}">
+    <form data-replace class="card spaced" method="post" th:action="@{/transactions/{id}/category(id=${transaction.id})}">
         <input type="hidden" name="query" th:if="${query}" th:value="${query}">
         <button class="row" type="submit" name="categoryId"
                 th:each="category : ${categories}" th:value="${category.id}"

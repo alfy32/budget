@@ -20,18 +20,18 @@
 
         <div class="section-title">Sort it</div>
         <div class="card">
-            <a class="row" th:href="@{/transactions/{id}/category(id=${t.id}, query=${query})}">
+            <a class="row" data-replace th:href="@{/transactions/{id}/category(id=${t.id}, query=${query})}">
                 <div class="main">Category</div>
                 <div class="value" th:if="${t.category != null}" th:text="${t.category.name}">Groceries</div>
                 <span class="badge" th:if="${t.category == null}">Choose</span>
                 <svg th:replace="~{layout :: chevron}"></svg>
             </a>
-            <a class="row" th:href="@{/transactions/{id}/tags(id=${t.id}, query=${query})}">
+            <a class="row" data-replace th:href="@{/transactions/{id}/tags(id=${t.id}, query=${query})}">
                 <div class="main">Tags</div>
                 <div class="value" th:text="${t.tags != null ? t.tags : 'None'}">None</div>
                 <svg th:replace="~{layout :: chevron}"></svg>
             </a>
-            <a class="row" th:href="@{/split/{id}(id=${bank.id}, query=${query})}">
+            <a class="row" data-replace th:href="@{/split/{id}(id=${bank.id}, query=${query})}">
                 <div class="main">Split</div>
                 <div class="value" th:text="${t.splitIndex > 0 ? 'Split' : 'Not split'}">Not split</div>
                 <svg th:replace="~{layout :: chevron}"></svg>

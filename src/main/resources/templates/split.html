@@ -10,7 +10,7 @@
         <div class="sub" th:text="|${#temporals.format(bankTransaction.transactionDate, 'MMM d, yyyy')} · ${bankTransaction.account}|">Date</div>
     </div>
 
-    <form method="post" th:action="@{/split/{id}(id=${bankTransaction.id})}">
+    <form data-replace method="post" th:action="@{/split/{id}(id=${bankTransaction.id})}">
         <input type="hidden" name="query" th:if="${query}" th:value="${query}">
 
         <div class="section-title">Split into</div>
