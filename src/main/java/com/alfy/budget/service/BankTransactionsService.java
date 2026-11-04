@@ -1,18 +1,12 @@
 package com.alfy.budget.service;
 
 import com.alfy.budget.model.BankTransaction;
-import com.alfy.budget.model.PossibleDuplicateTransactions;
 import com.alfy.budget.tools.Tools;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 public class BankTransactionsService {
@@ -78,46 +72,6 @@ public class BankTransactionsService {
     public BankTransaction get(UUID id) {
         return jdbc.queryForObject("SELECT * FROM bank_transactions WHERE id = :id",
                 new MapSqlParameterSource("id", Db.id(id)), BankTransactionsService::map);
-    }
-
-    public List<PossibleDuplicateTransactions> listPossibleDuplicates() {
-        List<BankTransaction> transactions = jdbc.query(
-                "SELECT * FROM bank_transactions WHERE transaction_date > :start",
-                new MapSqlParameterSource("start", Db.date(LocalDate.now().minusMonths(12))),
-                BankTransactionsService::map);
-
-        List<PossibleDuplicateTransactions> possibleDuplicates = new ArrayList<>();
-        for (int i = 0; i < transactions.size() - 1; i++) {
-            BankTransaction transaction1 = transactions.get(i);
-            for (int j = i + 1; j < transactions.size(); j++) {
-                BankTransaction transaction2 = transactions.get(j);
-                if (isDuplicate(transaction1, transaction2)) {
-                    PossibleDuplicateTransactions possibleDuplicate = new PossibleDuplicateTransactions();
-                    possibleDuplicate.transaction1 = transaction1;
-                    possibleDuplicate.transaction2 = transaction2;
-                    possibleDuplicates.add(possibleDuplicate);
-                }
-            }
-        }
-
-        return possibleDuplicates;
-    }
-
-    private static boolean isDuplicate(BankTransaction transaction1, BankTransaction transaction2) {
-        if (transaction1 == transaction2) {
-            return false;
-        }
-
-        if (!Objects.equals(transaction1.amount, transaction2.amount)) {
-            return false;
-        }
-
-        if (!Objects.equals(transaction1.transactionType, transaction2.transactionType)) {
-            return false;
-        }
-
-        long days = Math.abs(ChronoUnit.DAYS.between(transaction1.transactionDate, transaction2.transactionDate));
-        return days < 5;
     }
 
     public boolean add(BankTransaction bankTransaction) {

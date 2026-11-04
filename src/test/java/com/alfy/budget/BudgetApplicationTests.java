@@ -77,7 +77,6 @@ class BudgetApplicationTests {
                 "/transactions",
                 "/transactions?query=needsCategorized",
                 "/transactions?query=needsTransferred",
-                "/transactions?query=possibleDuplicates",
                 "/transactions?query=category," + category.id + "," + today + "," + today,
                 "/transactions?query=category," + category.id + ",needsTransferred",
                 "/transactions?search=gunnison",

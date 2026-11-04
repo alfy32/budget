@@ -76,28 +76,6 @@ public class TransactionsService {
         jdbc.update("DELETE FROM transactions WHERE id = :id", new MapSqlParameterSource("id", Db.id(id)));
     }
 
-    public List<Transaction> listPossibleDuplicates(List<PossibleDuplicateTransactions> possibleDuplicateTransactions) {
-        List<Transaction> possibleDuplicates = new ArrayList<>();
-
-        for (PossibleDuplicateTransactions duplicateTransactions : possibleDuplicateTransactions) {
-            List<Transaction> transactions1 = listWithBankTransactionId(duplicateTransactions.transaction1.id);
-            List<Transaction> transactions2 = listWithBankTransactionId(duplicateTransactions.transaction2.id);
-            if (!transactions1.isEmpty() && !transactions2.isEmpty()) {
-                for (Transaction transaction : transactions1) {
-                    transaction.bankTransaction = duplicateTransactions.transaction1;
-                    possibleDuplicates.add(transaction);
-                }
-
-                for (Transaction transaction : transactions2) {
-                    transaction.bankTransaction = duplicateTransactions.transaction2;
-                    possibleDuplicates.add(transaction);
-                }
-            }
-        }
-
-        return possibleDuplicates;
-    }
-
     /**
      * One page of a transaction list, newest first. search matches description or notes, ignoring case.
      */

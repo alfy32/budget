@@ -2,7 +2,6 @@ package com.alfy.budget.controller;
 
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Category;
-import com.alfy.budget.model.PossibleDuplicateTransactions;
 import com.alfy.budget.model.Transaction;
 import com.alfy.budget.model.TransactionFilter;
 import com.alfy.budget.service.BankTransactionsService;
@@ -47,7 +46,7 @@ public class TransactionsController {
     static final int PAGE_SIZE = 50;
 
     /**
-     * query is one of: needsCategorized, needsTransferred, possibleDuplicates,
+     * query is one of: needsCategorized, needsTransferred,
      * category,{id},{start},{end} or category,{id},needsTransferred. Anything else lists everything.
      *
      * The first request renders the whole page with the newest PAGE_SIZE transactions. At the bottom is a
@@ -64,19 +63,10 @@ public class TransactionsController {
             Model model
     ) {
         page = Math.max(page, 0);
-        List<Transaction> transactions;
-        boolean hasMore;
-
-        if ("possibleDuplicates".equals(query)) {
-            // Worked out in Java by comparing transactions, and always short, so it's not paged.
-            transactions = possibleDuplicates(search);
-            hasMore = false;
-        } else {
-            transactions = new ArrayList<>(transactionsService.page(filter(query), search, PAGE_SIZE + 1, page * PAGE_SIZE));
-            hasMore = transactions.size() > PAGE_SIZE;
-            if (hasMore) {
-                transactions.removeLast();
-            }
+        List<Transaction> transactions = new ArrayList<>(transactionsService.page(filter(query), search, PAGE_SIZE + 1, page * PAGE_SIZE));
+        boolean hasMore = transactions.size() > PAGE_SIZE;
+        if (hasMore) {
+            transactions.removeLast();
         }
 
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
@@ -132,22 +122,6 @@ public class TransactionsController {
         return TransactionFilter.ALL;
     }
 
-    private List<Transaction> possibleDuplicates(String search) {
-        List<PossibleDuplicateTransactions> possibleDuplicates = bankTransactionsService.listPossibleDuplicates();
-        List<Transaction> transactions = new ArrayList<>(transactionsService.listPossibleDuplicates(possibleDuplicates));
-        if (search != null) {
-            String lowerSearch = search.toLowerCase();
-            transactions.removeIf(transaction -> !contains(transaction.description, lowerSearch) && !contains(transaction.notes, lowerSearch));
-        }
-        transactions.sort(Comparator
-                .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
-                .thenComparing(transaction -> transaction.description, Comparator.nullsFirst(Comparator.naturalOrder())));
-        return transactions;
-    }
-
-    private static boolean contains(String value, String lowerSearch) {
-        return value != null && value.toLowerCase().contains(lowerSearch);
-    }
 
     /**
      * Transactions that share a date, with a label like "Today" or "Thu, Oct 30".
@@ -188,9 +162,6 @@ public class TransactionsController {
         }
         if (query.equals("needsTransferred")) {
             return "Needs transferred";
-        }
-        if (query.equals("possibleDuplicates")) {
-            return "Possible duplicates";
         }
         if (query.startsWith("category,")) {
             Category category = categoriesById.get(UUID.fromString(query.split(",")[1]));

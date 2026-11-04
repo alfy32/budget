@@ -37,12 +37,6 @@
         <a class="row" th:href="@{/needs-transferred}"><div class="main">Transfers</div><svg th:replace="~{layout :: chevron}"></svg></a>
     </div>
 
-    <div class="section-title">Transactions</div>
-    <div class="card">
-        <a class="row" th:href="@{/transactions}"><div class="main">All transactions</div><svg th:replace="~{layout :: chevron}"></svg></a>
-        <a class="row" th:href="@{/transactions(query='possibleDuplicates')}"><div class="main">Possible duplicates</div><svg th:replace="~{layout :: chevron}"></svg></a>
-    </div>
-
     <div class="section-title">Setup</div>
     <div class="card">
         <a class="row" th:href="@{/budgets}"><div class="main">Budgets</div><svg th:replace="~{layout :: chevron}"></svg></a>
