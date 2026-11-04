@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Edit Category')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Edit Category</h2>
+    <!-- Each field saves as soon as it changes, same as the budget page. -->
+    <div x-data="{ saved: '' }" @htmx:after-request="if ($event.detail.successful) { saved = $event.detail.elt.name; setTimeout(() => saved = '', 1500) }">
+        <div class="label">Name <span class="saved" x-show="saved === 'name'" x-cloak>saved</span></div>
+        <input type="text" name="name" th:value="${category.name}" th:hx-post="@{/categories/{id}/name(id=${category.id})}" hx-swap="none">
+
+        <div class="label">Budget <span class="saved" x-show="saved === 'budgetId'" x-cloak>saved</span></div>
+        <select name="budgetId" th:hx-post="@{/categories/{id}/budget(id=${category.id})}" hx-swap="none">
+            <option value="">No Budget</option>
+            <option th:each="budget : ${budgets}" th:value="${budget.id}" th:text="${budget.name}"
+                    th:selected="${category.budget != null && category.budget.id == budget.id}"></option>
+        </select>
+    </div>
+
+    <br>
+    <a class="button" th:href="@{/categories}">Done</a>
+
+    <div class="spacer"></div>
+
+    <div x-data="{ sure: false }">
+        <button class="button-red" type="button" x-show="!sure" @click="sure = true">Delete Category</button>
+        <form x-show="sure" x-cloak method="post" th:action="@{/categories/{id}/delete(id=${category.id})}">
+            <p>Transactions in this category will go back to Needs Categorized.</p>
+            <button class="button-red" type="submit">Yes delete for sure</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

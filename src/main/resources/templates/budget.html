@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Edit Budget')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Edit Budget</h2>
+    <!--
+      Each field saves on its own as soon as it changes (htmx posts it; the server answers with
+      nothing to swap). "saved" flashes so you know it worked.
+    -->
+    <div x-data="{ saved: '' }" @htmx:after-request="if ($event.detail.successful) { saved = $event.detail.elt.name; setTimeout(() => saved = '', 1500) }">
+        <div class="label">Name <span class="saved" x-show="saved === 'name'" x-cloak>saved</span></div>
+        <input type="text" name="name" th:value="${budget.name}" th:hx-post="@{/budgets/{id}/name(id=${budget.id})}" hx-swap="none">
+
+        <div class="label">Amount per month <span class="saved" x-show="saved === 'amount'" x-cloak>saved</span></div>
+        <input type="number" step="0.01" inputmode="decimal" name="amount" th:value="${budget.amount}"
+               th:hx-post="@{/budgets/{id}/amount(id=${budget.id})}" hx-swap="none">
+
+        <div class="label">Transfer Account <span class="saved" x-show="saved === 'transferAccount'" x-cloak>saved</span></div>
+        <input type="text" name="transferAccount" th:value="${budget.transferAccount}"
+               th:hx-post="@{/budgets/{id}/transfer-account(id=${budget.id})}" hx-swap="none">
+
+        <div class="label">
+            <label>
+                <input type="checkbox" name="monthly" value="true" th:checked="${budget.monthly}"
+                       th:hx-post="@{/budgets/{id}/monthly(id=${budget.id})}" hx-swap="none">
+                Show on the monthly page
+            </label>
+            <span class="saved" x-show="saved === 'monthly'" x-cloak>saved</span>
+        </div>
+    </div>
+
+    <div class="label">Categories</div>
+    <div th:if="${categories.isEmpty()}">None</div>
+    <a class="list-item" th:each="category : ${categories}" th:href="@{/categories/{id}(id=${category.id})}"
+       th:text="${category.name}">Category</a>
+
+    <br>
+    <a class="button" th:href="@{/budgets}">Done</a>
+
+    <div class="spacer"></div>
+
+    <div x-data="{ sure: false }">
+        <button class="button-red" type="button" x-show="!sure" @click="sure = true">Delete Budget</button>
+        <form x-show="sure" x-cloak method="post" th:action="@{/budgets/{id}/delete(id=${budget.id})}">
+            <button class="button-red" type="submit">Yes delete for sure</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

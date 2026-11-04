@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Yearly')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2 th:text="${date.year}">Year</h2>
+
+    <div class="period-nav">
+        <a th:href="@{/yearly(date=${previous})}">Previous</a>
+        -
+        <a th:href="@{/yearly}">This Year</a>
+        -
+        <a th:href="@{/yearly(date=${next})}">Next</a>
+    </div>
+
+    <div th:each="b : ${budgets}">
+        <a class="plain" th:href="@{/budgets/{id}(id=${b.budget.id})}">
+            <div class="budget-title" th:text="${b.budget.name}">Budget</div>
+        </a>
+        <progress th:replace="~{budget-fragments :: progress(${b.percent})}"></progress>
+        <div th:text="|${#numbers.formatCurrency(b.total)} of ${#numbers.formatCurrency(b.budget.amount)}|"></div>
+        <div th:text="${b.expectedPercent} + '% | ' + ${#numbers.formatCurrency(b.expectedTotal)}"></div>
+        <a class="plain category-total" th:each="c : ${b.categories}"
+           th:href="@{/transactions(query=|category,${c.category.id},${start},${end}|)}"
+           th:text="|${c.category.name}: ${#numbers.formatCurrency(c.total)}|">Category: $0.00</a>
+    </div>
+</main>
+</body>
+</html>

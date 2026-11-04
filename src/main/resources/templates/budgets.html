@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Budgets')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Budgets</h2>
+    <form method="post" th:action="@{/budgets}">
+        <input type="text" name="name" placeholder="New budget name" required>
+        <button class="button" type="submit">Add Budget</button>
+    </form>
+    <br>
+    <a class="list-item" th:each="budget : ${budgets}" th:href="@{/budgets/{id}(id=${budget.id})}"
+       th:text="|${budget.name} (${#numbers.formatCurrency(budget.amount)})|">Budget</a>
+</main>
+</body>
+</html>

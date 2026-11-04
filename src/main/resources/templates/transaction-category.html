@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Category')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h3 th:text="${transaction.description}">Description</h3>
+    <form method="post" th:action="@{/transactions/{id}/category(id=${transaction.id})}">
+        <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+        <button class="button" type="submit" name="categoryId"
+                th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Category</button>
+    </form>
+</main>
+</body>
+</html>

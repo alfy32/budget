@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- Blue normally, yellow above 80%, red at 100% or more. -->
+<progress th:fragment="progress(percent)" th:value="${percent}" max="100"
+          th:class="${percent >= 100 ? 'progress-full' : (percent > 80 ? 'progress-high' : 'progress-normal')}"></progress>
+
+</body>
+</html>

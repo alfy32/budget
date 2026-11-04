@@ -3,12 +3,11 @@ package com.alfy.budget.controller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.TransactionUploadResults;
@@ -25,10 +24,10 @@ import java.io.StringReader;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.UUID;
 
-@RestController
-@RequestMapping(path = "/rest/transactions/upload")
+@Controller
 public class TransactionsUploadController {
 
     final Logger logger = LoggerFactory.getLogger(TransactionsUploadController.class);
@@ -51,46 +50,41 @@ public class TransactionsUploadController {
         this.autoCategorizeService = autoCategorizeService;
     }
 
-    @PostMapping(
-            produces = MediaType.APPLICATION_JSON_VALUE
-    )
-    public ResponseEntity<Object> uploadTransactions(
+    /** Accounts offered on the upload page. Other supported formats: "Zions Cash Back Visa V1", "First Choice Platinum", "Zions All". */
+    static final List<String> UPLOAD_ACCOUNTS = List.of("SBSU Checking", "Zions Agility Cash Visa", "Zions Amazing Cash Visa");
+
+    @GetMapping("/transactions-upload")
+    public String uploadForm(Model model) {
+        model.addAttribute("accounts", UPLOAD_ACCOUNTS);
+        return "transactions-upload";
+    }
+
+    @PostMapping("/transactions-upload")
+    public String uploadTransactions(
             @RequestParam(name = "file") MultipartFile file,
             @RequestParam(name = "skip", defaultValue = "0") int skip,
-            @RequestParam(name = "account") String account
+            @RequestParam(name = "account") String account,
+            Model model
     ) throws IOException, CsvValidationException {
+        model.addAttribute("account", account);
+        model.addAttribute("results", parse(file, skip, account));
+        return "transactions-upload-results";
+    }
 
+    private TransactionUploadResults parse(MultipartFile file, int skip, String account) throws IOException, CsvValidationException {
         autoCategorizeService.updateCachedData();
 
         try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(file.getInputStream()))) {
-            switch (account) {
-                case "SBSU Checking" -> {
-                    TransactionUploadResults results = parseStateBankData(bufferedReader, skip, account);
-                    return ResponseEntity.ok(results);
-                }
+            return switch (account) {
+                case "SBSU Checking" -> parseStateBankData(bufferedReader, skip, account);
                 case "Zions Agility Cash Visa",
-                     "Zions Amazing Cash Visa" -> {
-                    TransactionUploadResults results = parseZionsCreditCardV2(bufferedReader, account);
-                    return ResponseEntity.ok(results);
-                }
-                case "Zions Cash Back Visa V1" -> {
-                    TransactionUploadResults results = parseZionsCreditCardV1(bufferedReader, "Cash Back Visa");
-                    return ResponseEntity.ok(results);
-                }
-                case "First Choice Platinum" -> {
-                    TransactionUploadResults results = parseDFCU(bufferedReader, account);
-                    return ResponseEntity.ok(results);
-                }
-                case "Zions All" -> {
-                    TransactionUploadResults results = parseZionsData(bufferedReader, parseCsvLine(bufferedReader.readLine()));
-                    return ResponseEntity.ok(results);
-                }
-                case null, default -> {
-                    return ResponseEntity.ok("Unknown account type");
-                }
-            }
+                     "Zions Amazing Cash Visa" -> parseZionsCreditCardV2(bufferedReader, account);
+                case "Zions Cash Back Visa V1" -> parseZionsCreditCardV1(bufferedReader, "Cash Back Visa");
+                case "First Choice Platinum" -> parseDFCU(bufferedReader, account);
+                case "Zions All" -> parseZionsData(bufferedReader, parseCsvLine(bufferedReader.readLine()));
+                default -> throw new IllegalArgumentException("Unknown account type: " + account);
+            };
         }
-
     }
 
     private TransactionUploadResults parseStateBankData(

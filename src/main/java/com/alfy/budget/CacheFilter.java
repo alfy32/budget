@@ -31,10 +31,6 @@ public class CacheFilter implements Filter {
 	private boolean addNoCacheHeaders(HttpServletRequest request) {
 		String requestURI = request.getRequestURI();
 
-		if (requestURI.startsWith("/rest")) {
-			return true;
-		}
-
 		if (requestURI.endsWith(".html")
 		    || requestURI.endsWith(".css")
 		    || requestURI.endsWith(".js")

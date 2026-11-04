@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Tags')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h3 th:text="${transaction.description}">Description</h3>
+    <form method="post" th:action="@{/transactions/{id}/tags(id=${transaction.id})}">
+        <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+        <label class="tag" th:each="tag : ${tags}">
+            <input type="checkbox" name="tag" th:value="${tag}" th:checked="${selected.contains(tag)}">
+            <span th:text="${tag}">Tag</span>
+        </label>
+        <button class="button" type="submit">Save</button>
+    </form>
+</main>
+</body>
+</html>

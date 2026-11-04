@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Needs Transferred')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Needs Transferred</h2>
+
+    <div class="empty" th:if="${transfers.isEmpty()}">Nothing to transfer</div>
+
+    <div th:each="transfer : ${transfers}">
+        <div class="account-title" th:text="|${#numbers.formatCurrency(transfer.amount)} - ${transfer.account}|"></div>
+        <form method="post" th:action="@{/needs-transferred/mark}">
+            <input type="hidden" name="account" th:value="${transfer.account}">
+            <button class="button small" type="submit" th:text="|Mark ${transfer.account} Transferred|"></button>
+        </form>
+
+        <div th:each="b : ${transfer.budgets}">
+            <a class="plain" th:href="@{/budgets/{id}(id=${b.budget.id})}">
+                <div class="budget-title" th:text="${b.budget.name}">Budget</div>
+            </a>
+            <div th:text="${#numbers.formatCurrency(b.total)}"></div>
+            <a class="plain category-total" th:each="c : ${b.categories}"
+               th:href="@{/transactions(query=|category,${c.category.id},needsTransferred|)}"
+               th:text="|${c.category.name}: ${#numbers.formatCurrency(c.total)}|">Category: $0.00</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

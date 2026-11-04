@@ -2,105 +2,58 @@ package com.alfy.budget.service;
 
 import com.alfy.budget.model.*;
 import com.alfy.budget.tools.Tools;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 import java.math.BigDecimal;
-import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.time.LocalDate;
 import java.util.*;
 
 public class TransactionsService {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private static final String ORDER = " ORDER BY transaction_date DESC, description";
 
-    public TransactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbc;
+
+    public TransactionsService(NamedParameterJdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     public UUID addFrom(BankTransaction bankTransaction) {
         UUID id = UUID.randomUUID();
 
-        String query = "INSERT INTO transactions (" +
-                "  id," +
-                "  bankTransactionId," +
-                "  account," +
-                "  transactionType," +
-                "  transactionDate," +
-                "  description," +
-                "  amount," +
-                "  needs_transferred" +
-                ")" +
-                "VALUES (" +
-                "  :id," +
-                "  :bankTransactionId," +
-                "  :account," +
-                "  :transactionType," +
-                "  :transactionDate," +
-                "  :description," +
-                "  :amount," +
-                "  :needs_transferred" +
-                ")";
+        String query = """
+                INSERT INTO transactions (
+                    id, bank_transaction_id, account, transaction_type, transaction_date,
+                    description, amount, needs_transferred
+                )
+                VALUES (
+                    :id, :bankTransactionId, :account, :transactionType, :transactionDate,
+                    :description, :amount, 1
+                )
+                """;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", id)
-                .addValue("bankTransactionId", bankTransaction.id)
-                .addValue("account", bankTransaction.account, Types.VARCHAR)
-                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
-                .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
-                .addValue("description", bankTransaction.description, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER)
-                .addValue("needs_transferred", true, Types.BOOLEAN);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("id", Db.id(id))
+                .addValue("bankTransactionId", Db.id(bankTransaction.id))
+                .addValue("account", bankTransaction.account)
+                .addValue("transactionType", bankTransaction.transactionType)
+                .addValue("transactionDate", Db.date(bankTransaction.transactionDate))
+                .addValue("description", bankTransaction.description)
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount));
 
-        if (namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1) {
-            return id;
-        } else {
-            return null;
-        }
+        return jdbc.update(query, params) == 1 ? id : null;
     }
 
     public Transaction get(UUID id) {
-        String query = "SELECT * FROM transactions WHERE id = :id";
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
-        return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, TransactionsService::mapTransaction);
+        return jdbc.queryForObject("SELECT * FROM transactions WHERE id = :id",
+                new MapSqlParameterSource("id", Db.id(id)), TransactionsService::map);
     }
 
     public void delete(UUID id) {
-        String query = "DELETE FROM transactions WHERE id = :id";
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
-    }
-
-    public Map<String, Object> getTransactionDescription(UUID id) {
-        String query = "SELECT transactions.description, bank_transactions.description AS original_description "
-                + " FROM transactions"
-                + " INNER JOIN bank_transactions "
-                + "    ON transactions.bankTransactionId = bank_transactions.id"
-                + " WHERE transactions.id=:transactionId";
-        HashMap<String, Object> paramMap = new HashMap<>();
-        paramMap.put("transactionId", id);
-        Map<String, Object> stringObjectMap = namedParameterJdbcTemplate.queryForMap(query, paramMap);
-
-
-        String originalDescription = (String) stringObjectMap.get("original_description");
-        if (originalDescription == null) {
-            originalDescription = "";
-        }
-
-        String decription = (String) stringObjectMap.get("description");
-        if (decription == null) {
-            decription = "";
-        }
-
-        HashMap<String, Object> json = new HashMap<>();
-        json.put("description", decription);
-        json.put("originalDescription", originalDescription);
-        return json;
+        jdbc.update("DELETE FROM transactions WHERE id = :id", new MapSqlParameterSource("id", Db.id(id)));
     }
 
     public List<Transaction> listPossibleDuplicates(List<PossibleDuplicateTransactions> possibleDuplicateTransactions) {
@@ -125,277 +78,138 @@ public class TransactionsService {
         return possibleDuplicates;
     }
 
-    public List<Transaction> listOrderedByDate(
-            boolean needsCategorized,
-            boolean needsTransferred
-    ) {
-        String query;
-        if (needsCategorized) {
-            query = """
-                    SELECT * FROM transactions
-                    WHERE categoryId IS NULL
-                    ORDER By transactionDate DESC, description
-                    """;
-        } else if (needsTransferred) {
-            query = """
-                    SELECT * FROM transactions
-                    WHERE needs_transferred = True
-                    ORDER By transactionDate DESC, description
-                    """;
-        } else {
-            query = """
-                    SELECT * FROM transactions
-                    ORDER By transactionDate DESC, description
-                    """;
-        }
+    public List<Transaction> listAll() {
+        return jdbc.query("SELECT * FROM transactions" + ORDER, TransactionsService::map);
+    }
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource();
-        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+    public List<Transaction> listNeedsCategorized() {
+        return jdbc.query("SELECT * FROM transactions WHERE category_id IS NULL" + ORDER, TransactionsService::map);
     }
 
     public List<Transaction> listNeedTransferred() {
-        String query = """
-                SELECT * FROM transactions
-                WHERE needs_transferred IS TRUE
-                ORDER By transactionDate DESC, description
-                """;
-
-        return namedParameterJdbcTemplate.query(query, new MapSqlParameterSource(), TransactionsService::mapTransaction);
+        return jdbc.query("SELECT * FROM transactions WHERE needs_transferred = 1" + ORDER, TransactionsService::map);
     }
 
-    public List<Transaction> listOrderedByDateWithCategory(
-            UUID categoryId,
-            LocalDate startDate,
-            LocalDate endDate
-    ) {
+    public List<Transaction> listWithCategory(UUID categoryId, LocalDate startDate, LocalDate endDate) {
         String query = """
                 SELECT * FROM transactions
-                WHERE categoryId = :categoryId
-                  AND transactionDate >= :startDate
-                  AND transactionDate <= :endDate
-                ORDER By transactionDate DESC, description
-                """;
+                WHERE category_id = :categoryId
+                  AND transaction_date >= :startDate
+                  AND transaction_date <= :endDate
+                """ + ORDER;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("categoryId", categoryId)
-                .addValue("startDate", Date.valueOf(startDate))
-                .addValue("endDate", Date.valueOf(endDate));
-
-        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+        return jdbc.query(query, new MapSqlParameterSource()
+                .addValue("categoryId", Db.id(categoryId))
+                .addValue("startDate", Db.date(startDate))
+                .addValue("endDate", Db.date(endDate)), TransactionsService::map);
     }
 
-    public List<Transaction> listOrderedByDateWithCategory(
-            UUID categoryId
-    ) {
+    public List<Transaction> listWithCategoryNeedsTransferred(UUID categoryId) {
         String query = """
                 SELECT * FROM transactions
-                WHERE categoryId = :categoryId
-                  AND needs_transferred IS TRUE
-                ORDER By transactionDate DESC, description
-                """;
+                WHERE category_id = :categoryId
+                  AND needs_transferred = 1
+                """ + ORDER;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("categoryId", categoryId);
-
-        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+        return jdbc.query(query, new MapSqlParameterSource("categoryId", Db.id(categoryId)), TransactionsService::map);
     }
 
     public List<Transaction> listByDate(LocalDate start, LocalDate end) {
-        String query = "SELECT * FROM transactions" +
-                " WHERE transactionDate >= :start" +
-                "   AND transactionDate <= :end";
+        String query = """
+                SELECT * FROM transactions
+                WHERE transaction_date >= :start
+                  AND transaction_date <= :end
+                """;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("start", Date.valueOf(start))
-                .addValue("end", Date.valueOf(end));
-
-        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+        return jdbc.query(query, new MapSqlParameterSource()
+                .addValue("start", Db.date(start))
+                .addValue("end", Db.date(end)), TransactionsService::map);
     }
 
     public List<Transaction> listWithBankTransactionId(UUID bankTransactionId) {
-        String query = "SELECT * FROM transactions" +
-                " WHERE bankTransactionId = :bankTransactionId";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("bankTransactionId", bankTransactionId);
-
-        return namedParameterJdbcTemplate.query(query, sqlParameterSource, TransactionsService::mapTransaction);
+        return jdbc.query("SELECT * FROM transactions WHERE bank_transaction_id = :id ORDER BY split_index",
+                new MapSqlParameterSource("id", Db.id(bankTransactionId)), TransactionsService::map);
     }
 
     public void updateCategory(UUID transactionId, UUID categoryId) {
-        String query = "UPDATE transactions"
-                + " SET categoryId = :categoryId"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
-                .addValue("categoryId", categoryId);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "category_id", Db.id(categoryId));
     }
 
     public void updateAmount(UUID transactionId, BigDecimal amount) {
-        String query = "UPDATE transactions"
-                + " SET amount = :amount"
-                + " WHERE id = :transactionId";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("transactionId", transactionId)
-                .addValue("amount", Tools.toDatabaseInt(amount), Types.INTEGER);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "amount", Tools.toDatabaseInt(amount));
     }
 
     public void updateDescription(UUID transactionId, String description) {
-        String query = "UPDATE transactions"
-                + " SET description = :description"
-                + " WHERE id = :transactionId";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("transactionId", transactionId)
-                .addValue("description", description, Types.VARCHAR);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "description", description);
     }
 
     public void updateNotes(UUID transactionId, String notes) {
-        String query = "UPDATE transactions"
-                + " SET notes = :notes"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
-                .addValue("notes", notes, Types.VARCHAR);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "notes", notes == null || notes.isBlank() ? null : notes);
     }
 
     public void updateDate(UUID transactionId, LocalDate transactionDate) {
-        String query = "UPDATE transactions"
-                + " SET transactionDate = :transactionDate"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
-                .addValue("transactionDate", transactionDate, Types.DATE);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "transaction_date", Db.date(transactionDate));
     }
 
     public void updateType(UUID transactionId, String transactionType) {
-        String query = "UPDATE transactions"
-                + " SET transactionType = :transactionType"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
-                .addValue("transactionType", transactionType, Types.VARCHAR);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "transaction_type", transactionType);
     }
 
     public void updateTags(UUID transactionId, String tags) {
-        String query = "UPDATE transactions"
-                + " SET tags = :tags"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
-                .addValue("tags", tags, Types.VARCHAR);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(transactionId, "tags", tags == null || tags.isBlank() ? null : tags);
     }
 
     public void needsTransferred(UUID transactionId, boolean needsTransferred) {
-        String query = "UPDATE transactions"
-                + " SET needs_transferred = :needsTransferred"
-                + " WHERE id = :id";
+        update(transactionId, "needs_transferred", needsTransferred ? 1 : 0);
+    }
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", transactionId)
-                .addValue("needsTransferred", needsTransferred, Types.BOOLEAN);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    private void update(UUID transactionId, String column, Object value) {
+        jdbc.update("UPDATE transactions SET " + column + " = :value WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("id", Db.id(transactionId))
+                        .addValue("value", value));
     }
 
     public void updateTransaction(SplitTransaction splitTransaction) {
-        String query = "UPDATE transactions" +
-                " SET description = :description" +
-                "   , categoryId = :categoryId" +
-                "   , amount = :amount" +
-                "   , splitIndex = :splitIndex" +
-                " WHERE id = :id";
+        String query = """
+                UPDATE transactions
+                SET description = :description,
+                    category_id = :categoryId,
+                    amount = :amount,
+                    split_index = :splitIndex
+                WHERE id = :id
+                """;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", splitTransaction.id)
-                .addValue("description", splitTransaction.description, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount), Types.INTEGER)
-                .addValue("splitIndex", splitTransaction.index, Types.INTEGER)
-                .addValue("categoryId", splitTransaction.categoryId);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        jdbc.update(query, new MapSqlParameterSource()
+                .addValue("id", Db.id(splitTransaction.id))
+                .addValue("description", splitTransaction.description)
+                .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount))
+                .addValue("splitIndex", splitTransaction.index)
+                .addValue("categoryId", Db.id(splitTransaction.categoryId)));
     }
 
     public void addSplitTransaction(BankTransaction bankTransaction, SplitTransaction splitTransaction) {
-        String query = "INSERT INTO transactions (" +
-                "  id," +
-                "  bankTransactionId," +
-                "  splitIndex," +
-                "  account," +
-                "  transactionType," +
-                "  transactionDate," +
-                "  description," +
-                "  amount," +
-                "  categoryId" +
-                ")" +
-                "VALUES (" +
-                "  :id," +
-                "  :bankTransactionId," +
-                "  :splitIndex," +
-                "  :account," +
-                "  :transactionType," +
-                "  :transactionDate," +
-                "  :description," +
-                "  :amount," +
-                "  :categoryId" +
-                ")";
+        String query = """
+                INSERT INTO transactions (
+                    id, bank_transaction_id, split_index, account, transaction_type, transaction_date,
+                    description, amount, category_id
+                )
+                VALUES (
+                    :id, :bankTransactionId, :splitIndex, :account, :transactionType, :transactionDate,
+                    :description, :amount, :categoryId
+                )
+                """;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", UUID.randomUUID())
-                .addValue("bankTransactionId", bankTransaction.id)
+        jdbc.update(query, new MapSqlParameterSource()
+                .addValue("id", Db.id(UUID.randomUUID()))
+                .addValue("bankTransactionId", Db.id(bankTransaction.id))
                 .addValue("splitIndex", splitTransaction.index)
-                .addValue("account", bankTransaction.account, Types.VARCHAR)
-                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
-                .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
-                .addValue("description", splitTransaction.description, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount), Types.INTEGER)
-                .addValue("categoryId", splitTransaction.categoryId);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
-    }
-
-    private static Transaction mapTransaction(ResultSet resultSet, int rowNum) throws SQLException {
-        Transaction transaction = new Transaction();
-        transaction.id = UUID.fromString(resultSet.getString("id"));
-        transaction.bankTransaction = new BankTransaction();
-        transaction.bankTransaction.id = UUID.fromString(resultSet.getString("bankTransactionId"));
-        transaction.splitIndex = resultSet.getInt("splitIndex");
-        transaction.account = resultSet.getString("account");
-        transaction.transactionType = resultSet.getString("transactionType");
-        transaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
-        transaction.description = resultSet.getString("description");
-        transaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
-
-        String categoryId = resultSet.getString("categoryId");
-        if (Strings.isNotBlank(categoryId)) {
-            transaction.category = new Category();
-            transaction.category.id = UUID.fromString(categoryId);
-        }
-
-        transaction.tags = resultSet.getString("tags");
-        transaction.notes = resultSet.getString("notes");
-        transaction.needsTransferred = resultSet.getBoolean("needs_transferred");
-        return transaction;
+                .addValue("account", bankTransaction.account)
+                .addValue("transactionType", bankTransaction.transactionType)
+                .addValue("transactionDate", Db.date(bankTransaction.transactionDate))
+                .addValue("description", splitTransaction.description)
+                .addValue("amount", Tools.toDatabaseInt(splitTransaction.amount))
+                .addValue("categoryId", Db.id(splitTransaction.categoryId)));
     }
 
     public int markTransactionsTransferredForAccount(String transferAccount) {
@@ -404,20 +218,39 @@ public class TransactionsService {
         }
 
         String query = """
-            UPDATE transactions
-            SET needs_transferred = false
-            WHERE transactions.categoryId IN (
-                SELECT categories.id FROM categories
-                WHERE categories.budgetid IN (
-                    SELECT budgets.id FROM budgets
-                    WHERE transfer_account = :transfer_account
+                UPDATE transactions
+                SET needs_transferred = 0
+                WHERE category_id IN (
+                    SELECT categories.id FROM categories
+                    JOIN budgets ON budgets.id = categories.budget_id
+                    WHERE budgets.transfer_account = :transferAccount
                 )
-            )
-            """;
+                """;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("transfer_account", transferAccount, Types.VARCHAR);
+        return jdbc.update(query, new MapSqlParameterSource("transferAccount", transferAccount));
+    }
 
-        return namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    private static Transaction map(ResultSet resultSet, int rowNum) throws SQLException {
+        Transaction transaction = new Transaction();
+        transaction.id = Db.getId(resultSet, "id");
+        transaction.bankTransaction = new BankTransaction();
+        transaction.bankTransaction.id = Db.getId(resultSet, "bank_transaction_id");
+        transaction.splitIndex = resultSet.getInt("split_index");
+        transaction.account = resultSet.getString("account");
+        transaction.transactionType = resultSet.getString("transaction_type");
+        transaction.transactionDate = Db.getDate(resultSet, "transaction_date");
+        transaction.description = resultSet.getString("description");
+        transaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
+
+        UUID categoryId = Db.getId(resultSet, "category_id");
+        if (categoryId != null) {
+            transaction.category = new Category();
+            transaction.category.id = categoryId;
+        }
+
+        transaction.tags = resultSet.getString("tags");
+        transaction.notes = resultSet.getString("notes");
+        transaction.needsTransferred = resultSet.getBoolean("needs_transferred");
+        return transaction;
     }
 }

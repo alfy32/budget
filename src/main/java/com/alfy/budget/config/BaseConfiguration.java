@@ -9,38 +9,37 @@ import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 public class BaseConfiguration {
 
     @Bean
-    public BankTransactionsService bankTransactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        return new BankTransactionsService(namedParameterJdbcTemplate);
+    public BankTransactionsService bankTransactionsService(NamedParameterJdbcTemplate jdbc) {
+        return new BankTransactionsService(jdbc);
     }
 
     @Bean
-    public BudgetsService budgetsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        return new BudgetsService(namedParameterJdbcTemplate);
+    public BudgetsService budgetsService(NamedParameterJdbcTemplate jdbc) {
+        return new BudgetsService(jdbc);
     }
 
     @Bean
-    public CategoriesService categoriesService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        return new CategoriesService(namedParameterJdbcTemplate);
+    public CategoriesService categoriesService(NamedParameterJdbcTemplate jdbc) {
+        return new CategoriesService(jdbc);
     }
 
     @Bean
-    public TransactionsService transactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        return new TransactionsService(namedParameterJdbcTemplate);
+    public TransactionsService transactionsService(NamedParameterJdbcTemplate jdbc) {
+        return new TransactionsService(jdbc);
     }
 
-//    @Bean
-//    public InitializerService initializerService(BudgetsService budgetsService, CategoriesService categoriesService) {
-//        InitializerService initializerService = new InitializerService(budgetsService, categoriesService);
-//        initializerService.addInitialBudgetsAndCategories();
-//        return initializerService;
-//    }
+    @Bean
+    public AutoCategorizeService autoCategorizeService(NamedParameterJdbcTemplate jdbc, TransactionsService transactionsService) {
+        return new AutoCategorizeService(jdbc, transactionsService);
+    }
 
     @Bean
-    public AutoCategorizeService autoCategorizeService(
+    public BudgetReportsService budgetReportsService(
+            BudgetsService budgetsService,
             CategoriesService categoriesService,
             TransactionsService transactionsService
     ) {
-        return new AutoCategorizeService(categoriesService, transactionsService);
+        return new BudgetReportsService(budgetsService, categoriesService, transactionsService);
     }
 
 }

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Auto-Categorize Rules')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Auto-Categorize Rules</h2>
+    <p>When you upload a bank export, new transactions whose bank description exactly matches a rule get that category.</p>
+
+    <form method="post" th:action="@{/rules}">
+        <div class="label">Bank description</div>
+        <input type="text" name="description" th:value="${description}" required>
+        <div class="label">Category</div>
+        <select name="categoryId" required>
+            <option value="">Pick a category</option>
+            <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"
+                    th:selected="${category.id == categoryId}"></option>
+        </select>
+        <button class="button" type="submit">Add Rule</button>
+    </form>
+
+    <br>
+    <div class="empty" th:if="${rules.isEmpty()}">No rules yet</div>
+    <div class="rule" th:each="rule : ${rules}">
+        <div>
+            <div th:text="${rule.description}">Description</div>
+            <div class="hint" th:text="${rule.categoryName}">Category</div>
+        </div>
+        <form method="post" th:action="@{/rules/{id}/delete(id=${rule.id})}">
+            <button class="button-red small" type="submit">Delete</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

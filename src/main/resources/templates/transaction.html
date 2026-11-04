@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Transaction')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main th:with="t=${transaction}, bank=${transaction.bankTransaction}">
+    <!--
+      How editing works on this page:
+        - Alpine (x-data / x-show) flips each field between showing its value and showing a small form.
+        - The form posts with htmx (th:hx-post). The server saves, then sends back this page, and
+          htmx swaps in the fresh #transaction section so you stay where you were on the page.
+    -->
+    <div id="transaction" hx-target="this" hx-select="#transaction" hx-swap="outerHTML">
+
+        <div x-data="{ editing: false }">
+            <div class="big-amount" th:classappend="${t.credit()} ? credit"
+                 @click="editing = true; $nextTick(() => $refs.input.focus())"
+                 th:text="${#numbers.formatCurrency(t.amount)}">$0.00</div>
+            <div class="big-description" th:text="${t.description}">Description</div>
+            <div class="centered" th:text="${#temporals.format(t.transactionDate, 'MMM d, yyyy')}">Date</div>
+            <div class="centered" th:text="${t.account}">Account</div>
+
+            <form x-show="editing" x-cloak th:hx-post="@{/transactions/{id}/amount(id=${t.id})}">
+                <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                <div class="label">Original Amount</div>
+                <div class="field value" th:text="${#numbers.formatCurrency(bank.amount)}"></div>
+                <input type="number" step="0.01" inputmode="decimal" name="amount" x-ref="input" th:value="${t.amount}">
+                <button class="button" type="submit">Update Amount</button>
+                <button class="button" type="button" @click="editing = false; $el.form.reset()">Cancel</button>
+            </form>
+        </div>
+        <hr>
+
+        <div class="field" x-data="{ editing: false }">
+            <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.focus())">
+                <div class="name">Description</div>
+                <div class="value" th:text="${t.description}"></div>
+            </div>
+            <div x-show="editing" x-cloak>
+                <div class="name">Original Description</div>
+                <div class="value" th:text="${bank.description}"></div>
+                <form th:hx-post="@{/transactions/{id}/description(id=${t.id})}">
+                    <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                    <input type="text" name="description" x-ref="input" th:value="${t.description}">
+                    <button class="button" type="submit">Update Description</button>
+                </form>
+                <form th:hx-post="@{/transactions/{id}/description/reset(id=${t.id})}">
+                    <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                    <button class="button" type="submit">Reset Description</button>
+                </form>
+                <button class="button" type="button" @click="editing = false">Cancel</button>
+            </div>
+        </div>
+
+        <div class="field">
+            <a class="plain" th:href="@{/transactions/{id}/category(id=${t.id}, query=${query})}">
+                <div class="name">Category</div>
+                <div class="value" th:text="${t.category != null ? t.category.name : 'Select Category'}"></div>
+            </a>
+            <a class="hint" th:if="${t.category != null}"
+               th:href="@{/rules(description=${bank.description}, categoryId=${t.category.id})}">
+                Always put "<span th:text="${bank.description}"></span>" in this category
+            </a>
+        </div>
+
+        <div class="field">
+            <a class="plain" th:href="@{/transactions/{id}/tags(id=${t.id}, query=${query})}">
+                <div class="name">Tags</div>
+                <div class="value" th:text="${t.tags != null ? t.tags : 'Add Tags'}"></div>
+            </a>
+        </div>
+
+        <div class="field" x-data="{ editing: false }">
+            <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.focus())">
+                <div class="name">Notes</div>
+                <div class="value" th:text="${t.notes != null ? t.notes : 'Add Notes'}"></div>
+            </div>
+            <form x-show="editing" x-cloak th:hx-post="@{/transactions/{id}/notes(id=${t.id})}">
+                <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                <div class="name">Notes</div>
+                <input type="text" name="notes" x-ref="input" th:value="${t.notes}">
+                <button class="button" type="submit">Update Notes</button>
+                <button class="button" type="button" @click="editing = false; $el.form.reset()">Cancel</button>
+            </form>
+        </div>
+
+        <div class="field" x-data="{ editing: false }">
+            <div x-show="!editing" @click="editing = true">
+                <div class="name">Date</div>
+                <div class="value" th:text="${#temporals.format(t.transactionDate, 'MMMM d, yyyy')}"></div>
+            </div>
+            <form x-show="editing" x-cloak th:hx-post="@{/transactions/{id}/date(id=${t.id})}">
+                <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                <div class="name">Original Date</div>
+                <div class="value" th:text="${#temporals.format(bank.transactionDate, 'MMMM d, yyyy')}"></div>
+                <input type="date" name="date" th:value="${t.transactionDate}">
+                <button class="button" type="submit">Update Date</button>
+                <button class="button" type="button" @click="editing = false; $el.form.reset()">Cancel</button>
+            </form>
+        </div>
+
+        <div class="field" x-data="{ editing: false }">
+            <div x-show="!editing" @click="editing = true">
+                <div class="name">Transaction Type</div>
+                <div class="value" th:text="${t.transactionType}"></div>
+            </div>
+            <form x-show="editing" x-cloak th:hx-post="@{/transactions/{id}/type(id=${t.id})}">
+                <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                <div class="name">Transaction Type</div>
+                <select name="transactionType">
+                    <option value="debit" th:selected="${t.debit()}">debit</option>
+                    <option value="credit" th:selected="${t.credit()}">credit</option>
+                </select>
+                <button class="button" type="submit">Update Transaction Type</button>
+                <button class="button" type="button" @click="editing = false; $el.form.reset()">Cancel</button>
+            </form>
+        </div>
+
+        <div class="field">
+            <a class="plain" th:href="@{/split/{id}(id=${bank.id}, query=${query})}">
+                <div class="name">Split Transaction</div>
+                <div class="value" th:text="${t.splitIndex > 0 ? 'Split' : 'Not Split'}"></div>
+            </a>
+        </div>
+
+        <form class="field" th:hx-post="@{/transactions/{id}/needs-transferred(id=${t.id})}" hx-trigger="click">
+            <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+            <div class="name">Needs Transferred</div>
+            <div class="value" th:text="${t.needsTransferred ? 'Yes' : 'No'}"></div>
+            <div class="hint">Tap to change</div>
+        </form>
+
+        <br>
+        <a class="button" th:href="@{/transactions(query=${query})}">Done</a>
+
+        <div class="spacer"></div>
+
+        <div x-data="{ sure: false }">
+            <button class="button-red" type="button" x-show="!sure" @click="sure = true">Delete</button>
+            <form x-show="sure" x-cloak method="post" th:action="@{/transactions/{id}/delete(id=${t.id})}">
+                <input type="hidden" name="query" th:if="${query}" th:value="${query}">
+                <button class="button-red" type="submit">Yes delete for sure</button>
+            </form>
+        </div>
+    </div>
+</main>
+</body>
+</html>

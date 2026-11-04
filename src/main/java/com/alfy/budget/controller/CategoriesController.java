@@ -1,69 +1,98 @@
 package com.alfy.budget.controller;
 
 import com.alfy.budget.model.Category;
+import com.alfy.budget.service.AutoCategorizeService;
 import com.alfy.budget.service.BudgetsService;
 import com.alfy.budget.service.CategoriesService;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-import java.util.Comparator;
-import java.util.List;
 import java.util.UUID;
 
-@RestController
-@RequestMapping(path = "/rest/categories")
+@Controller
 public class CategoriesController {
 
-    private final BudgetsService budgetsService;
     private final CategoriesService categoriesService;
+    private final BudgetsService budgetsService;
+    private final AutoCategorizeService autoCategorizeService;
 
     public CategoriesController(
+            CategoriesService categoriesService,
             BudgetsService budgetsService,
-            CategoriesService categoriesService
+            AutoCategorizeService autoCategorizeService
     ) {
-        this.budgetsService = budgetsService;
         this.categoriesService = categoriesService;
+        this.budgetsService = budgetsService;
+        this.autoCategorizeService = autoCategorizeService;
     }
 
-    @GetMapping
-    public List<Category> getCategories() {
-        List<Category> categories = categoriesService.list();
-        categories.sort(Comparator.comparing(category -> category.name.toLowerCase()));
-        return categories;
+    // ---- Categories --------------------------------------------------------------------------
+
+    @GetMapping("/categories")
+    public String categories(Model model) {
+        model.addAttribute("categories", categoriesService.list());
+        return "categories";
     }
 
-    @PostMapping
-    public void newCategory(
-            @RequestBody Category category
-    ) {
+    @PostMapping("/categories")
+    public String create(@RequestParam String name) {
+        Category category = Category.create(name);
         categoriesService.add(category);
+        return "redirect:/categories";
     }
 
-    @GetMapping(path = "/{id}")
-    public Category getCategory(
-            @PathVariable(name = "id") UUID id
-    ) {
-        Category category = categoriesService.get(id);
-        if (category.budget != null && category.budget.id != null) {
-            category.budget = budgetsService.get(category.budget.id);
-        }
-        return category;
+    @GetMapping("/categories/{id}")
+    public String category(@PathVariable UUID id, Model model) {
+        model.addAttribute("category", categoriesService.get(id));
+        model.addAttribute("budgets", budgetsService.list());
+        return "category";
     }
 
-    @PostMapping(path = "/{id}")
-    public void update(
-            @PathVariable(name = "id") UUID id,
-            @RequestBody Category category
-    ) {
-        category.id = id;
-        categoriesService.update(category);
+    @PostMapping("/categories/{id}/name")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setName(@PathVariable UUID id, @RequestParam String name) {
+        categoriesService.setName(id, name);
     }
 
-    @DeleteMapping(path = "/{id}")
-    public void deleteCategory(
-            @PathVariable(name = "id") UUID id
-    ) throws IOException {
+    @PostMapping("/categories/{id}/budget")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void setBudget(@PathVariable UUID id, @RequestParam(required = false) UUID budgetId) {
+        categoriesService.setBudget(id, budgetId);
+    }
+
+    @PostMapping("/categories/{id}/delete")
+    public String delete(@PathVariable UUID id) {
         categoriesService.delete(id);
+        return "redirect:/categories";
+    }
+
+    // ---- Auto-categorize rules ---------------------------------------------------------------
+
+    @GetMapping("/rules")
+    public String rules(
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) UUID categoryId,
+            Model model
+    ) {
+        model.addAttribute("rules", autoCategorizeService.list());
+        model.addAttribute("categories", categoriesService.list());
+        model.addAttribute("description", description);
+        model.addAttribute("categoryId", categoryId);
+        return "rules";
+    }
+
+    @PostMapping("/rules")
+    public String createRule(@RequestParam String description, @RequestParam UUID categoryId) {
+        autoCategorizeService.add(description, categoryId);
+        return "redirect:/rules";
+    }
+
+    @PostMapping("/rules/{id}/delete")
+    public String deleteRule(@PathVariable UUID id) {
+        autoCategorizeService.delete(id);
+        return "redirect:/rules";
     }
 
 }

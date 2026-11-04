@@ -1,18 +1,15 @@
 package com.alfy.budget.service;
 
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
-import org.springframework.jdbc.support.rowset.SqlRowSet;
 import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.PossibleDuplicateTransactions;
 import com.alfy.budget.tools.Tools;
-import java.sql.Date;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
-import java.time.Duration;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -20,110 +17,85 @@ import java.util.UUID;
 
 public class BankTransactionsService {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbc;
 
-    public BankTransactionsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    public BankTransactionsService(NamedParameterJdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     public boolean existsReferenceNumber(String account, String referenceNumber) {
-        if (account == null || account.isEmpty()) {
+        if (isBlank(account) || isBlank(referenceNumber)) {
             return false;
         }
 
-        if (referenceNumber == null || referenceNumber.isEmpty()) {
-            return false;
-        }
-
-        String query = "SELECT id FROM bank_transactions"
-                       + " WHERE account=:account"
-                       + "   AND referenceNumber=:referenceNumber";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("account", account, Types.VARCHAR)
-                .addValue("referenceNumber", referenceNumber, Types.VARCHAR);
-
-        SqlRowSet sqlRowSet = namedParameterJdbcTemplate.queryForRowSet(query, sqlParameterSource);
-        return sqlRowSet.next();
+        return exists("""
+                SELECT 1 FROM bank_transactions
+                WHERE account = :account
+                  AND reference_number = :referenceNumber
+                """, new MapSqlParameterSource()
+                .addValue("account", account)
+                .addValue("referenceNumber", referenceNumber));
     }
 
     public boolean exists(String account, String csv) {
-        if (account == null || account.isEmpty()) {
+        if (isBlank(account) || isBlank(csv)) {
             return false;
         }
 
-        if (csv == null || csv.isEmpty()) {
-            return false;
-        }
-
-        String query = "SELECT id FROM bank_transactions"
-                + " WHERE account=:account"
-                + "   AND csv=:csv";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("account", account, Types.VARCHAR)
-                .addValue("csv", csv, Types.VARCHAR);
-
-        SqlRowSet sqlRowSet = namedParameterJdbcTemplate.queryForRowSet(query, sqlParameterSource);
-        return sqlRowSet.next();
+        return exists("""
+                SELECT 1 FROM bank_transactions
+                WHERE account = :account
+                  AND csv = :csv
+                """, new MapSqlParameterSource()
+                .addValue("account", account)
+                .addValue("csv", csv));
     }
 
     public boolean exists(String account, BankTransaction bankTransaction) {
-        if (account == null || account.isEmpty()) {
+        if (isBlank(account) || bankTransaction == null) {
             return false;
         }
 
-        if (bankTransaction == null) {
-            return false;
-        }
+        return exists("""
+                SELECT 1 FROM bank_transactions
+                WHERE account = :account
+                  AND transaction_type = :transactionType
+                  AND description = :description
+                  AND amount = :amount
+                  AND balance = :balance
+                """, new MapSqlParameterSource()
+                .addValue("account", bankTransaction.account)
+                .addValue("transactionType", bankTransaction.transactionType)
+                .addValue("description", bankTransaction.description)
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount))
+                .addValue("balance", Tools.toDatabaseInt(bankTransaction.balance)));
+    }
 
-        String query = """
-                SELECT id FROM bank_transactions
-                WHERE account=:account
-                  AND transactionType=:transactionType
-                  AND description=:description
-                  AND amount=:amount
-                  AND balance=:balance
-                """;
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("account", bankTransaction.account, Types.VARCHAR)
-                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
-                .addValue("description", bankTransaction.description, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER)
-                .addValue("balance", Tools.toDatabaseInt(bankTransaction.balance), Types.INTEGER);
-
-        SqlRowSet sqlRowSet = namedParameterJdbcTemplate.queryForRowSet(query, sqlParameterSource);
-        return sqlRowSet.next();
+    private boolean exists(String query, MapSqlParameterSource params) {
+        return !jdbc.queryForList(query, params).isEmpty();
     }
 
     public BankTransaction get(UUID id) {
-        String query = "SELECT * FROM bank_transactions WHERE id = :id";
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
-        return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, BankTransactionsService::map);
+        return jdbc.queryForObject("SELECT * FROM bank_transactions WHERE id = :id",
+                new MapSqlParameterSource("id", Db.id(id)), BankTransactionsService::map);
     }
 
     public List<PossibleDuplicateTransactions> listPossibleDuplicates() {
+        List<BankTransaction> transactions = jdbc.query(
+                "SELECT * FROM bank_transactions WHERE transaction_date > :start",
+                new MapSqlParameterSource("start", Db.date(LocalDate.now().minusMonths(12))),
+                BankTransactionsService::map);
+
         List<PossibleDuplicateTransactions> possibleDuplicates = new ArrayList<>();
-
-        String query = "SELECT * FROM bank_transactions WHERE transactionDate > :transactionDate";
-
-        LocalDate startDate = LocalDate.now().minusMonths(12);
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("transactionDate", startDate, Types.DATE);
-
-        List<BankTransaction> transactions = namedParameterJdbcTemplate.query(query, sqlParameterSource, BankTransactionsService::map);
-
         for (int i = 0; i < transactions.size() - 1; i++) {
             BankTransaction transaction1 = transactions.get(i);
             for (int j = i + 1; j < transactions.size(); j++) {
                 BankTransaction transaction2 = transactions.get(j);
                 if (isDuplicate(transaction1, transaction2)) {
-                    PossibleDuplicateTransactions possibleDuplicateTransactions = new PossibleDuplicateTransactions();
-                    possibleDuplicateTransactions.transaction1 = transaction1;
-                    possibleDuplicateTransactions.transaction2 = transaction2;
-                    possibleDuplicates.add(possibleDuplicateTransactions);
+                    PossibleDuplicateTransactions possibleDuplicate = new PossibleDuplicateTransactions();
+                    possibleDuplicate.transaction1 = transaction1;
+                    possibleDuplicate.transaction2 = transaction2;
+                    possibleDuplicates.add(possibleDuplicate);
                 }
             }
         }
@@ -144,7 +116,7 @@ public class BankTransactionsService {
             return false;
         }
 
-        long days = Duration.between(transaction1.transactionDate.atStartOfDay(), transaction2.transactionDate.atStartOfDay()).abs().toDays();
+        long days = Math.abs(ChronoUnit.DAYS.between(transaction1.transactionDate, transaction2.transactionDate));
         return days < 5;
     }
 
@@ -155,81 +127,60 @@ public class BankTransactionsService {
 
         String query = """
                 INSERT INTO bank_transactions (
-                    id,
-                    csv,
-                    account,
-                    transactionType,
-                    transactionDate,
-                    postDate,
-                    referenceNumber,
-                    description,
-                    comments,
-                    checkNumber,
-                    amount,
-                    balance
+                    id, csv, account, transaction_type, transaction_date, post_date, reference_number,
+                    description, comments, check_number, amount, balance
                 )
                 VALUES (
-                    :id,
-                    :csv,
-                    :account,
-                    :transactionType,
-                    :transactionDate,
-                    :postDate,
-                    :referenceNumber,
-                    :description,
-                    :comments,
-                    :checkNumber,
-                    :amount,
-                    :balance
+                    :id, :csv, :account, :transactionType, :transactionDate, :postDate, :referenceNumber,
+                    :description, :comments, :checkNumber, :amount, :balance
                 )
-                ON CONFLICT (id)
-                DO UPDATE SET
-                    id=:id,
-                    csv=:csv,
-                    account=:account,
-                    transactionType=:transactionType,
-                    transactionDate=:transactionDate,
-                    postDate=:postDate,
-                    referenceNumber=:referenceNumber,
-                    description=:description,
-                    comments=:comments,
-                    checkNumber=:checkNumber,
-                    amount=:amount,
-                    balance=:balance
+                ON CONFLICT (id) DO UPDATE SET
+                    csv = excluded.csv,
+                    account = excluded.account,
+                    transaction_type = excluded.transaction_type,
+                    transaction_date = excluded.transaction_date,
+                    post_date = excluded.post_date,
+                    reference_number = excluded.reference_number,
+                    description = excluded.description,
+                    comments = excluded.comments,
+                    check_number = excluded.check_number,
+                    amount = excluded.amount,
+                    balance = excluded.balance
                 """;
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", bankTransaction.id)
-                .addValue("csv", bankTransaction.csv, Types.VARCHAR)
-                .addValue("account", bankTransaction.account, Types.VARCHAR)
-                .addValue("transactionType", bankTransaction.transactionType, Types.VARCHAR)
-                .addValue("transactionDate", bankTransaction.transactionDate, Types.DATE)
-                .addValue("postDate", bankTransaction.postDate, Types.DATE)
-                .addValue("referenceNumber", bankTransaction.referenceNumber, Types.VARCHAR)
-                .addValue("description", bankTransaction.description, Types.VARCHAR)
-                .addValue("comments", bankTransaction.comments, Types.VARCHAR)
-                .addValue("checkNumber", bankTransaction.checkNumber, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount), Types.INTEGER)
-                .addValue("balance", Tools.toDatabaseInt(bankTransaction.balance), Types.INTEGER);
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("id", Db.id(bankTransaction.id))
+                .addValue("csv", bankTransaction.csv)
+                .addValue("account", bankTransaction.account)
+                .addValue("transactionType", bankTransaction.transactionType)
+                .addValue("transactionDate", Db.date(bankTransaction.transactionDate))
+                .addValue("postDate", Db.date(bankTransaction.postDate))
+                .addValue("referenceNumber", bankTransaction.referenceNumber)
+                .addValue("description", bankTransaction.description)
+                .addValue("comments", bankTransaction.comments)
+                .addValue("checkNumber", bankTransaction.checkNumber)
+                .addValue("amount", Tools.toDatabaseInt(bankTransaction.amount))
+                .addValue("balance", Tools.toDatabaseInt(bankTransaction.balance));
 
-        return namedParameterJdbcTemplate.update(query, sqlParameterSource) == 1;
+        return jdbc.update(query, params) == 1;
     }
 
-    private static BankTransaction map(ResultSet resultSet, int i) throws SQLException {
+    private static boolean isBlank(String value) {
+        return value == null || value.isEmpty();
+    }
+
+    private static BankTransaction map(ResultSet resultSet, int rowNum) throws SQLException {
         BankTransaction bankTransaction = new BankTransaction();
-        bankTransaction.id = UUID.fromString(resultSet.getString("id"));
+        bankTransaction.id = Db.getId(resultSet, "id");
         bankTransaction.csv = resultSet.getString("csv");
         bankTransaction.account = resultSet.getString("account");
-        bankTransaction.transactionDate = resultSet.getDate("transactionDate").toLocalDate();
-        bankTransaction.transactionType = resultSet.getString("transactionType");
-        Date postDate = resultSet.getDate("postDate");
-        if (postDate != null) {
-            bankTransaction.postDate = postDate.toLocalDate();
-        }
-        bankTransaction.referenceNumber = resultSet.getString("referenceNumber");
+        bankTransaction.transactionType = resultSet.getString("transaction_type");
+        bankTransaction.transactionDate = Db.getDate(resultSet, "transaction_date");
+        bankTransaction.postDate = Db.getDate(resultSet, "post_date");
+        bankTransaction.referenceNumber = resultSet.getString("reference_number");
         bankTransaction.description = resultSet.getString("description");
         bankTransaction.comments = resultSet.getString("comments");
-        bankTransaction.checkNumber = resultSet.getString("checkNumber");
+        bankTransaction.checkNumber = resultSet.getString("check_number");
         bankTransaction.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
         bankTransaction.balance = Tools.fromDatabaseInt(resultSet.getInt("balance"));
         return bankTransaction;

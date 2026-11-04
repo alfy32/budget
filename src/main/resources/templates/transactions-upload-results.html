@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Upload Results')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Uploaded</h2>
+    <div class="label" th:text="${account}">Account</div>
+    <div class="field value" th:text="|${results.newTransactions()} new|"></div>
+    <div class="field value" th:text="|${results.autoCategorizedTransactions()} auto-categorized|"></div>
+    <div class="field value" th:text="|${results.existingTransactions()} already uploaded|"></div>
+    <div class="field value" th:classappend="${results.failedTransactions() > 0} ? warning"
+         th:text="|${results.failedTransactions()} failed|"></div>
+    <br>
+    <a class="button" th:href="@{/transactions(query='needsCategorized')}">Categorize</a>
+    <a class="button" th:href="@{/transactions-upload}">Upload Another</a>
+</main>
+</body>
+</html>

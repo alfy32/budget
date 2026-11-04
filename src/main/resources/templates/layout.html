@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  Shared pieces used by every page:
+    <head th:replace="~{layout :: head('Page title')}"></head>
+    <nav th:replace="~{layout :: nav}"></nav>
+-->
+<head th:fragment="head(title)">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${title} + ' - Budget'">Budget</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <!-- htmx: send forms / swap parts of the page without a full reload -->
+    <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
+    <!-- Alpine: small bits of in-browser behavior (show/hide, live totals) -->
+    <script th:src="@{/webjars/alpinejs/dist/cdn.min.js}" defer></script>
+</head>
+<body>
+
+<nav th:fragment="nav" class="topnav">
+    <a th:href="@{/}">Home</a>
+    <a th:href="@{/transactions(query='needsCategorized')}">Categorize</a>
+    <a th:href="@{/monthly}">Monthly</a>
+    <a th:href="@{/yearly}">Yearly</a>
+</nav>
+
+</body>
+</html>

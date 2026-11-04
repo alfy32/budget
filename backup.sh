@@ -1,17 +1,14 @@
 #!/bin/bash
+# Copies the SQLite database to a dated file. Safe to run while the app is running.
+# To restore: stop the app, copy a backup over budget.db (and delete budget.db-wal / budget.db-shm), start the app.
+set -euo pipefail
 
-# PostgreSQL database credentials
-DB_NAME="budget_prod"
-DB_USER="postgres"
-DB_PASS="postgres"
-
-# Backup directory and filename
+DB_FILE="/home/alan/budget-data/budget.db"
 BACKUP_DIR="/home/alan/budget-backups"
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
-BACKUP_FILE="$BACKUP_DIR/$DB_NAME-$DATE.sql"
 
-# Execute pg_dump to backup the database
-PGPASSWORD="$DB_PASS" pg_dump -U "$DB_USER" -h localhost "$DB_NAME" > "$BACKUP_FILE"
+mkdir -p "$BACKUP_DIR"
+sqlite3 "$DB_FILE" ".backup '$BACKUP_DIR/budget-$DATE.db'"
 
-# Optional: Remove old backups (e.g., older than 7 days)
-find "$BACKUP_DIR" -type f -name "*.sql" -mtime +30 -delete
+# Keep 30 days of backups
+find "$BACKUP_DIR" -type f -name "budget-*.db" -mtime +30 -delete

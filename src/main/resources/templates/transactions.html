@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Transactions')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <!-- Typing filters the list: htmx re-requests this page and swaps in just #list. -->
+    <form th:action="@{/transactions}" method="get"
+          th:hx-get="@{/transactions}" hx-trigger="input changed delay:250ms from:find input.search, submit"
+          hx-target="#list" hx-select="#list" hx-swap="outerHTML" hx-push-url="true">
+        <input type="hidden" name="query" th:value="${query}" th:if="${query}">
+        <input class="search" type="text" name="search" th:value="${search}" placeholder="Search" autocomplete="off">
+    </form>
+
+    <div id="list">
+        <div class="empty" th:if="${transactions.isEmpty() && query == 'needsCategorized'}">Nothing to categorize</div>
+        <div class="empty" th:if="${transactions.isEmpty() && query == 'needsTransferred'}">Nothing to transfer</div>
+
+        <a class="transaction-row" th:each="t : ${transactions}"
+           th:href="@{/transactions/{id}(id=${t.id}, query=${query})}">
+            <div class="description" th:text="${t.description}">Description</div>
+            <div class="line">
+                <span th:text="${t.category != null ? t.category.name : 'Needs Categorized'}">Category</span>
+                <span th:text="${t.splitIndex > 0 ? 'Split' : ''}"></span>
+            </div>
+            <div class="line">
+                <span th:text="${#temporals.format(t.transactionDate, 'MMM d')}">Jan 1</span>
+                <span th:classappend="${t.credit()} ? credit" th:text="${#numbers.formatCurrency(t.amount)}">$0.00</span>
+            </div>
+        </a>
+    </div>
+</main>
+</body>
+</html>

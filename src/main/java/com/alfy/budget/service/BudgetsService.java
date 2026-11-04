@@ -2,15 +2,12 @@ package com.alfy.budget.service;
 
 import com.alfy.budget.model.Budget;
 import com.alfy.budget.tools.Tools;
-import org.apache.logging.log4j.util.Strings;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Types;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,113 +15,75 @@ import java.util.UUID;
 
 public class BudgetsService {
 
-    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
+    private final NamedParameterJdbcTemplate jdbc;
 
-    public BudgetsService(NamedParameterJdbcTemplate namedParameterJdbcTemplate) {
-        this.namedParameterJdbcTemplate = namedParameterJdbcTemplate;
+    public BudgetsService(NamedParameterJdbcTemplate jdbc) {
+        this.jdbc = jdbc;
     }
 
     public List<Budget> list() {
-        String query = "SELECT * FROM budgets";
-        HashMap<String, Object> paramMap = new HashMap<>();
-        return namedParameterJdbcTemplate.query(query, paramMap, BudgetsService::map);
+        return jdbc.query("SELECT * FROM budgets ORDER BY name", BudgetsService::map);
     }
 
     public Map<UUID, Budget> listBudgetsById() {
-        HashMap<UUID, Budget> budgetsById = new HashMap<>();
-
+        Map<UUID, Budget> budgetsById = new HashMap<>();
         for (Budget budget : list()) {
             budgetsById.put(budget.id, budget);
         }
-
         return budgetsById;
     }
 
     public Budget get(UUID id) {
-        String query = "SELECT * FROM budgets WHERE id=:id";
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
-        return namedParameterJdbcTemplate.queryForObject(query, sqlParameterSource, BudgetsService::map);
+        return jdbc.queryForObject("SELECT * FROM budgets WHERE id = :id",
+                new MapSqlParameterSource("id", Db.id(id)), BudgetsService::map);
     }
 
     public Budget add(Budget budget) {
-        if (budget == null || Strings.isBlank(budget.name) || Tools.isLessThanZero(budget.amount)) {
+        if (budget == null || budget.name == null || budget.name.isBlank() || Tools.isLessThanZero(budget.amount)) {
             return null;
         }
 
         budget.id = UUID.randomUUID();
 
-        String query = "INSERT INTO budgets (id, name, amount)" +
-                "VALUES (:id, :name, :amount)";
+        jdbc.update("INSERT INTO budgets (id, name, amount) VALUES (:id, :name, :amount)",
+                new MapSqlParameterSource()
+                        .addValue("id", Db.id(budget.id))
+                        .addValue("name", budget.name)
+                        .addValue("amount", Tools.toDatabaseInt(budget.amount)));
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", budget.id)
-                .addValue("name", budget.name, Types.VARCHAR)
-                .addValue("amount", Tools.toDatabaseInt(budget.amount), Types.INTEGER);
-
-        if (namedParameterJdbcTemplate.update(query, sqlParameterSource) != 0) {
-            return budget;
-        }
-
-        return null;
+        return budget;
     }
 
     public void delete(UUID id) {
-        String query = "DELETE FROM budgets WHERE id=:id";
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource().addValue("id", id);
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        jdbc.update("DELETE FROM budgets WHERE id = :id", new MapSqlParameterSource("id", Db.id(id)));
     }
 
     public void setName(UUID id, String name) {
-        String query = "UPDATE budgets"
-                + " SET name = :name"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", id)
-                .addValue("name", name, Types.VARCHAR);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(id, "name", name);
     }
 
     public void setMonthly(UUID id, boolean monthly) {
-        String query = "UPDATE budgets"
-                + " SET monthly = :monthly"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", id)
-                .addValue("monthly", monthly, Types.BOOLEAN);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(id, "monthly", monthly ? 1 : 0);
     }
 
     public void setAmount(UUID id, BigDecimal amount) {
-        String query = "UPDATE budgets"
-                + " SET amount = :amount"
-                + " WHERE id = :id";
-
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", id)
-                .addValue("amount", Tools.toDatabaseInt(amount), Types.INTEGER);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+        update(id, "amount", Tools.toDatabaseInt(amount));
     }
 
     public void setTransferAccount(UUID id, String transferAccount) {
-        String query = "UPDATE budgets"
-                + " SET transfer_account = :transfer_account"
-                + " WHERE id = :id";
+        update(id, "transfer_account", transferAccount == null || transferAccount.isBlank() ? null : transferAccount);
+    }
 
-        SqlParameterSource sqlParameterSource = new MapSqlParameterSource()
-                .addValue("id", id)
-                .addValue("transfer_account", transferAccount, Types.VARCHAR);
-
-        namedParameterJdbcTemplate.update(query, sqlParameterSource);
+    private void update(UUID id, String column, Object value) {
+        jdbc.update("UPDATE budgets SET " + column + " = :value WHERE id = :id",
+                new MapSqlParameterSource()
+                        .addValue("id", Db.id(id))
+                        .addValue("value", value));
     }
 
     private static Budget map(ResultSet resultSet, int rowNum) throws SQLException {
         Budget budget = new Budget();
-        budget.id = UUID.fromString(resultSet.getString("id"));
+        budget.id = Db.getId(resultSet, "id");
         budget.name = resultSet.getString("name");
         budget.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
         budget.monthly = resultSet.getBoolean("monthly");

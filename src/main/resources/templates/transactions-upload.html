@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Upload')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h3>Select export to upload</h3>
+    <!-- Picking a file guesses the account from the file name, like the old page did. -->
+    <form method="post" enctype="multipart/form-data" th:action="@{/transactions-upload}"
+          x-data="{ account: 'SBSU Checking' }">
+        <input type="file" name="file" accept=".csv" required
+               @change="const name = $event.target.files[0]?.name || '';
+                        if (name.startsWith('export_')) account = 'SBSU Checking';
+                        else if (name.startsWith('Transactions')) account = 'Zions Agility Cash Visa';">
+
+        <div class="label">Skip this many rows</div>
+        <input type="number" name="skip" value="0" min="0">
+
+        <div class="label">Account</div>
+        <select name="account" x-model="account">
+            <option th:each="account : ${accounts}" th:value="${account}" th:text="${account}"></option>
+        </select>
+
+        <br><br>
+        <button class="button" type="submit">Upload</button>
+    </form>
+</main>
+</body>
+</html>

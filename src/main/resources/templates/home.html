@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Home')}"></head>
+<body>
+<nav th:replace="~{layout :: nav}"></nav>
+<main>
+    <h2>Budget App</h2>
+
+    <a class="button" th:href="@{/create-transaction}">Create Transaction</a>
+    <a class="button" th:href="@{/transactions}">All Transactions</a>
+    <a class="button" th:href="@{/transactions(query='needsCategorized')}">Needs Categorized Transactions</a>
+    <a class="button" th:href="@{/transactions(query='needsTransferred')}">Needs Transferred Transactions</a>
+    <a class="button" th:href="@{/needs-transferred}">Needs Transferred</a>
+    <a class="button" th:href="@{/transactions(query='possibleDuplicates')}">Possible Duplicate Transactions</a>
+    <a class="button" th:href="@{/budgets}">Budgets</a>
+    <a class="button" th:href="@{/categories}">Categories</a>
+    <a class="button" th:href="@{/rules}">Auto-Categorize Rules</a>
+    <a class="button" th:href="@{/transactions-upload}">Upload Transactions CSV</a>
+</main>
+</body>
+</html>

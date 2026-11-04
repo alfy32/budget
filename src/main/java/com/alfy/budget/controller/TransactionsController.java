@@ -7,15 +7,24 @@ import com.alfy.budget.model.Transaction;
 import com.alfy.budget.service.BankTransactionsService;
 import com.alfy.budget.service.CategoriesService;
 import com.alfy.budget.service.TransactionsService;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.*;
 
-@RestController
-@RequestMapping(path = "/rest/transactions")
+@Controller
 public class TransactionsController {
+
+    /** Accounts you can pick when entering a transaction by hand. */
+    static final List<String> MANUAL_ACCOUNTS = List.of("Cash", "Gunnison Checking", "Cash Back Visa", "First Choice Platinum");
+
+    /** Tags you can put on a transaction. */
+    static final List<String> TAGS = List.of("Medical", "Car", "Home Improvement", "Savings", "Gift");
 
     private final CategoriesService categoriesService;
     private final TransactionsService transactionsService;
@@ -31,205 +40,241 @@ public class TransactionsController {
         this.bankTransactionsService = bankTransactionsService;
     }
 
-    @GetMapping
-    public List<Transaction> queryTransactions(
-            @RequestParam(name = "query", required = false) String query
+    // ---- List --------------------------------------------------------------------------------
+
+    /**
+     * query is one of: needsCategorized, needsTransferred, possibleDuplicates,
+     * category,{id},{start},{end} or category,{id},needsTransferred. Anything else lists everything.
+     */
+    @GetMapping("/transactions")
+    public String list(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String search,
+            Model model
     ) {
-        List<Transaction> transactionsOrderedByDate = getTransactions(query);
+        List<Transaction> transactions = getTransactions(query);
+
+        if (search != null && !search.isBlank()) {
+            String lowerSearch = search.toLowerCase();
+            transactions = transactions.stream()
+                    .filter(transaction -> contains(transaction.description, lowerSearch) || contains(transaction.notes, lowerSearch))
+                    .toList();
+        }
 
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
-        for (Transaction transaction : transactionsOrderedByDate) {
-            if (transaction.category != null && transaction.category.id != null) {
+        for (Transaction transaction : transactions) {
+            if (transaction.category != null) {
                 transaction.category = categoriesById.get(transaction.category.id);
             }
         }
 
-        return transactionsOrderedByDate;
+        model.addAttribute("query", query);
+        model.addAttribute("search", search);
+        model.addAttribute("transactions", transactions);
+        return "transactions";
+    }
+
+    private static boolean contains(String value, String lowerSearch) {
+        return value != null && value.toLowerCase().contains(lowerSearch);
     }
 
     private List<Transaction> getTransactions(String query) {
-        if (query != null) {
-            if ("needsCategorized".equals(query)) {
-                return transactionsService.listOrderedByDate(
-                        true,
-                        false
-                );
-            } else if ("needsTransferred".equals(query)) {
-                return transactionsService.listOrderedByDate(
-                        false,
-                        true
-                );
-            } else if ("possibleDuplicates".equals(query)) {
-                List<PossibleDuplicateTransactions> possibleDuplicateTransactions = bankTransactionsService.listPossibleDuplicates();
-                List<Transaction> transactions = transactionsService.listPossibleDuplicates(possibleDuplicateTransactions);
-                transactions.sort(Comparator
-                        .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
-                        .thenComparing((Transaction transaction) -> transaction.description)
-                );
-                return transactions;
-            } else if (query.startsWith("category,")) {
-                return getCategoryTransactions(query);
-            }
+        if (query == null) {
+            return transactionsService.listAll();
         }
 
-        return transactionsService.listOrderedByDate(
-                false,
-                false
-        );
-    }
-
-    private List<Transaction> getCategoryTransactions(String query) {
-        String[] split = query.split(",");
-        if ("category".equals(split[0])) {
-            UUID categoryId = UUID.fromString(split[1]);
-            if (split[2].equals("needsTransferred")) {
-                return transactionsService.listOrderedByDateWithCategory(categoryId);
-            } else {
-                LocalDate startDate = LocalDate.parse(split[2]);
-                LocalDate endDate = LocalDate.parse(split[3]);
-                return transactionsService.listOrderedByDateWithCategory(categoryId, startDate, endDate);
-            }
+        if (query.equals("needsCategorized")) {
+            return transactionsService.listNeedsCategorized();
         }
 
-        return Collections.emptyList();
+        if (query.equals("needsTransferred")) {
+            return transactionsService.listNeedTransferred();
+        }
+
+        if (query.equals("possibleDuplicates")) {
+            List<PossibleDuplicateTransactions> possibleDuplicates = bankTransactionsService.listPossibleDuplicates();
+            List<Transaction> transactions = new ArrayList<>(transactionsService.listPossibleDuplicates(possibleDuplicates));
+            transactions.sort(Comparator
+                    .comparing((Transaction transaction) -> transaction.transactionDate).reversed()
+                    .thenComparing(transaction -> transaction.description, Comparator.nullsFirst(Comparator.naturalOrder())));
+            return transactions;
+        }
+
+        if (query.startsWith("category,")) {
+            String[] parts = query.split(",");
+            UUID categoryId = UUID.fromString(parts[1]);
+            if (parts[2].equals("needsTransferred")) {
+                return transactionsService.listWithCategoryNeedsTransferred(categoryId);
+            }
+            return transactionsService.listWithCategory(categoryId, LocalDate.parse(parts[2]), LocalDate.parse(parts[3]));
+        }
+
+        return transactionsService.listAll();
     }
 
-    @PostMapping(path = "/create")
-    public UUID createTransaction(
-            @RequestBody BankTransaction bankTransaction
+    // ---- One transaction -------------------------------------------------------------------
+
+    @GetMapping("/transactions/{id}")
+    public String transaction(
+            @PathVariable UUID id,
+            @RequestParam(required = false) String query,
+            Model model
     ) {
-        if (bankTransaction.account == null || bankTransaction.account.isEmpty()) {
-            throw new IllegalArgumentException("'account' is required");
+        Transaction transaction = transactionsService.get(id);
+        if (transaction.category != null) {
+            transaction.category = categoriesService.getCategoriesById().get(transaction.category.id);
+        }
+        transaction.bankTransaction = bankTransactionsService.get(transaction.bankTransaction.id);
+
+        model.addAttribute("transaction", transaction);
+        model.addAttribute("query", query);
+        return "transaction";
+    }
+
+    @PostMapping("/transactions/{id}/amount")
+    public String updateAmount(@PathVariable UUID id, @RequestParam BigDecimal amount, @RequestParam(required = false) String query) {
+        transactionsService.updateAmount(id, amount);
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/description")
+    public String updateDescription(@PathVariable UUID id, @RequestParam String description, @RequestParam(required = false) String query) {
+        transactionsService.updateDescription(id, description);
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/description/reset")
+    public String resetDescription(@PathVariable UUID id, @RequestParam(required = false) String query) {
+        Transaction transaction = transactionsService.get(id);
+        BankTransaction bankTransaction = bankTransactionsService.get(transaction.bankTransaction.id);
+        transactionsService.updateDescription(id, bankTransaction.description);
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/notes")
+    public String updateNotes(@PathVariable UUID id, @RequestParam(required = false) String notes, @RequestParam(required = false) String query) {
+        transactionsService.updateNotes(id, notes);
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/date")
+    public String updateDate(
+            @PathVariable UUID id,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String query
+    ) {
+        transactionsService.updateDate(id, date);
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/type")
+    public String updateType(@PathVariable UUID id, @RequestParam String transactionType, @RequestParam(required = false) String query) {
+        if ("credit".equals(transactionType) || "debit".equals(transactionType)) {
+            transactionsService.updateType(id, transactionType);
+        }
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/needs-transferred")
+    public String toggleNeedsTransferred(@PathVariable UUID id, @RequestParam(required = false) String query) {
+        Transaction transaction = transactionsService.get(id);
+        transactionsService.needsTransferred(id, !transaction.needsTransferred);
+        return redirectToTransaction(id, query);
+    }
+
+    @PostMapping("/transactions/{id}/delete")
+    public String delete(@PathVariable UUID id, @RequestParam(required = false) String query) {
+        transactionsService.delete(id);
+        return "redirect:" + UriComponentsBuilder.fromPath("/transactions").queryParamIfPresent("query", Optional.ofNullable(query)).encode().toUriString();
+    }
+
+    // ---- Category ----------------------------------------------------------------------------
+
+    @GetMapping("/transactions/{id}/category")
+    public String categoryPicker(@PathVariable UUID id, @RequestParam(required = false) String query, Model model) {
+        model.addAttribute("transaction", transactionsService.get(id));
+        model.addAttribute("categories", categoriesService.list());
+        model.addAttribute("query", query);
+        return "transaction-category";
+    }
+
+    @PostMapping("/transactions/{id}/category")
+    public String updateCategory(@PathVariable UUID id, @RequestParam UUID categoryId, @RequestParam(required = false) String query) {
+        transactionsService.updateCategory(id, categoryId);
+        return redirectToTransaction(id, query);
+    }
+
+    // ---- Tags --------------------------------------------------------------------------------
+
+    @GetMapping("/transactions/{id}/tags")
+    public String tagsPicker(@PathVariable UUID id, @RequestParam(required = false) String query, Model model) {
+        Transaction transaction = transactionsService.get(id);
+        Set<String> selected = new HashSet<>();
+        if (transaction.tags != null) {
+            for (String tag : transaction.tags.split(",")) {
+                selected.add(tag.trim());
+            }
         }
 
-        if (!"credit".equals(bankTransaction.transactionType) && !"debit".equals(bankTransaction.transactionType)) {
+        model.addAttribute("transaction", transaction);
+        model.addAttribute("tags", TAGS);
+        model.addAttribute("selected", selected);
+        model.addAttribute("query", query);
+        return "transaction-tags";
+    }
+
+    @PostMapping("/transactions/{id}/tags")
+    public String updateTags(
+            @PathVariable UUID id,
+            @RequestParam(name = "tag", required = false) List<String> tags,
+            @RequestParam(required = false) String query
+    ) {
+        transactionsService.updateTags(id, tags == null ? null : String.join(", ", tags));
+        return redirectToTransaction(id, query);
+    }
+
+    // ---- Create ------------------------------------------------------------------------------
+
+    @GetMapping("/create-transaction")
+    public String createForm(Model model) {
+        model.addAttribute("accounts", MANUAL_ACCOUNTS);
+        model.addAttribute("today", LocalDate.now());
+        return "transaction-create";
+    }
+
+    @PostMapping("/create-transaction")
+    public String create(
+            @RequestParam String account,
+            @RequestParam String description,
+            @RequestParam BigDecimal amount,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam String transactionType
+    ) {
+        if (!"credit".equals(transactionType) && !"debit".equals(transactionType)) {
             throw new IllegalArgumentException("'transactionType' of 'credit' or 'debit' required");
         }
 
-        if (bankTransaction.transactionDate == null) {
-            throw new IllegalArgumentException("'transactionDate' is required");
-        }
-
-        if (bankTransaction.description == null || bankTransaction.description.isEmpty()) {
-            throw new IllegalArgumentException("'description' is required");
-        }
-
-        if (bankTransaction.amount == null) {
-            throw new IllegalArgumentException("'amount' is required");
-        }
-
+        BankTransaction bankTransaction = new BankTransaction();
         bankTransaction.id = UUID.randomUUID();
         bankTransaction.csv = "UserTransaction" + bankTransaction.id;
-        bankTransaction.postDate = bankTransaction.transactionDate;
+        bankTransaction.account = account;
+        bankTransaction.description = description;
+        bankTransaction.amount = amount.abs();
+        bankTransaction.transactionDate = date;
+        bankTransaction.postDate = date;
+        bankTransaction.transactionType = transactionType;
+
         bankTransactionsService.add(bankTransaction);
-        return transactionsService.addFrom(bankTransaction);
+        UUID transactionId = transactionsService.addFrom(bankTransaction);
+        return redirectToTransaction(transactionId, null);
     }
 
-    @GetMapping(path = "/{id}")
-    public Transaction getTransaction(
-            @PathVariable(name = "id") UUID id
-    ) {
-        Transaction transaction = transactionsService.get(id);
-        if (transaction.category != null && transaction.category.id != null) {
-            transaction.category = categoriesService.get(transaction.category.id);
-        }
-
-        if (transaction.bankTransaction != null && transaction.bankTransaction.id != null) {
-            transaction.bankTransaction = bankTransactionsService.get(transaction.bankTransaction.id);
-        }
-
-        return transaction;
-    }
-
-    @DeleteMapping(path = "/{id}")
-    public void deleteTransaction(
-            @PathVariable(name = "id") UUID id
-    ) {
-        transactionsService.delete(id);
-    }
-
-    @GetMapping(path = "/{id}/description")
-    public Map<String, Object> getTransactionDescription(
-            @PathVariable(name = "id") UUID id
-    ) {
-        return transactionsService.getTransactionDescription(id);
-    }
-
-    @PostMapping(path = "/{id}/amount")
-    public void updateAmount(
-            @PathVariable(name = "id") UUID id,
-            @RequestBody BigDecimal amount
-    ) {
-        transactionsService.updateAmount(id, amount);
-    }
-
-    @PostMapping(path = "/{id}/description")
-    public void updateTransactionDescription(
-            @PathVariable(name = "id") UUID id,
-            @RequestParam(name = "description") String description
-    ) {
-        transactionsService.updateDescription(id, description);
-    }
-
-    @PostMapping(path = "/{id}/category")
-    public void updateTransactionCategory(
-            @PathVariable(name = "id") UUID id,
-            @RequestParam(name = "categoryId") UUID categoryId
-    ) {
-        transactionsService.updateCategory(id, categoryId);
-    }
-
-    @PostMapping(path = "/{id}/tags")
-    public void updateTags(
-            @PathVariable(name = "id") UUID transactionId,
-            @RequestBody(required = false) List<String> tags
-    ) {
-        String tagsValue = tags == null ? null : String.join(", ", tags);
-        transactionsService.updateTags(transactionId, tagsValue);
-    }
-
-    @PostMapping(path = "/{id}/notes")
-    public void updateNotes(
-            @PathVariable("id") UUID transactionId,
-            @RequestBody(required = false) String note
-    ) {
-        if (note == null || note.isEmpty()) {
-            note = null;
-        }
-
-        transactionsService.updateNotes(transactionId, note);
-    }
-
-    @PostMapping(path = "/{id}/date")
-    public void updateDate(
-            @PathVariable("id") UUID transactionId,
-            @RequestBody LocalDate transactionDate
-    ) {
-        transactionsService.updateDate(transactionId, transactionDate);
-    }
-
-    @PostMapping(path = "/{id}/type")
-    public void updateType(
-            @PathVariable("id") UUID transactionId,
-            @RequestBody(required = false) String transactionType
-    ) {
-        if ("credit".equals(transactionType) || "debit".equals(transactionType)) {
-            transactionsService.updateType(transactionId, transactionType);
-        }
-    }
-
-    @PutMapping(path = "/{id}/needsTransferred")
-    public void needsTransferred(
-            @PathVariable("id") UUID transactionId
-    ) {
-        transactionsService.needsTransferred(transactionId, true);
-    }
-
-    @PutMapping(path = "/{id}/transferComplete")
-    public void transferComplete(
-            @PathVariable("id") UUID transactionId
-    ) {
-        transactionsService.needsTransferred(transactionId, false);
+    static String redirectToTransaction(UUID id, String query) {
+        return "redirect:" + UriComponentsBuilder.fromPath("/transactions/{id}")
+                .queryParamIfPresent("query", Optional.ofNullable(query).filter(q -> !q.isBlank()))
+                .encode()
+                .buildAndExpand(id)
+                .toUriString();
     }
 
 }
