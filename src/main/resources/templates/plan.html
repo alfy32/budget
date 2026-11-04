@@ -14,13 +14,19 @@
     <div class="savings-bar">
         <div class="top">
             <span>Savings</span>
-            <span><span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(perUnit(savings))"></span>
-                <span class="muted small" x-text="unitLabel + ' · ' + pct(savings)"></span></span>
+            <span><span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(savings / 12)"></span><span class="muted small">/mo</span></span>
+        </div>
+        <div class="sub-line">
+            <span x-text="money(savings) + '/yr'"></span>
+            <span x-text="pct(savings) + ' of gross'"></span>
         </div>
         <div class="top second">
             <span>Retirement</span>
-            <span><span class="amount" x-text="money(perUnit(retirement))"></span>
-                <span class="muted small" x-text="unitLabel + ' · ' + pct(retirement)"></span></span>
+            <span><span class="amount" x-text="money(retirement)"></span><span class="muted small">/yr</span></span>
+        </div>
+        <div class="sub-line">
+            <span x-text="money(retirement / 12) + '/mo'"></span>
+            <span x-text="pct(retirement) + ' of gross'"></span>
         </div>
     </div>
 

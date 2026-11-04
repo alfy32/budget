@@ -1320,3 +1320,15 @@ label.main {
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
+
+.savings-bar .sub-line {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+}
+
+.savings-bar .top.second {
+    margin-top: 6px;
+}
