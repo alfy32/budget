@@ -10,21 +10,17 @@
   nothing is saved until you tap Save.
 -->
 <main x-data="plan">
-    <!-- Always visible: what goes to savings each month. Tap for the breakdown. -->
-    <div class="savings-bar" @click="details = !details">
+    <!-- Always visible while you adjust: what goes to savings and to retirement, with % of gross. -->
+    <div class="savings-bar">
         <div class="top">
             <span>Savings</span>
-            <span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(savings) + '/mo'"></span>
+            <span><span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(perUnit(savings))"></span>
+                <span class="muted small" x-text="unitLabel + ' · ' + pct(savings)"></span></span>
         </div>
-        <div class="sub">Tap for the breakdown</div>
-        <div class="breakdown" x-show="details" x-cloak>
-            <div class="line"><span>Take-home pay</span><span x-text="money(takeHome)"></span></div>
-            <div class="line"><span>− From income (donations…)</span><span x-text="money(fromIncome)"></span></div>
-            <div class="line"><span>− Spending (monthly + yearly)</span><span x-text="money(spending)"></span></div>
-            <div class="line sub"><span>&nbsp;&nbsp;Monthly</span><span x-text="money(groupTotal('monthly') / 12)"></span></div>
-            <div class="line sub"><span>&nbsp;&nbsp;Yearly</span><span x-text="money(groupTotal('yearly') / 12)"></span></div>
-            <div class="line total"><span>= Savings</span><span x-text="money(savings)"></span></div>
-            <div class="line sub"><span>Other (not counted)</span><span x-text="money(groupTotal('other') / 12)"></span></div>
+        <div class="top second">
+            <span>Retirement</span>
+            <span><span class="amount" x-text="money(perUnit(retirement))"></span>
+                <span class="muted small" x-text="unitLabel + ' · ' + pct(retirement)"></span></span>
         </div>
     </div>
 
@@ -39,84 +35,135 @@
 
     <form method="post" th:action="@{/plans/{id}(id=${plan.id})}" id="plan-form">
 
-        <div class="card padded">
-            <div class="hint" style="margin-bottom: 10px;" th:unless="${plan.isProposed()}">
-                <span th:text="|Starts ${#temporals.format(plan.startMonth, 'MMMM yyyy')}.|"></span>
-                <span th:if="${plan.end == null}">The newest plan.</span>
-                <span th:if="${plan.end != null}" th:text="|Until ${#temporals.format(plan.end, 'MMM d, yyyy')}.|"></span>
-                <span th:if="${isCurrent}"> In effect now.</span>
-            </div>
-            <label class="field">
-                <span class="field-label">Take-home pay per month</span>
-                <input type="number" step="0.01" min="0" inputmode="decimal" name="takeHome" x-model.number="takeHome">
-            </label>
-            <label class="field">
-                <span class="field-label">Notes</span>
-                <input type="text" name="notes" th:value="${plan.notes}" placeholder="e.g. Raise in July">
-            </label>
+        <!-- Which unit the boxes show and take. Everything is stored per year. -->
+        <div class="segmented unit-switch">
+            <label><input type="radio" value="year" x-model="unit"><span>Per year</span></label>
+            <label><input type="radio" value="month" x-model="unit"><span>Per month</span></label>
+            <label><input type="radio" value="paycheck" x-model="unit"><span>Per paycheck</span></label>
         </div>
 
-        <!-- How to split each paycheck's direct deposit once this plan starts (like the bottom of the sheet). -->
+        <div class="hint" style="margin: 0 4px 10px 4px;" th:unless="${plan.isProposed()}">
+            <span th:text="|Starts ${#temporals.format(plan.startMonth, 'MMMM yyyy')}.|"></span>
+            <span th:if="${plan.end == null}">The newest plan.</span>
+            <span th:if="${plan.end != null}" th:text="|Until ${#temporals.format(plan.end, 'MMM d, yyyy')}.|"></span>
+            <span th:if="${isCurrent}"> In effect now.</span>
+        </div>
+
+        <!-- ===== Pay ===== -->
+        <div class="section-title">Pay</div>
+        <div class="card">
+            <div class="pay-total">
+                <div class="label">Gross salary <span class="muted small" x-text="money(gross / 2080) + '/hr · ' + money(gross / 52) + '/wk'"></span></div>
+                <input type="number" step="0.01" min="0" inputmode="decimal" aria-label="Gross salary"
+                       :value="perUnit(gross).toFixed(2)" @change="gross = toYear($event.target.value)">
+                <input type="hidden" name="grossSalary" :value="gross.toFixed(2)">
+            </div>
+
+            <th:block th:each="sectionEntry : ${payBySection}" th:with="section=${sectionEntry.key}">
+                <th:block th:if="${section.name() == 'PRETAX' || section.name() == 'TAX' || section.name() == 'POSTTAX'}">
+                    <div th:replace="~{plan-fragments :: paySection(${section}, ${sectionEntry.value})}"></div>
+                </th:block>
+                <div class="pay-total" th:if="${section.name() == 'PRETAX'}">
+                    <div class="label">= Taxable salary <span class="muted small" x-text="money(taxable / 2080) + '/hr'"></span></div>
+                    <div class="value"><span x-text="money(perUnit(taxable))"></span> <span class="muted small" x-text="pct(taxable)"></span></div>
+                </div>
+                <div class="pay-total strong" th:if="${section.name() == 'POSTTAX'}">
+                    <div class="label">= Paycheck <span class="muted small" x-text="money(paycheck / 2080) + '/hr'"></span></div>
+                    <div class="value"><span x-text="money(perUnit(paycheck))"></span> <span class="muted small" x-text="pct(paycheck)"></span></div>
+                </div>
+            </th:block>
+        </div>
+
+        <div class="section-title">From the paycheck</div>
+        <div class="card">
+            <th:block th:each="sectionEntry : ${payBySection}" th:with="section=${sectionEntry.key}">
+                <th:block th:if="${section.name() == 'TRANSFER' || section.name() == 'DONATION'}">
+                    <div th:replace="~{plan-fragments :: paySection(${section}, ${sectionEntry.value})}"></div>
+                </th:block>
+            </th:block>
+            <div class="pay-total strong">
+                <div class="label">= Net <span class="muted small" x-text="money(net / 2080) + '/hr'"></span></div>
+                <div class="value"><span x-text="money(perUnit(net))"></span> <span class="muted small" x-text="pct(net)"></span></div>
+            </div>
+        </div>
+
+        <!-- ===== Where it goes ===== -->
+        <div class="section-title">Where it goes</div>
+        <div class="card summary">
+            <div class="sum-row"><span>Paycheck</span><span x-text="money(perUnit(paycheck))"></span><span x-text="pct(paycheck)"></span></div>
+            <div class="sum-row"><span>− Through checking</span><span x-text="money(perUnit(transfers))"></span><span x-text="pct(transfers)"></span></div>
+            <div class="sum-row"><span>− Donations</span><span x-text="money(perUnit(donations))"></span><span x-text="pct(donations)"></span></div>
+            <div class="sum-row"><span>− Monthly budgets</span><span x-text="money(perUnit(groupTotal('monthly')))"></span><span x-text="pct(groupTotal('monthly'))"></span></div>
+            <div class="sum-row"><span>− Yearly budgets</span><span x-text="money(perUnit(groupTotal('yearly')))"></span><span x-text="pct(groupTotal('yearly'))"></span></div>
+            <div class="sum-row total"><span>= Savings <span class="muted small" x-text="money(savings / 2080) + '/hr'"></span></span>
+                <span :class="savings < 0 && 'negative'" x-text="money(perUnit(savings))"></span><span x-text="pct(savings)"></span></div>
+            <div class="sum-row spaced-row"><span>Retirement</span><span x-text="money(perUnit(retirement))"></span><span x-text="pct(retirement)"></span></div>
+            <div class="sum-row"><span>Emergency fund <span class="muted small">(insurance + budgets)</span></span><span x-text="money(perUnit(emergencyFund))"></span><span x-text="pct(emergencyFund)"></span></div>
+            <!-- How much to keep in the emergency fund account to cover 3, 6 or 12 months without income. -->
+            <div class="emergency">
+                <div><span class="muted small">3 months</span><strong x-text="money(emergencyFund / 4)"></strong></div>
+                <div><span class="muted small">6 months</span><strong x-text="money(emergencyFund / 2)"></strong></div>
+                <div><span class="muted small">12 months</span><strong x-text="money(emergencyFund)"></strong></div>
+            </div>
+            <div class="sum-row muted"><span>Other budgets (not counted)</span><span x-text="money(perUnit(groupTotal('other')))"></span><span></span></div>
+        </div>
+
+        <!-- How to split each paycheck's direct deposit once this plan starts. -->
         <div class="section-title">Direct deposit</div>
         <div class="card">
             <div class="row small muted" style="min-height: 0; padding-top: 8px; padding-bottom: 4px;">
                 <span class="main"></span><span class="deposit">Per month</span><span class="deposit">Per paycheck</span>
             </div>
             <div class="row">
-                <div class="main"><div class="title">Checking</div><div class="sub">Monthly budgets + from income</div></div>
-                <span class="deposit" x-text="money(checking)"></span><span class="deposit strong" x-text="money(checking / paychecksPerMonth)"></span>
+                <div class="main"><div class="title">Checking</div><div class="sub">Monthly budgets, donations, through checking</div></div>
+                <span class="deposit" x-text="money(checking / 12)"></span><span class="deposit strong" x-text="money(checking / 24)"></span>
             </div>
             <div class="row">
                 <div class="main"><div class="title">Yearly Savings</div><div class="sub">Yearly budgets</div></div>
-                <span class="deposit" x-text="money(yearlySavings)"></span><span class="deposit strong" x-text="money(yearlySavings / paychecksPerMonth)"></span>
+                <span class="deposit" x-text="money(groupTotal('yearly') / 12)"></span><span class="deposit strong" x-text="money(groupTotal('yearly') / 24)"></span>
             </div>
             <div class="row">
                 <div class="main"><div class="title">Savings</div><div class="sub">What's left</div></div>
-                <span class="deposit" :class="savings < 0 && 'negative'" x-text="money(savings)"></span>
-                <span class="deposit strong" :class="savings < 0 && 'negative'" x-text="money(savings / paychecksPerMonth)"></span>
+                <span class="deposit" :class="savings < 0 && 'negative'" x-text="money(savings / 12)"></span>
+                <span class="deposit strong" :class="savings < 0 && 'negative'" x-text="money(savings / 24)"></span>
             </div>
         </div>
-        <p class="hint" style="margin: 6px 4px 0 4px;">Per paycheck assumes 2 paychecks a month (24 a year).</p>
+        <p class="hint" style="margin: 6px 4px 0 4px;">Per paycheck assumes 24 paychecks a year. Per hour assumes 2,080 hours a year.</p>
 
+        <div class="section-title">Employer and insurance</div>
+        <div class="card">
+            <th:block th:each="sectionEntry : ${payBySection}" th:with="section=${sectionEntry.key}">
+                <th:block th:if="${section.name() == 'INFO' || section.name() == 'INSURANCE'}">
+                    <div th:replace="~{plan-fragments :: paySection(${section}, ${sectionEntry.value})}"></div>
+                </th:block>
+            </th:block>
+        </div>
+
+        <div class="card padded spaced">
+            <label class="field">
+                <span class="field-label">Notes</span>
+                <input type="text" name="notes" th:value="${plan.notes}" placeholder="e.g. Raise in July">
+            </label>
+        </div>
+
+        <!-- ===== Budgets ===== -->
         <p class="hint" style="margin: 12px 4px 0 4px;">
             <span th:if="${previous != null}" th:text="|Last = the plan from ${#temporals.format(previous.startMonth, 'MMM yyyy')}. |"></span>
-            <span th:text="|Spent = ${actualLabel}.|"></span> Amounts are per year.
+            <span th:text="|Spent = ${actualLabel}.|"></span> Last and Spent are per year; the change is per year.
         </p>
 
         <th:block th:each="groupEntry : ${grouped}" th:with="group=${groupEntry.key}">
             <div class="section-title plan-group" th:x-data="|{ group: '${group.dbValue}' }|">
                 <span th:text="${group.label}">Monthly</span>
-                <span x-text="money(groupTotal(group) / 12) + '/mo'"></span>
+                <span x-text="money(perUnit(groupTotal(group))) + ' · ' + pct(groupTotal(group))"></span>
             </div>
             <p class="hint" style="margin: -2px 4px 6px 4px;" th:text="${group.description}"></p>
-
-            <!-- Money set aside from income that isn't a spending category (e.g. a Roth IRA). -->
-            <div class="card" th:if="${group.name() == 'INCOME'}" style="margin-bottom: 12px;">
-                <div class="plan-line" th:each="item : ${incomeItems}" th:x-data="|{ itemId: '${item.id}' }|">
-                    <div class="name"><span th:text="${item.name}">Alan Roth IRA</span></div>
-                    <div class="inputs">
-                        <label>Month <input type="number" step="0.01" inputmode="decimal"
-                                            :value="(income[itemId] / 12).toFixed(2)"
-                                            @change="income[itemId] = Math.round($event.target.value * 1200) / 100"></label>
-                        <label>Year <input type="number" step="0.01" inputmode="decimal" th:name="|income_${item.id}|"
-                                           x-model.number="income[itemId]"></label>
-                        <button class="link-button" type="submit" name="action" th:value="|removeIncome:${item.id}|">Remove</button>
-                    </div>
-                </div>
-                <div class="plan-line add-income">
-                    <div class="inputs">
-                        <input type="text" name="newIncomeName" placeholder="e.g. Roth IRA" aria-label="Name">
-                        <input type="number" step="0.01" inputmode="decimal" name="newIncomeAmount" placeholder="Per year" aria-label="Per year">
-                        <button class="btn inline secondary" type="submit" name="action" value="addIncome">Add</button>
-                    </div>
-                </div>
-            </div>
 
             <div class="card plan-budget" th:each="budgetEntry : ${groupEntry.value}" th:with="budget=${budgetsById[budgetEntry.key]}"
                  th:x-data="|{ budget: '${budget.id}' }|">
                 <div class="budget-name">
                     <a class="plain" th:href="@{/budgets/{id}(id=${budget.id})}" th:text="${budget.name}">Groceries</a>
-                    <span x-text="money(budgetTotal(budget) / 12) + '/mo'"></span>
+                    <span x-text="money(perUnit(budgetTotal(budget))) + ' · ' + pct(budgetTotal(budget))"></span>
                 </div>
                 <div class="plan-line" th:each="line : ${budgetEntry.value}"
                      th:with="last=${lastAmounts[line.categoryId]}, spent=${actual[line.categoryId]}"
@@ -133,12 +180,17 @@
                               th:classappend="${left.signum() < 0} ? negative"
                               th:text="${left.signum() < 0} ? |Over ${#numbers.formatCurrency(left.negate())}| : |Left ${#numbers.formatCurrency(left)}|">Left $345.54</span>
                     </div>
-                    <div class="inputs">
-                        <label>Month <input type="number" step="0.01" inputmode="decimal"
-                                            :value="(lines[id].amount / 12).toFixed(2)"
-                                            @change="lines[id].amount = Math.round($event.target.value * 1200) / 100"></label>
-                        <label>Year <input type="number" step="0.01" min="0" inputmode="decimal" th:name="|line_${line.categoryId}|"
-                                           x-model.number="lines[id].amount"></label>
+                    <!-- Donations' amount comes from the donation lines in the pay section. -->
+                    <div class="inputs" th:if="${hasDonationLines && line.group.name() == 'INCOME'}">
+                        <span class="muted small">From the donation lines above:</span>
+                        <span class="amount" x-text="money(perUnit(donations)) + ' · ' + pct(donations)"></span>
+                    </div>
+                    <div class="inputs" th:unless="${hasDonationLines && line.group.name() == 'INCOME'}">
+                        <label><span x-text="unitName"></span>
+                            <input type="number" step="0.01" min="0" inputmode="decimal"
+                                   :value="perUnit(lines[id].amount).toFixed(2)" @change="lines[id].amount = toYear($event.target.value)"></label>
+                        <input type="hidden" th:name="|line_${line.categoryId}|" :value="lines[id].amount.toFixed(2)">
+                        <span class="pct" x-text="pct(lines[id].amount)"></span>
                         <span class="change" th:if="${last != null}"
                               x-text="change(lines[id].amount, last)"
                               :class="lines[id].amount > last + 0.004 ? 'up' : (lines[id].amount < last - 0.004 ? 'down' : '')"></span>
@@ -236,42 +288,66 @@
     <script th:inline="javascript">
         document.addEventListener('alpine:init', () => {
             Alpine.data('plan', () => ({
-                details: false,
-                takeHome: Number(/*[[${plan.takeHome}]]*/ 0),
+                unit: 'month',
+                gross: Number(/*[[${plan.grossSalary}]]*/ 0),
+                hasDonationLines: /*[[${hasDonationLines}]]*/ false,
                 // category id -> { budget, group, amount per year }
                 lines: Object.fromEntries((/*[[${lineData}]]*/ []).map(line =>
                     [line.id, {budget: line.budget, group: line.group, amount: Number(line.amount)}])),
-                // income item id -> amount per year
-                income: Object.fromEntries((/*[[${incomeData}]]*/ []).map(item => [item.id, Number(item.amount)])),
+                // pay line id -> { section, kind: amount | gross | taxable, value (per year, or a percent), retirement }
+                pay: Object.fromEntries((/*[[${payData}]]*/ []).map(item =>
+                    [item.id, {section: item.section, kind: item.kind, value: Number(item.value), retirement: item.retirement === 'true'}])),
+
+                // Units: everything is stored per year.
+                get factor() { return {year: 1, month: 12, paycheck: 24}[this.unit]; },
+                get unitLabel() { return {year: '/yr', month: '/mo', paycheck: '/check'}[this.unit]; },
+                get unitName() { return {year: 'Per year', month: 'Per month', paycheck: 'Per paycheck'}[this.unit]; },
+                perUnit(perYear) { return (Number(perYear) || 0) / this.factor; },
+                toYear(value) { return Math.round((Number(value) || 0) * this.factor * 100) / 100; },
+
+                // Pay, worked down from gross the way the planning sheet does.
+                payAmount(id) {
+                    const item = this.pay[id];
+                    if (item.kind === 'amount') {
+                        return Number(item.value) || 0;
+                    }
+                    const base = item.kind === 'taxable' && item.section !== 'pretax' ? this.taxable : this.gross;
+                    return Math.round(base * (Number(item.value) || 0)) / 100;
+                },
+                sectionTotal(section) {
+                    return Object.keys(this.pay).filter(id => this.pay[id].section === section)
+                        .reduce((sum, id) => sum + this.payAmount(id), 0);
+                },
+                get taxable() { return this.gross - this.sectionTotal('pretax'); },
+                get paycheck() { return this.taxable - this.sectionTotal('tax') - this.sectionTotal('posttax'); },
+                get transfers() { return this.sectionTotal('transfer'); },
+                get donations() { return this.hasDonationLines ? this.sectionTotal('donation') : this.groupTotal('income'); },
+                get net() { return this.paycheck - this.transfers - this.donations; },
+                get spending() { return this.groupTotal('monthly') + this.groupTotal('yearly'); },
+                get savings() { return this.net - this.spending; },
+                get emergencyFund() { return this.sectionTotal('insurance') + this.spending; },
+                get retirement() {
+                    return Object.keys(this.pay).filter(id => this.pay[id].retirement)
+                        .reduce((sum, id) => sum + this.payAmount(id), 0);
+                },
+                // Direct deposit: checking pays monthly budgets, donations and what passes through to elsewhere.
+                get checking() { return this.groupTotal('monthly') + this.donations + this.transfers; },
 
                 groupTotal(group) {
-                    let total = Object.values(this.lines).filter(line => line.group === group)
+                    return Object.values(this.lines).filter(line => line.group === group)
                         .reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
-                    if (group === 'income') {
-                        total += Object.values(this.income).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
-                    }
-                    return total;
                 },
-
                 budgetTotal(budget) {
                     return Object.values(this.lines).filter(line => line.budget === budget)
                         .reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
                 },
 
-                get fromIncome() { return this.groupTotal('income') / 12; },
-                get spending() { return (this.groupTotal('monthly') + this.groupTotal('yearly')) / 12; },
-                get savings() { return (Number(this.takeHome) || 0) - this.fromIncome - this.spending; },
-
-                // Direct deposit split: checking pays monthly budgets and everything from income,
-                // Yearly Savings gets the yearly budgets, savings gets the rest.
-                paychecksPerMonth: 2,
-                get checking() { return this.groupTotal('monthly') / 12 + this.fromIncome; },
-                get yearlySavings() { return this.groupTotal('yearly') / 12; },
-
                 money(value) {
                     return (Number(value) || 0).toLocaleString('en-US', {style: 'currency', currency: 'USD'});
                 },
-
+                pct(perYear) {
+                    return this.gross > 0 ? ((Number(perYear) || 0) / this.gross * 100).toFixed(2) + '%' : '';
+                },
                 change(now, last) {
                     const difference = (Number(now) || 0) - Number(last);
                     if (Math.abs(difference) < 0.005) {
@@ -284,5 +360,6 @@
     </script>
 </main>
 <nav th:replace="~{layout :: tabs('budgets')}"></nav>
+
 </body>
 </html>

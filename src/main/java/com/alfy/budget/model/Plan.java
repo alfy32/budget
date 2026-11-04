@@ -14,8 +14,8 @@ public class Plan {
     public LocalDate startMonth;
     /** The day before the next plan starts, or null if this is the newest plan. */
     public LocalDate end;
-    /** Take-home pay per month. */
-    public BigDecimal takeHome = BigDecimal.ZERO;
+    /** Gross salary per year. */
+    public BigDecimal grossSalary = BigDecimal.ZERO;
     /** The savings per month to stay at or above, or null. */
     public BigDecimal savingsTarget;
     public String notes;

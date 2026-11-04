@@ -2,7 +2,8 @@ package com.alfy.budget.service;
 
 import com.alfy.budget.model.Plan;
 import com.alfy.budget.model.PlanGroup;
-import com.alfy.budget.model.PlanIncomeItem;
+import com.alfy.budget.model.PaySection;
+import com.alfy.budget.model.PlanPayItem;
 import com.alfy.budget.model.PlanLine;
 import com.alfy.budget.tools.Tools;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -93,19 +94,19 @@ public class PlansService {
                 .addValue("start", startMonth == null ? null : Db.date(startMonth.withDayOfMonth(1)));
 
         jdbc.update("""
-                INSERT INTO plans (id, start_month, take_home, savings_target)
-                SELECT :id, :start, take_home, savings_target FROM plans WHERE id = :from
+                INSERT INTO plans (id, start_month, gross_salary, savings_target)
+                SELECT :id, :start, gross_salary, savings_target FROM plans WHERE id = :from
                 """, params);
         jdbc.update("""
                 INSERT INTO plan_lines (plan_id, category_id, budget_id, amount)
                 SELECT :id, category_id, budget_id, amount FROM plan_lines WHERE plan_id = :from
                 """, params);
         jdbc.update("""
-                INSERT INTO plan_income_items (id, plan_id, name, amount)
+                INSERT INTO plan_pay_items (id, plan_id, section, name, kind, base, value, retirement, sort)
                 SELECT lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-' || hex(randomblob(2)) || '-' ||
                              hex(randomblob(2)) || '-' || hex(randomblob(6))),
-                       :id, name, amount
-                FROM plan_income_items WHERE plan_id = :from
+                       :id, section, name, kind, base, value, retirement, sort
+                FROM plan_pay_items WHERE plan_id = :from
                 """, params);
 
         syncCurrentPlan();
@@ -117,17 +118,16 @@ public class PlansService {
                 && list().stream().anyMatch(plan -> plan.startMonth.equals(startMonth.withDayOfMonth(1)) && !plan.id.equals(exceptPlanId));
     }
 
-    public void update(UUID planId, LocalDate startMonth, BigDecimal takeHome, BigDecimal savingsTarget, String notes) {
+    public void update(UUID planId, LocalDate startMonth, BigDecimal grossSalary, String notes) {
         jdbc.update("""
                         UPDATE plans
-                        SET start_month = :start, take_home = :takeHome, savings_target = :target, notes = :notes
+                        SET start_month = :start, gross_salary = :gross, notes = :notes
                         WHERE id = :id
                         """,
                 new MapSqlParameterSource()
                         .addValue("id", Db.id(planId))
                         .addValue("start", startMonth == null ? null : Db.date(startMonth.withDayOfMonth(1)))
-                        .addValue("takeHome", Tools.toDatabaseInt(takeHome))
-                        .addValue("target", savingsTarget == null ? null : Tools.toDatabaseInt(savingsTarget))
+                        .addValue("gross", Tools.toDatabaseInt(grossSalary == null ? BigDecimal.ZERO : grossSalary.abs()))
                         .addValue("notes", notes));
         syncCurrentPlan();
     }
@@ -204,43 +204,58 @@ public class PlansService {
         }
     }
 
-    // ---- From income -------------------------------------------------------------------------
+    // ---- Pay ---------------------------------------------------------------------------------
 
-    public List<PlanIncomeItem> incomeItems(UUID planId) {
-        return jdbc.query("SELECT * FROM plan_income_items WHERE plan_id = :planId ORDER BY lower(name)",
+    public List<PlanPayItem> payItems(UUID planId) {
+        return jdbc.query("SELECT * FROM plan_pay_items WHERE plan_id = :planId ORDER BY sort, rowid",
                 new MapSqlParameterSource("planId", Db.id(planId)), (resultSet, rowNum) -> {
-                    PlanIncomeItem item = new PlanIncomeItem();
+                    PlanPayItem item = new PlanPayItem();
                     item.id = Db.getId(resultSet, "id");
+                    item.section = PaySection.fromDb(resultSet.getString("section"));
                     item.name = resultSet.getString("name");
-                    item.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
+                    item.percent = "percent".equals(resultSet.getString("kind"));
+                    item.ofTaxable = "taxable".equals(resultSet.getString("base"));
+                    item.value = Tools.fromDatabaseInt(resultSet.getInt("value"));
+                    item.retirement = resultSet.getBoolean("retirement");
                     return item;
                 });
     }
 
-    public void addIncomeItem(UUID planId, String name, BigDecimal amount) {
+    /** Saves a pay line's settings (value is dollars per year, or a percent like 6.2). */
+    public void updatePayItem(UUID planId, UUID itemId, String name, boolean percent, boolean ofTaxable, BigDecimal value, boolean retirement) {
+        jdbc.update("""
+                        UPDATE plan_pay_items
+                        SET name = coalesce(:name, name), kind = :kind, base = :base, value = :value, retirement = :retirement
+                        WHERE plan_id = :planId AND id = :id
+                        """,
+                new MapSqlParameterSource()
+                        .addValue("planId", Db.id(planId))
+                        .addValue("id", Db.id(itemId))
+                        .addValue("name", name == null || name.isBlank() ? null : name.strip())
+                        .addValue("kind", percent ? "percent" : "amount")
+                        .addValue("base", ofTaxable ? "taxable" : "gross")
+                        .addValue("value", Tools.toDatabaseInt(value == null ? BigDecimal.ZERO : value.abs()))
+                        .addValue("retirement", retirement ? 1 : 0));
+    }
+
+    public void addPayItem(UUID planId, PaySection section, String name) {
         if (name == null || name.isBlank()) {
             return;
         }
-        jdbc.update("INSERT INTO plan_income_items (id, plan_id, name, amount) VALUES (:id, :planId, :name, :amount)",
+        jdbc.update("""
+                        INSERT INTO plan_pay_items (id, plan_id, section, name, sort)
+                        VALUES (:id, :planId, :section, :name,
+                                (SELECT coalesce(max(sort), 0) + 1 FROM plan_pay_items WHERE plan_id = :planId))
+                        """,
                 new MapSqlParameterSource()
                         .addValue("id", Db.id(UUID.randomUUID()))
                         .addValue("planId", Db.id(planId))
-                        .addValue("name", name.strip())
-                        .addValue("amount", Tools.toDatabaseInt(amount == null ? BigDecimal.ZERO : amount.abs())));
+                        .addValue("section", section.dbValue)
+                        .addValue("name", name.strip()));
     }
 
-    public void setIncomeItemAmounts(UUID planId, Map<UUID, BigDecimal> amountsById) {
-        for (Map.Entry<UUID, BigDecimal> entry : amountsById.entrySet()) {
-            jdbc.update("UPDATE plan_income_items SET amount = :amount WHERE plan_id = :planId AND id = :id",
-                    new MapSqlParameterSource()
-                            .addValue("planId", Db.id(planId))
-                            .addValue("id", Db.id(entry.getKey()))
-                            .addValue("amount", Tools.toDatabaseInt(entry.getValue() == null ? BigDecimal.ZERO : entry.getValue().abs())));
-        }
-    }
-
-    public void removeIncomeItem(UUID planId, UUID itemId) {
-        jdbc.update("DELETE FROM plan_income_items WHERE plan_id = :planId AND id = :id",
+    public void removePayItem(UUID planId, UUID itemId) {
+        jdbc.update("DELETE FROM plan_pay_items WHERE plan_id = :planId AND id = :id",
                 new MapSqlParameterSource()
                         .addValue("planId", Db.id(planId))
                         .addValue("id", Db.id(itemId)));
@@ -249,38 +264,96 @@ public class PlansService {
     // ---- Totals ------------------------------------------------------------------------------
 
     /**
-     * Per-month totals for a plan, the way the planning sheet adds them up.
-     * savings = takeHome - fromIncome - spending
+     * A plan's numbers per year, worked out the way the planning sheet does (the page's JavaScript does the same
+     * math live as you type):
+     *
+     *   taxable  = gross - before tax
+     *   paycheck = taxable - taxes - after tax
+     *   net      = paycheck - transfers - donations
+     *   savings  = net - spending (monthly + yearly budgets)
+     *   emergency fund = insurance + spending
+     *   retirement     = every line marked retirement
+     *
+     * If the plan has no donation lines, its From-income budget lines count as donations.
      */
-    public record Totals(BigDecimal takeHome, BigDecimal fromIncome, BigDecimal spending, BigDecimal monthly,
-                         BigDecimal yearly, BigDecimal other, BigDecimal savings) {
+    public record Totals(BigDecimal gross, BigDecimal pretax, BigDecimal taxable, BigDecimal taxes, BigDecimal posttax,
+                         BigDecimal paycheck, BigDecimal transfers, BigDecimal donations, BigDecimal net,
+                         BigDecimal monthly, BigDecimal yearly, BigDecimal other, BigDecimal spending, BigDecimal savings,
+                         BigDecimal insurance, BigDecimal emergencyFund, BigDecimal retirement) {
+
+        public BigDecimal perMonth(BigDecimal perYear) {
+            return perYear.divide(BigDecimal.valueOf(12), 2, java.math.RoundingMode.HALF_UP);
+        }
+
+        /** Percent of gross salary, e.g. 8.0 for 8%. */
+        public BigDecimal percentOfGross(BigDecimal perYear) {
+            return gross.signum() == 0 ? BigDecimal.ZERO
+                    : perYear.multiply(BigDecimal.valueOf(100)).divide(gross, 2, java.math.RoundingMode.HALF_UP);
+        }
     }
 
     public Totals totals(Plan plan) {
+        BigDecimal gross = plan.grossSalary;
+        List<PlanPayItem> items = payItems(plan.id);
+
+        Map<PaySection, BigDecimal> bySection = new EnumMap<>(PaySection.class);
+        for (PaySection section : PaySection.values()) {
+            bySection.put(section, BigDecimal.ZERO);
+        }
+        // Before-tax lines are always a percent of gross (taxable depends on them).
+        for (PlanPayItem item : items) {
+            if (item.section == PaySection.PRETAX) {
+                bySection.merge(PaySection.PRETAX, item.amount(gross, gross), BigDecimal::add);
+            }
+        }
+        BigDecimal taxable = gross.subtract(bySection.get(PaySection.PRETAX));
+        BigDecimal retirement = BigDecimal.ZERO;
+        for (PlanPayItem item : items) {
+            BigDecimal amount = item.amount(gross, item.section == PaySection.PRETAX ? gross : taxable);
+            if (item.section != PaySection.PRETAX) {
+                bySection.merge(item.section, amount, BigDecimal::add);
+            }
+            if (item.retirement) {
+                retirement = retirement.add(amount);
+            }
+        }
+
         BigDecimal monthly = BigDecimal.ZERO;
         BigDecimal yearly = BigDecimal.ZERO;
-        BigDecimal income = BigDecimal.ZERO;
+        BigDecimal incomeLines = BigDecimal.ZERO;
         BigDecimal other = BigDecimal.ZERO;
         for (PlanLine line : lines(plan.id)) {
             switch (line.group) {
                 case MONTHLY -> monthly = monthly.add(line.amount);
                 case YEARLY -> yearly = yearly.add(line.amount);
-                case INCOME -> income = income.add(line.amount);
+                case INCOME -> incomeLines = incomeLines.add(line.amount);
                 case OTHER -> other = other.add(line.amount);
             }
         }
-        for (PlanIncomeItem item : incomeItems(plan.id)) {
-            income = income.add(item.amount);
-        }
 
-        BigDecimal twelve = BigDecimal.valueOf(12);
-        BigDecimal monthlyPerMonth = monthly.divide(twelve, 2, java.math.RoundingMode.HALF_UP);
-        BigDecimal yearlyPerMonth = yearly.divide(twelve, 2, java.math.RoundingMode.HALF_UP);
-        BigDecimal incomePerMonth = income.divide(twelve, 2, java.math.RoundingMode.HALF_UP);
-        BigDecimal spending = monthlyPerMonth.add(yearlyPerMonth);
-        return new Totals(plan.takeHome, incomePerMonth, spending, monthlyPerMonth, yearlyPerMonth,
-                other.divide(twelve, 2, java.math.RoundingMode.HALF_UP),
-                plan.takeHome.subtract(incomePerMonth).subtract(spending));
+        boolean hasDonationLines = items.stream().anyMatch(item -> item.section == PaySection.DONATION);
+        BigDecimal donations = hasDonationLines ? bySection.get(PaySection.DONATION) : incomeLines;
+        BigDecimal paycheck = taxable.subtract(bySection.get(PaySection.TAX)).subtract(bySection.get(PaySection.POSTTAX));
+        BigDecimal net = paycheck.subtract(bySection.get(PaySection.TRANSFER)).subtract(donations);
+        BigDecimal spending = monthly.add(yearly);
+        BigDecimal insurance = bySection.get(PaySection.INSURANCE);
+
+        return new Totals(gross, bySection.get(PaySection.PRETAX), taxable, bySection.get(PaySection.TAX),
+                bySection.get(PaySection.POSTTAX), paycheck, bySection.get(PaySection.TRANSFER), donations, net,
+                monthly, yearly, other, spending, net.subtract(spending), insurance, insurance.add(spending), retirement);
+    }
+
+    /**
+     * When a plan has donation lines, their total is what its From-income budget line (e.g. Donations) gets, so the
+     * reports compare actual donations to the plan. Only done when there's exactly one such line.
+     */
+    public void syncDonations(UUID planId) {
+        Plan plan = get(planId);
+        List<PlanLine> incomeLines = lines(planId).stream().filter(line -> line.group == PlanGroup.INCOME).toList();
+        boolean hasDonationLines = payItems(planId).stream().anyMatch(item -> item.section == PaySection.DONATION);
+        if (hasDonationLines && incomeLines.size() == 1) {
+            setAmounts(planId, Map.of(incomeLines.getFirst().categoryId, totals(plan).donations()));
+        }
     }
 
     // ---- Keeping the rest of the app in step -------------------------------------------------
@@ -309,7 +382,7 @@ public class PlansService {
         Plan plan = new Plan();
         plan.id = Db.getId(resultSet, "id");
         plan.startMonth = Db.getDate(resultSet, "start_month");
-        plan.takeHome = Tools.fromDatabaseInt(resultSet.getInt("take_home"));
+        plan.grossSalary = Tools.fromDatabaseInt(resultSet.getInt("gross_salary"));
         int target = resultSet.getInt("savings_target");
         plan.savingsTarget = resultSet.wasNull() ? null : Tools.fromDatabaseInt(target);
         plan.notes = resultSet.getString("notes");

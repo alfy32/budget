@@ -120,11 +120,22 @@ public class PlansController {
                     "group", line.group.dbValue,
                     "amount", line.amount.toPlainString()));
         }
-        List<PlanIncomeItem> incomeItems = plansService.incomeItems(plan.id);
-        List<Map<String, String>> incomeData = new ArrayList<>();
-        for (PlanIncomeItem item : incomeItems) {
-            incomeData.add(Map.of("id", item.id.toString(), "amount", item.amount.toPlainString()));
+        List<PlanPayItem> payItems = plansService.payItems(plan.id);
+        Map<PaySection, List<PlanPayItem>> payBySection = new LinkedHashMap<>();
+        for (PaySection section : PaySection.values()) {
+            payBySection.put(section, new ArrayList<>());
         }
+        List<Map<String, String>> payData = new ArrayList<>();
+        for (PlanPayItem item : payItems) {
+            payBySection.get(item.section).add(item);
+            payData.add(Map.of(
+                    "id", item.id.toString(),
+                    "section", item.section.dbValue,
+                    "kind", item.percent ? (item.ofTaxable ? "taxable" : "gross") : "amount",
+                    "value", item.value.toPlainString(),
+                    "retirement", String.valueOf(item.retirement)));
+        }
+        boolean hasDonationLines = !payBySection.get(PaySection.DONATION).isEmpty();
 
         Set<UUID> inPlan = new HashSet<>();
         lines.forEach(line -> inPlan.add(line.categoryId));
@@ -144,10 +155,11 @@ public class PlansController {
         model.addAttribute("lastAmounts", lastAmounts);
         model.addAttribute("actual", actual);
         model.addAttribute("actualLabel", YearMonth.from(actualStart) + " to " + YearMonth.from(actualEnd));
-        model.addAttribute("incomeItems", incomeItems);
+        model.addAttribute("payBySection", payBySection);
+        model.addAttribute("hasDonationLines", hasDonationLines);
+        model.addAttribute("payData", payData);
         model.addAttribute("notInPlan", notInPlan);
         model.addAttribute("lineData", lineData);
-        model.addAttribute("incomeData", incomeData);
         model.addAttribute("error", error);
         return "plan";
     }
@@ -160,11 +172,10 @@ public class PlansController {
     public String save(@PathVariable UUID id, @RequestParam Map<String, String> form) {
         Plan plan = plansService.get(id);
 
-        // The savings target isn't shown any more; keep whatever is stored.
-        plansService.update(plan.id, plan.startMonth, money(form.get("takeHome")), plan.savingsTarget, blankToNull(form.get("notes")));
+        plansService.update(plan.id, plan.startMonth,
+                form.containsKey("grossSalary") ? money(form.get("grossSalary")) : plan.grossSalary, blankToNull(form.get("notes")));
 
         Map<UUID, BigDecimal> amounts = new HashMap<>();
-        Map<UUID, BigDecimal> incomeAmounts = new HashMap<>();
         Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
         for (Map.Entry<String, String> entry : form.entrySet()) {
             if (entry.getKey().startsWith("rename_")) {
@@ -179,14 +190,17 @@ public class PlansController {
             }
             if (entry.getKey().startsWith("line_")) {
                 amounts.put(UUID.fromString(entry.getKey().substring(5)), money(entry.getValue()));
-            } else if (entry.getKey().startsWith("income_")) {
-                incomeAmounts.put(UUID.fromString(entry.getKey().substring(7)), money(entry.getValue()));
+            } else if (entry.getKey().startsWith("payValue_")) {
+                UUID itemId = UUID.fromString(entry.getKey().substring("payValue_".length()));
+                String kind = form.getOrDefault("payKind_" + itemId, "amount");
+                plansService.updatePayItem(plan.id, itemId, form.get("payName_" + itemId), !kind.equals("amount"),
+                        kind.equals("taxable"), money(entry.getValue()), form.containsKey("payRetirement_" + itemId));
             } else if (entry.getKey().startsWith("budget_") && !entry.getValue().isBlank()) {
                 plansService.putLine(plan.id, UUID.fromString(entry.getKey().substring(7)), UUID.fromString(entry.getValue()));
             }
         }
         plansService.setAmounts(plan.id, amounts);
-        plansService.setIncomeItemAmounts(plan.id, incomeAmounts);
+        plansService.syncDonations(plan.id);
 
         String action = form.getOrDefault("action", "save");
         if (action.equals("addLine")) {
@@ -227,10 +241,12 @@ public class PlansController {
             plansService.setAmounts(plan.id, Map.of(
                     category.id, amount.min(line.amount),
                     categoryId, line.amount.subtract(amount).max(BigDecimal.ZERO)));
-        } else if (action.equals("addIncome")) {
-            plansService.addIncomeItem(plan.id, form.get("newIncomeName"), money(form.get("newIncomeAmount")));
-        } else if (action.startsWith("removeIncome:")) {
-            plansService.removeIncomeItem(plan.id, UUID.fromString(action.substring("removeIncome:".length())));
+        } else if (action.startsWith("addPay:")) {
+            String section = action.substring("addPay:".length());
+            plansService.addPayItem(plan.id, PaySection.fromDb(section), form.get("newPayName_" + section));
+        } else if (action.startsWith("removePay:")) {
+            plansService.removePayItem(plan.id, UUID.fromString(action.substring("removePay:".length())));
+            plansService.syncDonations(plan.id);
         } else if (action.equals("start")) {
             // Commit a proposal to a start month (or move a plan's start month).
             LocalDate start = parseMonth(form.get("startMonth"));
@@ -241,7 +257,7 @@ public class PlansController {
                 return error("/plans/" + id, "There's already a plan starting " + YearMonth.from(start) + ". Delete or move that one first.");
             }
             Plan saved = plansService.get(plan.id);
-            plansService.update(plan.id, start, saved.takeHome, saved.savingsTarget, saved.notes);
+            plansService.update(plan.id, start, saved.grossSalary, saved.notes);
             return "redirect:/plans/" + id + "?started=true";
         }
 

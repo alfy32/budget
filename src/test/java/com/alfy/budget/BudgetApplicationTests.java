@@ -4,6 +4,7 @@ import com.alfy.budget.model.BankTransaction;
 import com.alfy.budget.model.Budget;
 import com.alfy.budget.model.Category;
 import com.alfy.budget.model.CategorizeRule.MatchType;
+import com.alfy.budget.model.PaySection;
 import com.alfy.budget.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -386,24 +387,17 @@ class BudgetApplicationTests {
                     .andExpect(content().string(org.hamcrest.Matchers.containsString("Last $1,200.00")));
             mvc.perform(post("/plans/" + july)
                             .param("startMonth", lastYear + "-07")
-                            .param("takeHome", "5000")
+                            .param("grossSalary", "60000")
                             .param("line_" + chips.id, "3000"))
                     .andExpect(redirectedUrl("/plans/" + july + "?saved=true"));
             var saved = plansService.get(july);
-            assertEquals(new BigDecimal("5000.00"), saved.takeHome);
-            // Chips went from $1,200/yr ($100/mo) in January's plan to $3,000/yr ($250/mo): +$150 a month of yearly spending.
-            assertEquals(new BigDecimal("150.00"),
+            assertEquals(new BigDecimal("60000.00"), saved.grossSalary);
+            // Chips went from $1,200/yr in January's plan to $3,000/yr: +$1,800 a year of yearly spending.
+            assertEquals(new BigDecimal("1800.00"),
                     plansService.totals(saved).yearly().subtract(plansService.totals(plansService.get(january)).yearly()));
 
-            // From-income items come off take-home before savings.
-            mvc.perform(post("/plans/" + july).param("startMonth", lastYear + "-07").param("takeHome", "5000")
-                    .param("action", "addIncome").param("newIncomeName", "Roth IRA").param("newIncomeAmount", "1200"));
-            var totals = plansService.totals(plansService.get(july));
-            assertEquals(totals.takeHome().subtract(totals.fromIncome()).subtract(totals.spending()), totals.savings());
-            assertTrue(totals.fromIncome().compareTo(new BigDecimal("100.00")) >= 0);
-
             // Two plans can't start the same month.
-            mvc.perform(post("/plans/" + july).param("startMonth", lastYear + "-01").param("takeHome", "5000"))
+            mvc.perform(post("/plans/" + july).param("startMonth", lastYear + "-01"))
                     .andExpect(status().is3xxRedirection());
             assertEquals(LocalDate.of(lastYear, 7, 1), plansService.get(july).startMonth);
 
@@ -414,6 +408,53 @@ class BudgetApplicationTests {
             plansService.delete(july);
             plansService.delete(january);
         }
+    }
+
+    @Test
+    void payIsWorkedDownFromGrossLikeThePlanningSheet() throws Exception {
+        // Made-up numbers (the repo is public).
+        UUID planId = plansService.copy(plansService.current().id, null);
+        try {
+            plansService.update(planId, null, new BigDecimal("100000"), null);
+            addPay(planId, PaySection.PRETAX, "Dental", false, false, "1000", false);
+            addPay(planId, PaySection.PRETAX, "HSA", true, false, "5", false);          // 5% of gross
+            addPay(planId, PaySection.TAX, "Federal", false, false, "3000", false);
+            addPay(planId, PaySection.TAX, "Social Security", true, true, "6.2", false); // % of taxable
+            addPay(planId, PaySection.TAX, "Medicare", true, true, "1.45", false);
+            addPay(planId, PaySection.TAX, "State", true, true, "4.5", false);
+            addPay(planId, PaySection.POSTTAX, "Roth 401k", true, false, "5", true);
+            addPay(planId, PaySection.INFO, "401k match", true, false, "4", true);
+            addPay(planId, PaySection.TRANSFER, "Roth IRA", false, false, "6000", true);
+            addPay(planId, PaySection.DONATION, "Tithing", true, false, "10", false);
+            addPay(planId, PaySection.DONATION, "Fast offerings", false, false, "1200", false);
+            addPay(planId, PaySection.INSURANCE, "Insurance", false, false, "12000", false);
+
+            var totals = plansService.totals(plansService.get(planId));
+            assertEquals(new BigDecimal("94000.00"), totals.taxable());   // 100,000 - 1,000 - 5,000
+            assertEquals(new BigDecimal("74579.00"), totals.paycheck());  // - 3,000 - 5,828 - 1,363 - 4,230 - 5,000
+            assertEquals(new BigDecimal("11200.00"), totals.donations()); // 10,000 + 1,200
+            assertEquals(new BigDecimal("57379.00"), totals.net());       // - 6,000 - 11,200
+            assertEquals(totals.net().subtract(totals.spending()), totals.savings());
+            assertEquals(new BigDecimal("15000.00"), totals.retirement()); // 5,000 + 4,000 + 6,000
+            assertEquals(new BigDecimal("15.00"), totals.percentOfGross(totals.retirement()));
+            assertEquals(totals.spending().add(new BigDecimal("12000.00")), totals.emergencyFund());
+
+            mvc.perform(get("/plans/" + planId)).andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("Through checking")));
+
+            // A raise: percents (tithing, taxes, Roth 401k) follow the new salary.
+            mvc.perform(post("/plans/" + planId).param("grossSalary", "110000"));
+            var raised = plansService.totals(plansService.get(planId));
+            assertEquals(new BigDecimal("12200.00"), raised.donations());
+        } finally {
+            plansService.delete(planId);
+        }
+    }
+
+    private void addPay(UUID planId, PaySection section, String name, boolean percent, boolean ofTaxable, String value, boolean retirement) {
+        plansService.addPayItem(planId, section, name);
+        var item = plansService.payItems(planId).stream().filter(i -> i.name.equals(name)).findFirst().orElseThrow();
+        plansService.updatePayItem(planId, item.id, name, percent, ofTaxable, new BigDecimal(value), retirement);
     }
 
     @Test
@@ -432,12 +473,12 @@ class BudgetApplicationTests {
                     .andExpect(content().string(org.hamcrest.Matchers.containsString("Proposed")));
 
             // Editing it doesn't touch the current plan.
-            mvc.perform(post(location).param("takeHome", "123.45").param("line_" + category.id, "99999"));
+            mvc.perform(post(location).param("line_" + category.id, "99999"));
             assertEquals(new BigDecimal("8400.00"), plansService.lines(current.id).stream()
                     .filter(line -> line.categoryId.equals(category.id)).findFirst().orElseThrow().amount);
 
             // Committing it to a month makes it a real plan.
-            mvc.perform(post(location).param("takeHome", "123.45").param("action", "start").param("startMonth", "2099-01"))
+            mvc.perform(post(location).param("action", "start").param("startMonth", "2099-01"))
                     .andExpect(redirectedUrl(location + "?started=true"));
             assertFalse(plansService.get(proposalId).isProposed());
             assertEquals(LocalDate.of(2099, 1, 1), plansService.get(proposalId).startMonth);
@@ -457,7 +498,6 @@ class BudgetApplicationTests {
 
         // Split $600 off into a new "Solar" line in the same budget.
         mvc.perform(post("/plans/" + current.id)
-                        .param("takeHome", current.takeHome.toPlainString())
                         .param("line_" + power.id, "1800")
                         .param("action", "split:" + power.id)
                         .param("splitName_" + power.id, "SplitTest Solar")
@@ -472,7 +512,6 @@ class BudgetApplicationTests {
 
         // Rename from the worksheet; it's the same category everywhere.
         mvc.perform(post("/plans/" + current.id)
-                .param("takeHome", current.takeHome.toPlainString())
                 .param("rename_" + power.id, "SplitTest Electric"));
         assertEquals("SplitTest Electric", categoriesService.get(power.id).name);
         assertEquals(new BigDecimal("1200.00"), plansService.lines(current.id).stream()

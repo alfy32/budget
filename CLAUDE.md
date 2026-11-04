@@ -32,9 +32,11 @@ Rules:
 - Going back must return to where you were: side trips from a transaction (category, tags, split) use
   `data-replace` so the phone's back button goes to the list, not the picker.
 - Money is stored as whole cents; `transaction_type` ('credit' / 'debit') says which way it went.
-- Budget amounts live in **plans** (`plans`, `plan_lines`, `plan_income_items`): each plan runs from its start month
+- Budget amounts live in **plans** (`plans`, `plan_lines`, `plan_pay_items`): each plan runs from its start month
   until the next one; a plan with no start month is a proposal. Reports use the plan in effect for each month.
   `categories.budget_id` and `budgets.amount` only mirror the current plan (`PlansService.syncCurrentPlan`).
+  A plan's pay is worked down from gross salary like the planning sheet (see `V6__plan_pay.sql`); the worksheet
+  does the same math in JavaScript (`plan.html`) as `PlansService.totals` does in Java, so keep them in step.
 - The repo is **public**: never commit personal data (amounts, pay, the database). The real plans are loaded from
   `data/seed_plans.sql`, which is git-ignored like the rest of `data/`.
 - Schema changes go in a new `src/main/resources/db/migration/V<n>__name.sql`; never edit an applied migration.

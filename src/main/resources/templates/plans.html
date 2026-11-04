@@ -23,7 +23,7 @@
                 </div>
                 <div class="amount">
                     <div th:classappend="${t.savings().signum() < 0} ? negative"
-                         th:text="|${#numbers.formatCurrency(t.savings())}/mo|">$0/mo</div>
+                         th:text="|${#numbers.formatCurrency(t.perMonth(t.savings()))}/mo|">$0/mo</div>
                     <div class="sub">to savings</div>
                 </div>
                 <svg th:replace="~{layout :: chevron}"></svg>
@@ -48,8 +48,8 @@
             </div>
             <div class="amount">
                 <div th:classappend="${t.savings().signum() < 0} ? negative"
-                     th:text="|${#numbers.formatCurrency(t.savings())}/mo|">$0/mo</div>
-                <div class="sub">to savings</div>
+                     th:text="|${#numbers.formatCurrency(t.perMonth(t.savings()))}/mo|">$0/mo</div>
+                <div class="sub" th:text="|to savings · ${t.percentOfGross(t.retirement())}% retirement|">to savings</div>
             </div>
             <svg th:replace="~{layout :: chevron}"></svg>
         </a>
