@@ -48,7 +48,9 @@ public class PlansService {
 
     public Plan get(UUID id) {
         return list().stream().filter(plan -> plan.id.equals(id)).findFirst()
-                .orElseGet(() -> proposals().stream().filter(plan -> plan.id.equals(id)).findFirst().orElseThrow());
+                .orElseGet(() -> proposals().stream().filter(plan -> plan.id.equals(id)).findFirst()
+                        .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                                org.springframework.http.HttpStatus.NOT_FOUND, "No such plan (it may have been deleted)")));
     }
 
     /** The plan in effect for the month containing date. Months before the first plan use the first plan. */

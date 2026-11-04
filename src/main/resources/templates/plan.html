@@ -10,6 +10,24 @@
   nothing is saved until you tap Save.
 -->
 <main x-data="plan">
+    <!-- Always visible: what goes to savings each month. Tap for the breakdown. -->
+    <div class="savings-bar" @click="details = !details">
+        <div class="top">
+            <span>Savings</span>
+            <span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(savings) + '/mo'"></span>
+        </div>
+        <div class="sub">Tap for the breakdown</div>
+        <div class="breakdown" x-show="details" x-cloak>
+            <div class="line"><span>Take-home pay</span><span x-text="money(takeHome)"></span></div>
+            <div class="line"><span>− From income (donations…)</span><span x-text="money(fromIncome)"></span></div>
+            <div class="line"><span>− Spending (monthly + yearly)</span><span x-text="money(spending)"></span></div>
+            <div class="line sub"><span>&nbsp;&nbsp;Monthly</span><span x-text="money(groupTotal('monthly') / 12)"></span></div>
+            <div class="line sub"><span>&nbsp;&nbsp;Yearly</span><span x-text="money(groupTotal('yearly') / 12)"></span></div>
+            <div class="line total"><span>= Savings</span><span x-text="money(savings)"></span></div>
+            <div class="line sub"><span>Other (not counted)</span><span x-text="money(groupTotal('other') / 12)"></span></div>
+        </div>
+    </div>
+
     <div class="card padded warning" th:if="${error != null}" th:text="${error}" style="margin-bottom: 12px;">Error</div>
     <div class="card padded saved" th:if="${param.saved != null}" style="margin-bottom: 12px;">Saved.</div>
     <div class="card padded saved" th:if="${param.started != null}" style="margin-bottom: 12px;"
@@ -20,24 +38,6 @@
     </div>
 
     <form method="post" th:action="@{/plans/{id}(id=${plan.id})}" id="plan-form">
-
-        <!-- Always visible: what goes to savings each month. Tap for the breakdown. -->
-        <div class="savings-bar" @click="details = !details">
-            <div class="top">
-                <span>Savings</span>
-                <span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(savings) + '/mo'"></span>
-            </div>
-            <div class="sub">Tap for the breakdown</div>
-            <div class="breakdown" x-show="details" x-cloak>
-                <div class="line"><span>Take-home pay</span><span x-text="money(takeHome)"></span></div>
-                <div class="line"><span>− From income (donations…)</span><span x-text="money(fromIncome)"></span></div>
-                <div class="line"><span>− Spending (monthly + yearly)</span><span x-text="money(spending)"></span></div>
-                <div class="line sub"><span>&nbsp;&nbsp;Monthly</span><span x-text="money(groupTotal('monthly') / 12)"></span></div>
-                <div class="line sub"><span>&nbsp;&nbsp;Yearly</span><span x-text="money(groupTotal('yearly') / 12)"></span></div>
-                <div class="line total"><span>= Savings</span><span x-text="money(savings)"></span></div>
-                <div class="line sub"><span>Other (not counted)</span><span x-text="money(groupTotal('other') / 12)"></span></div>
-            </div>
-        </div>
 
         <div class="card padded">
             <div class="hint" style="margin-bottom: 10px;" th:unless="${plan.isProposed()}">
