@@ -23,9 +23,12 @@
                 </select>
             </label>
 
-            <label class="field">
-                <span class="field-label">Skip this many rows</span>
-                <input type="number" name="skip" value="0" min="0" inputmode="numeric">
+            <!-- Only SBSU exports start with pending rows (they change once they post), so only SBSU gets this. -->
+            <label class="field" x-show="account === 'SBSU Checking'">
+                <span class="field-label">Pending rows to skip</span>
+                <input type="number" name="skip" value="0" min="0" inputmode="numeric"
+                       :disabled="account !== 'SBSU Checking'">
+                <span class="hint" style="display: block; margin-top: 6px;">Pending rows at the top of the export, right after the header. They're skipped so they don't get saved before they post.</span>
             </label>
         </div>
 
