@@ -4,11 +4,7 @@
 <body>
 <header th:replace="~{layout :: topbar('Budgets', null)}"></header>
 <main>
-    <div class="segmented" style="margin-bottom: 12px;">
-        <a class="seg-link" th:href="@{/monthly}">Month</a>
-        <a class="seg-link" th:href="@{/yearly}">Year</a>
-        <a class="seg-link active" th:href="@{/needs-transferred}">Transfer</a>
-    </div>
+    <div th:replace="~{budget-fragments :: switcher('transfer')}"></div>
 
     <p class="hint" style="margin: 0 4px 4px 4px;">
         Spending in budgets with a transfer account, still to be moved from that account into checking.
@@ -17,7 +13,7 @@
 
     <th:block th:each="transfer : ${transfers}">
         <div class="card hero spaced" style="padding: 16px;">
-            <div class="sub" th:text="|Move to ${transfer.account}|">Move to Savings</div>
+            <div class="sub" th:text="|From ${transfer.account} to checking|">From Yearly to checking</div>
             <div class="big" th:text="${#numbers.formatCurrency(transfer.amount)}">$0.00</div>
             <form method="post" th:action="@{/needs-transferred/mark}" x-data="{ sure: false }" style="margin-top: 10px;">
                 <input type="hidden" name="account" th:value="${transfer.account}">

@@ -151,6 +151,21 @@ public class TransactionsService {
         return jdbc.query(query, new MapSqlParameterSource("accountId", Db.id(accountId)), TransactionsService::map);
     }
 
+    /** Net spending per category between two dates (debits add, credits subtract). */
+    public Map<UUID, BigDecimal> spendingByCategory(LocalDate start, LocalDate end) {
+        Map<UUID, BigDecimal> spending = new HashMap<>();
+        jdbc.query("""
+                        SELECT category_id, sum(CASE WHEN transaction_type = 'credit' THEN -amount ELSE amount END) AS cents
+                        FROM transactions
+                        WHERE category_id IS NOT NULL AND transaction_date >= :start AND transaction_date <= :end
+                        GROUP BY category_id
+                        """,
+                new MapSqlParameterSource().addValue("start", Db.date(start)).addValue("end", Db.date(end)),
+                (org.springframework.jdbc.core.RowCallbackHandler) resultSet ->
+                        spending.put(Db.getId(resultSet, "category_id"), Tools.fromDatabaseInt(resultSet.getInt("cents"))));
+        return spending;
+    }
+
     public List<Transaction> listByDate(LocalDate start, LocalDate end) {
         String query = """
                 SELECT * FROM transactions

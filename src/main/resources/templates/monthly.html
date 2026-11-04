@@ -4,11 +4,7 @@
 <body>
 <header th:replace="~{layout :: topbar('Budgets', null)}"></header>
 <main>
-    <div class="segmented" style="margin-bottom: 12px;">
-        <a class="seg-link active" th:href="@{/monthly}">Month</a>
-        <a class="seg-link" th:href="@{/yearly}">Year</a>
-        <a class="seg-link" th:href="@{/needs-transferred}">Transfer</a>
-    </div>
+    <div th:replace="~{budget-fragments :: switcher('month')}"></div>
 
     <div class="period">
         <a class="icon-btn" th:href="@{/monthly(date=${previous})}" aria-label="Previous month"><svg th:replace="~{layout :: left}"></svg></a>

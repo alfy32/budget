@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head(${title})}"></head>
+<body>
+<header th:replace="~{layout :: topbar(${title}, @{/plans})}"></header>
+<!--
+  The plan worksheet. Every line shows last plan's amount, what was actually spent in the 12 months before
+  this plan, and this plan's amount. Amounts are typed per year (the per-month box is there for convenience).
+  The savings bar at the top is worked out in the browser as you type (Alpine, see the script at the bottom);
+  nothing is saved until you tap Save.
+-->
+<main x-data="plan">
+    <div class="card padded warning" th:if="${error != null}" th:text="${error}" style="margin-bottom: 12px;">Error</div>
+    <div class="card padded saved" th:if="${param.saved != null}" style="margin-bottom: 12px;">Saved.</div>
+    <div class="card padded saved" th:if="${param.started != null}" style="margin-bottom: 12px;"
+         th:text="|Committed. This plan starts ${#temporals.format(plan.startMonth, 'MMMM yyyy')}.|">Committed.</div>
+    <div class="card padded" th:if="${plan.isProposed()}" style="margin-bottom: 12px;">
+        <strong>Proposed.</strong> Nothing uses this plan until you commit it to a start month at the bottom.
+        Last = the current plan; Spent = the last 12 months.
+    </div>
+
+    <form method="post" th:action="@{/plans/{id}(id=${plan.id})}" id="plan-form">
+
+        <!-- Always visible: what goes to savings each month. Tap for the breakdown. -->
+        <div class="savings-bar" @click="details = !details">
+            <div class="top">
+                <span>Savings</span>
+                <span class="amount" :class="belowTarget ? 'negative' : 'credit'" x-text="money(savings) + '/mo'"></span>
+            </div>
+            <div class="sub" x-show="target > 0" x-text="belowTarget ? money(target - savings) + ' below your ' + money(target) + ' target' : money(savings - target) + ' above your ' + money(target) + ' target'"></div>
+            <div class="sub" x-show="!(target > 0)">Set a target below to check against</div>
+            <div class="breakdown" x-show="details" x-cloak>
+                <div class="line"><span>Take-home pay</span><span x-text="money(takeHome)"></span></div>
+                <div class="line"><span>− From income (donations…)</span><span x-text="money(fromIncome)"></span></div>
+                <div class="line"><span>− Spending (monthly + yearly)</span><span x-text="money(spending)"></span></div>
+                <div class="line sub"><span>&nbsp;&nbsp;Monthly</span><span x-text="money(groupTotal('monthly') / 12)"></span></div>
+                <div class="line sub"><span>&nbsp;&nbsp;Yearly</span><span x-text="money(groupTotal('yearly') / 12)"></span></div>
+                <div class="line total"><span>= Savings</span><span x-text="money(savings)"></span></div>
+                <div class="line sub"><span>Other (not counted)</span><span x-text="money(groupTotal('other') / 12)"></span></div>
+            </div>
+        </div>
+
+        <div class="card padded">
+            <div class="hint" style="margin-bottom: 10px;" th:unless="${plan.isProposed()}">
+                <span th:text="|Starts ${#temporals.format(plan.startMonth, 'MMMM yyyy')}.|"></span>
+                <span th:if="${plan.end == null}">The newest plan.</span>
+                <span th:if="${plan.end != null}" th:text="|Until ${#temporals.format(plan.end, 'MMM d, yyyy')}.|"></span>
+                <span th:if="${isCurrent}"> In effect now.</span>
+            </div>
+            <label class="field">
+                <span class="field-label">Take-home pay per month</span>
+                <input type="number" step="0.01" min="0" inputmode="decimal" name="takeHome" x-model.number="takeHome">
+            </label>
+            <label class="field">
+                <span class="field-label">Keep savings at least (per month)</span>
+                <input type="number" step="0.01" min="0" inputmode="decimal" name="savingsTarget" x-model.number="target" placeholder="No target">
+            </label>
+            <label class="field">
+                <span class="field-label">Notes</span>
+                <input type="text" name="notes" th:value="${plan.notes}" placeholder="e.g. Raise in July">
+            </label>
+        </div>
+
+        <!-- How to split each paycheck's direct deposit once this plan starts (like the bottom of the sheet). -->
+        <div class="section-title">Direct deposit</div>
+        <div class="card">
+            <div class="row small muted" style="min-height: 0; padding-top: 8px; padding-bottom: 4px;">
+                <span class="main"></span><span class="deposit">Per month</span><span class="deposit">Per paycheck</span>
+            </div>
+            <div class="row">
+                <div class="main"><div class="title">Checking</div><div class="sub">Monthly budgets + from income</div></div>
+                <span class="deposit" x-text="money(checking)"></span><span class="deposit strong" x-text="money(checking / paychecksPerMonth)"></span>
+            </div>
+            <div class="row">
+                <div class="main"><div class="title">Yearly Savings</div><div class="sub">Yearly budgets</div></div>
+                <span class="deposit" x-text="money(yearlySavings)"></span><span class="deposit strong" x-text="money(yearlySavings / paychecksPerMonth)"></span>
+            </div>
+            <div class="row">
+                <div class="main"><div class="title">Savings</div><div class="sub">What's left</div></div>
+                <span class="deposit" :class="belowTarget && 'negative'" x-text="money(savings)"></span>
+                <span class="deposit strong" :class="belowTarget && 'negative'" x-text="money(savings / paychecksPerMonth)"></span>
+            </div>
+        </div>
+        <p class="hint" style="margin: 6px 4px 0 4px;">Per paycheck assumes 2 paychecks a month (24 a year).</p>
+
+        <p class="hint" style="margin: 12px 4px 0 4px;">
+            <span th:if="${previous != null}" th:text="|Last = the plan from ${#temporals.format(previous.startMonth, 'MMM yyyy')}. |"></span>
+            <span th:text="|Spent = ${actualLabel}.|"></span> Amounts are per year.
+        </p>
+
+        <th:block th:each="groupEntry : ${grouped}" th:with="group=${groupEntry.key}">
+            <div class="section-title plan-group" th:x-data="|{ group: '${group.dbValue}' }|">
+                <span th:text="${group.label}">Monthly</span>
+                <span x-text="money(groupTotal(group) / 12) + '/mo'"></span>
+            </div>
+            <p class="hint" style="margin: -2px 4px 6px 4px;" th:text="${group.description}"></p>
+
+            <!-- Money set aside from income that isn't a spending category (e.g. a Roth IRA). -->
+            <div class="card" th:if="${group.name() == 'INCOME'}" style="margin-bottom: 12px;">
+                <div class="plan-line" th:each="item : ${incomeItems}" th:x-data="|{ itemId: '${item.id}' }|">
+                    <div class="name"><span th:text="${item.name}">Alan Roth IRA</span></div>
+                    <div class="inputs">
+                        <label>Month <input type="number" step="0.01" inputmode="decimal"
+                                            :value="(income[itemId] / 12).toFixed(2)"
+                                            @change="income[itemId] = Math.round($event.target.value * 1200) / 100"></label>
+                        <label>Year <input type="number" step="0.01" inputmode="decimal" th:name="|income_${item.id}|"
+                                           x-model.number="income[itemId]"></label>
+                        <button class="link-button" type="submit" name="action" th:value="|removeIncome:${item.id}|">Remove</button>
+                    </div>
+                </div>
+                <div class="plan-line add-income">
+                    <div class="inputs">
+                        <input type="text" name="newIncomeName" placeholder="e.g. Roth IRA" aria-label="Name">
+                        <input type="number" step="0.01" inputmode="decimal" name="newIncomeAmount" placeholder="Per year" aria-label="Per year">
+                        <button class="btn inline secondary" type="submit" name="action" value="addIncome">Add</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card plan-budget" th:each="budgetEntry : ${groupEntry.value}" th:with="budget=${budgetsById[budgetEntry.key]}"
+                 th:x-data="|{ budget: '${budget.id}' }|">
+                <div class="budget-name">
+                    <a class="plain" th:href="@{/budgets/{id}(id=${budget.id})}" th:text="${budget.name}">Groceries</a>
+                    <span x-text="money(budgetTotal(budget) / 12) + '/mo'"></span>
+                </div>
+                <div class="plan-line" th:each="line : ${budgetEntry.value}"
+                     th:with="last=${lastAmounts[line.categoryId]}, spent=${actual[line.categoryId]}"
+                     th:x-data="|{ more: false, id: '${line.categoryId}', last: ${last != null ? last : 'null'} }|">
+                    <div class="name">
+                        <span th:text="${line.categoryName}">Groceries</span>
+                        <button class="link-button" type="button" @click="more = !more" aria-label="More">⋯</button>
+                    </div>
+                    <div class="facts">
+                        <span th:if="${last != null}" th:text="|Last ${#numbers.formatCurrency(last)}|">Last $10,000.00</span>
+                        <span th:if="${last == null}">New line</span>
+                        <span th:text="|Spent ${#numbers.formatCurrency(spent != null ? spent : 0)}|">Spent $9,654.46</span>
+                        <span th:if="${last != null}" th:with="left=${last.subtract(spent != null ? spent : 0)}"
+                              th:classappend="${left.signum() < 0} ? negative"
+                              th:text="${left.signum() < 0} ? |Over ${#numbers.formatCurrency(left.negate())}| : |Left ${#numbers.formatCurrency(left)}|">Left $345.54</span>
+                    </div>
+                    <div class="inputs">
+                        <label>Month <input type="number" step="0.01" inputmode="decimal"
+                                            :value="(lines[id].amount / 12).toFixed(2)"
+                                            @change="lines[id].amount = Math.round($event.target.value * 1200) / 100"></label>
+                        <label>Year <input type="number" step="0.01" min="0" inputmode="decimal" th:name="|line_${line.categoryId}|"
+                                           x-model.number="lines[id].amount"></label>
+                        <span class="change" th:if="${last != null}"
+                              x-text="change(lines[id].amount, last)"
+                              :class="lines[id].amount > last + 0.004 ? 'up' : (lines[id].amount < last - 0.004 ? 'down' : '')"></span>
+                    </div>
+                    <div class="more" x-show="more" x-cloak>
+                        <label>Move to
+                            <select th:name="|budget_${line.categoryId}|">
+                                <option value="">(keep in this budget)</option>
+                                <option th:each="other : ${budgets}" th:if="${other.id != line.budgetId}" th:value="${other.id}" th:text="${other.name}"></option>
+                            </select>
+                        </label>
+                        <button class="link-button danger-text" type="submit" name="action" th:value="|removeLine:${line.categoryId}|">Remove from this plan</button>
+                    </div>
+                </div>
+            </div>
+            <div class="empty small" th:if="${groupEntry.value.isEmpty() && group.name() != 'INCOME'}" style="padding: 8px;">No budgets in this group.</div>
+        </th:block>
+
+        <div class="section-title">Add a line</div>
+        <div class="card padded">
+            <label class="field">
+                <span class="field-label">Category</span>
+                <select name="addCategoryId">
+                    <option value="">Pick one…</option>
+                    <option th:each="category : ${notInPlan}" th:value="${category.id}" th:text="${category.name}"></option>
+                </select>
+            </label>
+            <label class="field">
+                <span class="field-label">…or a new category</span>
+                <input type="text" name="newCategoryName" placeholder="New category name">
+            </label>
+            <label class="field">
+                <span class="field-label">In budget</span>
+                <select name="addBudgetId">
+                    <option value="">Pick one…</option>
+                    <option th:each="budget : ${budgets}" th:value="${budget.id}" th:text="|${budget.name} (${budget.group.label})|"></option>
+                </select>
+            </label>
+            <label class="field">
+                <span class="field-label">…or a new budget</span>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" name="newBudgetName" placeholder="New budget name">
+                    <select name="newBudgetGroup" style="width: auto;" aria-label="Group">
+                        <option th:each="group : ${groups}" th:value="${group.dbValue}" th:text="${group.label}"></option>
+                    </select>
+                </div>
+            </label>
+            <div class="buttons"><button class="btn secondary" type="submit" name="action" value="addLine">Add line</button></div>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn" type="submit" name="action" value="save" th:text="${plan.isProposed()} ? 'Save proposal' : 'Save plan'">Save plan</button>
+        </div>
+
+        <!-- Commit a proposal to a start month (or move a committed plan's start). Saves everything above too. -->
+        <div class="section-title" th:text="${plan.isProposed()} ? 'Commit to this plan' : 'Start month'">Commit</div>
+        <div class="card padded">
+            <p class="hint" style="margin-top: 0;" th:if="${plan.isProposed()}">
+                When you've agreed on it, pick the month it starts. The plan before it ends the month before.
+            </p>
+            <label class="field">
+                <span class="field-label">Starts</span>
+                <input type="month" name="startMonth" th:value="${startMonth}">
+            </label>
+            <div class="buttons">
+                <button class="btn" th:classappend="${!plan.isProposed()} ? secondary" type="submit" name="action" value="start"
+                        th:text="${plan.isProposed()} ? 'Start this plan' : 'Move start month'">Start this plan</button>
+            </div>
+        </div>
+    </form>
+
+    <div class="danger-zone" x-data="{ sure: false }">
+        <button class="btn danger" type="button" x-show="!sure" @click="sure = true">Delete this plan</button>
+        <form x-show="sure" x-cloak method="post" th:action="@{/plans/{id}/delete(id=${plan.id})}">
+            <p class="hint">The months it covered will use the plan before it.</p>
+            <div class="buttons">
+                <button class="btn secondary" type="button" @click="sure = false">Keep it</button>
+                <button class="btn danger solid" type="submit">Delete</button>
+            </div>
+        </form>
+    </div>
+
+    <script th:inline="javascript">
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('plan', () => ({
+                details: false,
+                takeHome: Number(/*[[${plan.takeHome}]]*/ 0),
+                target: /*[[${plan.savingsTarget}]]*/ null,
+                // category id -> { budget, group, amount per year }
+                lines: Object.fromEntries((/*[[${lineData}]]*/ []).map(line =>
+                    [line.id, {budget: line.budget, group: line.group, amount: Number(line.amount)}])),
+                // income item id -> amount per year
+                income: Object.fromEntries((/*[[${incomeData}]]*/ []).map(item => [item.id, Number(item.amount)])),
+
+                init() {
+                    this.target = this.target == null ? null : Number(this.target);
+                },
+
+                groupTotal(group) {
+                    let total = Object.values(this.lines).filter(line => line.group === group)
+                        .reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+                    if (group === 'income') {
+                        total += Object.values(this.income).reduce((sum, amount) => sum + (Number(amount) || 0), 0);
+                    }
+                    return total;
+                },
+
+                budgetTotal(budget) {
+                    return Object.values(this.lines).filter(line => line.budget === budget)
+                        .reduce((sum, line) => sum + (Number(line.amount) || 0), 0);
+                },
+
+                get fromIncome() { return this.groupTotal('income') / 12; },
+                get spending() { return (this.groupTotal('monthly') + this.groupTotal('yearly')) / 12; },
+                get savings() { return (Number(this.takeHome) || 0) - this.fromIncome - this.spending; },
+                get belowTarget() { return this.target > 0 && this.savings < this.target; },
+
+                // Direct deposit split: checking pays monthly budgets and everything from income,
+                // Yearly Savings gets the yearly budgets, savings gets the rest.
+                paychecksPerMonth: 2,
+                get checking() { return this.groupTotal('monthly') / 12 + this.fromIncome; },
+                get yearlySavings() { return this.groupTotal('yearly') / 12; },
+
+                money(value) {
+                    return (Number(value) || 0).toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+                },
+
+                change(now, last) {
+                    const difference = (Number(now) || 0) - Number(last);
+                    if (Math.abs(difference) < 0.005) {
+                        return 'same';
+                    }
+                    return (difference > 0 ? '+' : '−') + this.money(Math.abs(difference));
+                },
+            }));
+        });
+    </script>
+</main>
+<nav th:replace="~{layout :: tabs('budgets')}"></nav>
+</body>
+</html>

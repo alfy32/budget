@@ -54,6 +54,14 @@ Start the app once so it creates an empty `data/budget.db`, then:
 ./import_from_postgres.sh budget_prod data/budget.db
 ```
 
+## Budget plans
+
+Budgets get their amounts from **plans** (Budgets tab → Plan). Propose a new plan (a copy of the current one), work
+through it with the worksheet (last plan's amount, what you actually spent, the new amount, and savings per month), then
+commit it to the month it starts. Reports use the plan in effect for each month.
+
+Your own plans can be kept in `data/seed_plans.sql` (not committed). `import_from_postgres.sh` loads it if it's there.
+
 ## Deploy
 
 ```bash

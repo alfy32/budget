@@ -82,6 +82,15 @@ echo "➡️  Copying $SOURCE_DB into $TARGET_FILE..."
     echo "COMMIT;"
 } | sqlite3 -bail "$TARGET_FILE"
 
+# Your budget plans live in data/seed_plans.sql (not committed: the repo is public). Load them if present.
+SEED_FILE="$(dirname "$0")/data/seed_plans.sql"
+if [ -f "$SEED_FILE" ]; then
+    echo "➡️  Loading budget plans from $SEED_FILE..."
+    sqlite3 -bail "$TARGET_FILE" < "$SEED_FILE"
+else
+    echo "ℹ️  No $SEED_FILE, so there's one plan built from the v1 budget amounts. Set up plans in the app."
+fi
+
 echo "✅ Done. Rows in $TARGET_FILE:"
 sqlite3 -column -header "$TARGET_FILE" "
     SELECT 'budgets' AS 'table', count(*) AS 'rows' FROM budgets

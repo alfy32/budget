@@ -39,12 +39,24 @@ public class BaseConfiguration {
     }
 
     @Bean
+    public PlansService plansService(NamedParameterJdbcTemplate jdbc) {
+        return new PlansService(jdbc);
+    }
+
+    /** A plan set up ahead of time becomes current when its month comes; catch up on start. */
+    @Bean
+    public org.springframework.boot.ApplicationRunner syncCurrentPlanOnStart(PlansService plansService) {
+        return args -> plansService.syncCurrentPlan();
+    }
+
+    @Bean
     public BudgetReportsService budgetReportsService(
             BudgetsService budgetsService,
             CategoriesService categoriesService,
-            TransactionsService transactionsService
+            TransactionsService transactionsService,
+            PlansService plansService
     ) {
-        return new BudgetReportsService(budgetsService, categoriesService, transactionsService);
+        return new BudgetReportsService(budgetsService, categoriesService, transactionsService, plansService);
     }
 
 }

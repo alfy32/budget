@@ -4,14 +4,15 @@
 <body>
 <header th:replace="~{layout :: topbar('Budget settings', @{/})}"></header>
 <main>
+    <p class="hint" style="margin: 0 4px 10px 4px;">Amounts come from the current plan. Change them in the <a th:href="@{/plans/current}">plan</a>.</p>
     <div class="card">
         <a class="row" th:each="budget : ${budgets}" th:href="@{/budgets/{id}(id=${budget.id})}">
             <div class="main">
                 <div class="title" th:text="${budget.name}">Budget</div>
                 <div class="sub">
-                    <span th:if="${budget.monthly}">Monthly page</span>
-                    <span th:if="${budget.monthly && budget.transferAccount != null}"> · </span>
-                    <span th:if="${budget.transferAccount != null}" th:text="|Transfers to ${budget.transferAccount}|"></span>
+                    <span th:text="${budget.group.label}">Monthly</span>
+                    <span th:if="${budget.monthly}"> · Watched</span>
+                    <span th:if="${budget.transferAccount != null}" th:text="| · From ${budget.transferAccount}|"></span>
                 </div>
             </div>
             <div class="amount" th:text="|${#numbers.formatCurrency(budget.amount)}/mo|">$0/mo</div>

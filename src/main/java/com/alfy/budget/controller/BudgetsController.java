@@ -118,6 +118,7 @@ public class BudgetsController {
 
         model.addAttribute("budget", budgetsService.get(id));
         model.addAttribute("categories", categories);
+        model.addAttribute("groups", com.alfy.budget.model.PlanGroup.values());
         return "budget";
     }
 
@@ -131,10 +132,10 @@ public class BudgetsController {
         }
     }
 
-    @PostMapping("/budgets/{id}/amount")
+    @PostMapping("/budgets/{id}/group")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void setAmount(@PathVariable UUID id, @RequestParam BigDecimal amount) {
-        budgetsService.setAmount(id, amount);
+    public void setGroup(@PathVariable UUID id, @RequestParam String group) {
+        budgetsService.setGroup(id, com.alfy.budget.model.PlanGroup.fromDb(group));
     }
 
     @PostMapping("/budgets/{id}/transfer-account")
@@ -149,8 +150,16 @@ public class BudgetsController {
         budgetsService.setMonthly(id, monthly);
     }
 
+    /** Plans are history, so a budget that's in any plan can't be deleted (it would vanish from past months). */
     @PostMapping("/budgets/{id}/delete")
     public String delete(@PathVariable UUID id) {
+        int plans = budgetsService.plansUsing(id);
+        if (plans > 0) {
+            return "redirect:" + org.springframework.web.util.UriComponentsBuilder.fromPath("/budgets/{id}")
+                    .queryParam("error", "This budget is in " + plans + (plans == 1 ? " plan" : " plans")
+                            + ". Take its categories out of the plans first; past plans keep their history.")
+                    .encode().buildAndExpand(id).toUriString();
+        }
         budgetsService.delete(id);
         return "redirect:/budgets";
     }

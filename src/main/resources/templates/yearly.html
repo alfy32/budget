@@ -4,11 +4,7 @@
 <body>
 <header th:replace="~{layout :: topbar('Budgets', null)}"></header>
 <main>
-    <div class="segmented" style="margin-bottom: 12px;">
-        <a class="seg-link" th:href="@{/monthly}">Month</a>
-        <a class="seg-link active" th:href="@{/yearly}">Year</a>
-        <a class="seg-link" th:href="@{/needs-transferred}">Transfer</a>
-    </div>
+    <div th:replace="~{budget-fragments :: switcher('year')}"></div>
 
     <div class="period">
         <a class="icon-btn" th:href="@{/yearly(date=${previous})}" aria-label="Previous year"><svg th:replace="~{layout :: left}"></svg></a>
@@ -18,9 +14,11 @@
         </div>
         <a class="icon-btn" th:href="@{/yearly(date=${next})}" aria-label="Next year"><svg th:replace="~{layout :: right}"></svg></a>
     </div>
-    <p class="hint" style="margin: -4px 4px 12px 4px;">The tick on each bar is where spending would be if it were spread evenly over the year.</p>
+    <p class="hint" style="margin: -4px 4px 12px 4px;">Each month counts against the plan in effect then. The tick on each bar is where the plan says you'd be by today.</p>
 
-    <th:block th:each="b : ${budgets}">
+    <th:block th:each="b, iter : ${budgets}">
+        <div class="section-title" th:if="${iter.first || budgets[iter.index - 1].group != b.group}"
+             th:text="${b.budget.name == 'No Budget' ? 'Not in the plan' : b.group.label}">Monthly</div>
         <div th:replace="~{budget-fragments :: budget-card(${b}, ${start}, ${end}, true)}"></div>
     </th:block>
 </main>

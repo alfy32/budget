@@ -10,6 +10,8 @@ public class Budget {
     public BigDecimal amount;
     public boolean monthly;
     public String transferAccount;
+    /** Which part of the plan it belongs to. */
+    public PlanGroup group = PlanGroup.MONTHLY;
 
     public static Budget create(String name, BigDecimal amount) {
         Budget budget = new Budget();
