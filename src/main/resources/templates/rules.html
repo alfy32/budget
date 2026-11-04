@@ -1,35 +1,41 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{layout :: head('Auto-Categorize Rules')}"></head>
+<head th:replace="~{layout :: head('Auto-categorize')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Auto-categorize', @{/})}"></header>
 <main>
-    <h2>Auto-Categorize Rules</h2>
-    <p>When you upload a bank export, new transactions whose bank description exactly matches a rule get that category.</p>
+    <p class="hint" style="margin: 0 4px 12px 4px;">When you upload a bank CSV, new transactions whose bank description matches a rule exactly get its category.</p>
 
-    <form method="post" th:action="@{/rules}">
-        <div class="label">Bank description</div>
-        <input type="text" name="description" th:value="${description}" required>
-        <div class="label">Category</div>
-        <select name="categoryId" required>
-            <option value="">Pick a category</option>
-            <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"
-                    th:selected="${category.id == categoryId}"></option>
-        </select>
-        <button class="button" type="submit">Add Rule</button>
-    </form>
-
-    <br>
-    <div class="empty" th:if="${rules.isEmpty()}">No rules yet</div>
-    <div class="rule" th:each="rule : ${rules}">
-        <div>
-            <div th:text="${rule.description}">Description</div>
-            <div class="hint" th:text="${rule.categoryName}">Category</div>
+    <div class="card">
+        <div class="row muted" th:if="${rules.isEmpty()}">No rules yet</div>
+        <div class="row" th:each="rule : ${rules}">
+            <div class="main">
+                <div class="title" th:text="${rule.description}">Description</div>
+                <div class="sub" th:text="|→ ${rule.categoryName}|">Category</div>
+            </div>
+            <form method="post" th:action="@{/rules/{id}/delete(id=${rule.id})}">
+                <button class="icon-delete" type="submit" aria-label="Delete rule"><svg th:replace="~{layout :: trash}"></svg></button>
+            </form>
         </div>
-        <form method="post" th:action="@{/rules/{id}/delete(id=${rule.id})}">
-            <button class="button-red small" type="submit">Delete</button>
-        </form>
     </div>
+
+    <div class="section-title">New rule</div>
+    <form class="card padded" method="post" th:action="@{/rules}">
+        <label class="field">
+            <span class="field-label">Bank description</span>
+            <input type="text" name="description" th:value="${description}" required>
+        </label>
+        <label class="field">
+            <span class="field-label">Category</span>
+            <select name="categoryId" required>
+                <option value="">Pick a category</option>
+                <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"
+                        th:selected="${category.id == categoryId}"></option>
+            </select>
+        </label>
+        <div class="buttons"><button class="btn" type="submit">Add rule</button></div>
+    </form>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

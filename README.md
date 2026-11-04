@@ -6,6 +6,8 @@ Version 2 is plain Spring Boot: Thymeleaf pages with [htmx](https://htmx.org) an
 for the bits that update without a reload, and a single SQLite file for the database. There is no npm or front-end build.
 The original Angular + Postgres version is on the `v1` branch.
 
+The UI is designed for our phones first (iPhone SE and Moto G Stylus); see `CLAUDE.md` for the sizes to check.
+
 ## Run it locally
 
 ```bash
@@ -17,7 +19,8 @@ Open http://localhost:8081. The database is `data/budget.db` (created on first s
 `bootRun` reads templates and CSS straight from `src/main/resources`:
 
 - Templates, CSS and JavaScript: save, then refresh the browser. No restart.
-- Java changes: devtools restarts the app in a second or two.
+- Java changes: build them (Ctrl+F9 in IntelliJ, or `./gradlew classes` in another terminal) and devtools restarts
+  the app in a second or two.
 
 In IntelliJ, start it the same way: run the Gradle task **bootRun** (Gradle tool window → Tasks → application),
 in Debug if you want Java method changes hot-swapped. Running `BudgetApplication` directly also works, but then

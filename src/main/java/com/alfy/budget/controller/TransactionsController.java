@@ -71,7 +71,58 @@ public class TransactionsController {
         model.addAttribute("query", query);
         model.addAttribute("search", search);
         model.addAttribute("transactions", transactions);
+        model.addAttribute("days", groupByDay(transactions));
+        model.addAttribute("title", title(query, categoriesById));
+        model.addAttribute("tab", "needsCategorized".equals(query) ? "categorize" : "transactions");
+        model.addAttribute("back", query != null && query.startsWith("category,") ? "javascript:history.back()" : null);
         return "transactions";
+    }
+
+    /** Transactions that share a date, with a label like "Today" or "Thu, Oct 30". */
+    public record Day(String label, List<Transaction> transactions) {
+    }
+
+    private static List<Day> groupByDay(List<Transaction> transactions) {
+        Map<LocalDate, List<Transaction>> byDate = new LinkedHashMap<>();
+        for (Transaction transaction : transactions) {
+            byDate.computeIfAbsent(transaction.transactionDate, date -> new ArrayList<>()).add(transaction);
+        }
+
+        LocalDate today = LocalDate.now();
+        List<Day> days = new ArrayList<>();
+        byDate.forEach((date, list) -> days.add(new Day(dayLabel(date, today), list)));
+        return days;
+    }
+
+    static String dayLabel(LocalDate date, LocalDate today) {
+        if (date.equals(today)) {
+            return "Today";
+        }
+        if (date.equals(today.minusDays(1))) {
+            return "Yesterday";
+        }
+        String pattern = date.getYear() == today.getYear() ? "EEE, MMM d" : "EEE, MMM d, yyyy";
+        return date.format(java.time.format.DateTimeFormatter.ofPattern(pattern, Locale.US));
+    }
+
+    private static String title(String query, Map<UUID, Category> categoriesById) {
+        if (query == null) {
+            return "Transactions";
+        }
+        if (query.equals("needsCategorized")) {
+            return "Categorize";
+        }
+        if (query.equals("needsTransferred")) {
+            return "Needs transferred";
+        }
+        if (query.equals("possibleDuplicates")) {
+            return "Possible duplicates";
+        }
+        if (query.startsWith("category,")) {
+            Category category = categoriesById.get(UUID.fromString(query.split(",")[1]));
+            return category == null ? "Category" : category.name;
+        }
+        return "Transactions";
     }
 
     private static boolean contains(String value, String lowerSearch) {

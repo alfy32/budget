@@ -82,6 +82,16 @@ public class TransactionsService {
         return jdbc.query("SELECT * FROM transactions" + ORDER, TransactionsService::map);
     }
 
+    public int countNeedsCategorized() {
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM transactions WHERE category_id IS NULL", Map.of(), Integer.class);
+        return count == null ? 0 : count;
+    }
+
+    public int countNeedsTransferred() {
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM transactions WHERE needs_transferred = 1", Map.of(), Integer.class);
+        return count == null ? 0 : count;
+    }
+
     public List<Transaction> listNeedsCategorized() {
         return jdbc.query("SELECT * FROM transactions WHERE category_id IS NULL" + ORDER, TransactionsService::map);
     }

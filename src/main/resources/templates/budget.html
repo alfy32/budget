@@ -1,52 +1,59 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{layout :: head('Edit Budget')}"></head>
+<head th:replace="~{layout :: head(${budget.name})}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar(${budget.name}, @{/budgets})}"></header>
 <main>
-    <h2>Edit Budget</h2>
     <!--
       Each field saves on its own as soon as it changes (htmx posts it; the server answers with
-      nothing to swap). "saved" flashes so you know it worked.
+      nothing to swap). "Saved" flashes next to the label so you know it worked.
     -->
-    <div x-data="{ saved: '' }" @htmx:after-request="if ($event.detail.successful) { saved = $event.detail.elt.name; setTimeout(() => saved = '', 1500) }">
-        <div class="label">Name <span class="saved" x-show="saved === 'name'" x-cloak>saved</span></div>
-        <input type="text" name="name" th:value="${budget.name}" th:hx-post="@{/budgets/{id}/name(id=${budget.id})}" hx-swap="none">
+    <div class="card padded" x-data="{ saved: '' }"
+         @htmx:after-request="if ($event.detail.successful) { saved = $event.detail.elt.name; setTimeout(() => saved = '', 1500) }">
+        <label class="field">
+            <span class="field-label">Name <span class="saved" x-show="saved === 'name'" x-cloak>Saved</span></span>
+            <input type="text" name="name" th:value="${budget.name}" th:hx-post="@{/budgets/{id}/name(id=${budget.id})}" hx-swap="none">
+        </label>
 
-        <div class="label">Amount per month <span class="saved" x-show="saved === 'amount'" x-cloak>saved</span></div>
-        <input type="number" step="0.01" inputmode="decimal" name="amount" th:value="${budget.amount}"
-               th:hx-post="@{/budgets/{id}/amount(id=${budget.id})}" hx-swap="none">
+        <label class="field">
+            <span class="field-label">Amount per month <span class="saved" x-show="saved === 'amount'" x-cloak>Saved</span></span>
+            <input type="number" step="0.01" inputmode="decimal" name="amount" th:value="${budget.amount}"
+                   th:hx-post="@{/budgets/{id}/amount(id=${budget.id})}" hx-swap="none">
+        </label>
 
-        <div class="label">Transfer Account <span class="saved" x-show="saved === 'transferAccount'" x-cloak>saved</span></div>
-        <input type="text" name="transferAccount" th:value="${budget.transferAccount}"
-               th:hx-post="@{/budgets/{id}/transfer-account(id=${budget.id})}" hx-swap="none">
+        <label class="field">
+            <span class="field-label">Transfer account <span class="saved" x-show="saved === 'transferAccount'" x-cloak>Saved</span></span>
+            <input type="text" name="transferAccount" th:value="${budget.transferAccount}" placeholder="None"
+                   th:hx-post="@{/budgets/{id}/transfer-account(id=${budget.id})}" hx-swap="none">
+        </label>
 
-        <div class="label">
-            <label>
-                <input type="checkbox" name="monthly" value="true" th:checked="${budget.monthly}"
-                       th:hx-post="@{/budgets/{id}/monthly(id=${budget.id})}" hx-swap="none">
-                Show on the monthly page
-            </label>
-            <span class="saved" x-show="saved === 'monthly'" x-cloak>saved</span>
-        </div>
+        <label class="field" style="display: flex; align-items: center; gap: 12px; margin-top: 16px;">
+            <span style="flex: 1;">Show on the monthly page <span class="saved" x-show="saved === 'monthly'" x-cloak>Saved</span></span>
+            <input class="switch" type="checkbox" name="monthly" value="true" th:checked="${budget.monthly}"
+                   th:hx-post="@{/budgets/{id}/monthly(id=${budget.id})}" hx-swap="none">
+        </label>
     </div>
 
-    <div class="label">Categories</div>
-    <div th:if="${categories.isEmpty()}">None</div>
-    <a class="list-item" th:each="category : ${categories}" th:href="@{/categories/{id}(id=${category.id})}"
-       th:text="${category.name}">Category</a>
+    <div class="section-title">Categories</div>
+    <div class="card">
+        <div class="row muted" th:if="${categories.isEmpty()}">None yet. Pick a budget on a category's page.</div>
+        <a class="row" th:each="category : ${categories}" th:href="@{/categories/{id}(id=${category.id})}">
+            <div class="main" th:text="${category.name}">Category</div>
+            <svg th:replace="~{layout :: chevron}"></svg>
+        </a>
+    </div>
 
-    <br>
-    <a class="button" th:href="@{/budgets}">Done</a>
-
-    <div class="spacer"></div>
-
-    <div x-data="{ sure: false }">
-        <button class="button-red" type="button" x-show="!sure" @click="sure = true">Delete Budget</button>
+    <div class="danger-zone" x-data="{ sure: false }">
+        <button class="btn danger" type="button" x-show="!sure" @click="sure = true">Delete budget</button>
         <form x-show="sure" x-cloak method="post" th:action="@{/budgets/{id}/delete(id=${budget.id})}">
-            <button class="button-red" type="submit">Yes delete for sure</button>
+            <p class="hint">Its categories stay; they just won't have a budget.</p>
+            <div class="buttons">
+                <button class="btn secondary" type="button" @click="sure = false">Keep it</button>
+                <button class="btn danger solid" type="submit">Delete</button>
+            </div>
         </form>
     </div>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

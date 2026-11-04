@@ -2,43 +2,45 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Split')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Split', @{/transactions/{id}(id=${rows[0].id}, query=${query})})}"></header>
 <main x-data="split">
-    <div class="title">Original Transaction</div>
-    <div class="big-amount" th:text="${#numbers.formatCurrency(bankTransaction.amount)}">$0.00</div>
-    <div class="big-description" th:text="${bankTransaction.description}">Description</div>
-    <div class="centered" th:text="${#temporals.format(bankTransaction.transactionDate, 'MMM d, yyyy')}">Date</div>
-    <div class="centered" th:text="${bankTransaction.account}">Account</div>
-
-    <br>
-    <div class="title">Split Transactions</div>
-    <p class="hint">The first row gets whatever is left over.</p>
+    <div class="card hero">
+        <div class="big" th:text="${#numbers.formatCurrency(bankTransaction.amount)}">$0.00</div>
+        <div class="title" th:text="${bankTransaction.description}">Description</div>
+        <div class="sub" th:text="|${#temporals.format(bankTransaction.transactionDate, 'MMM d, yyyy')} · ${bankTransaction.account}|">Date</div>
+    </div>
 
     <form method="post" th:action="@{/split/{id}(id=${bankTransaction.id})}">
         <input type="hidden" name="query" th:if="${query}" th:value="${query}">
 
-        <template x-for="(row, i) in rows" :key="i">
-            <div class="split-row">
-                <input type="hidden" :name="`rows[${i}].id`" :value="row.id">
-                <select :name="`rows[${i}].categoryId`" x-model="row.categoryId">
-                    <option value="">Needs Categorized</option>
-                    <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"></option>
-                </select>
-                <!-- The first row is read-only and always shows the remainder. -->
-                <input x-show="i === 0" type="text" readonly :value="first.toFixed(2)" :class="first < 0 && 'warning'">
-                <input x-show="i > 0" type="number" step="0.01" inputmode="decimal"
-                       :name="`rows[${i}].amount`" x-model.number="row.amount">
-                <button x-show="i > 0" class="button" type="button" @click="rows.splice(i, 1)">Delete</button>
-            </div>
-        </template>
+        <div class="section-title">Split into</div>
+        <div class="card">
+            <template x-for="(row, i) in rows" :key="i">
+                <div class="split-row">
+                    <input type="hidden" :name="`rows[${i}].id`" :value="row.id">
+                    <select :name="`rows[${i}].categoryId`" x-model="row.categoryId" aria-label="Category">
+                        <option value="">Needs category</option>
+                        <option th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}"></option>
+                    </select>
+                    <!-- The first row is the remainder and can't be typed in. -->
+                    <div x-show="i === 0" class="remainder" :class="first < 0 && 'warning'" x-text="money(first)"></div>
+                    <input x-show="i > 0" type="number" step="0.01" min="0" inputmode="decimal" aria-label="Amount"
+                           :name="`rows[${i}].amount`" x-model.number="row.amount" placeholder="0.00">
+                    <span x-show="i === 0"></span>
+                    <button x-show="i > 0" class="icon-delete" type="button" @click="rows.splice(i, 1)" aria-label="Remove">
+                        <svg th:replace="~{layout :: trash}"></svg>
+                    </button>
+                </div>
+            </template>
+            <button class="row" type="button" @click="add()" style="color: var(--accent); font-weight: 600;">+ Add a split</button>
+        </div>
+        <p class="hint" style="margin: 8px 4px;">The first line gets whatever is left over.</p>
+        <p class="warning" x-show="first < 0" x-cloak style="margin: 8px 4px;">The other lines add up to more than the total.</p>
 
-        <p class="warning" x-show="first < 0" x-cloak>The other rows add up to more than the original amount.</p>
-
-        <button class="button" type="button" @click="add()">Add</button>
-        <button class="button" type="submit" :disabled="first < 0">Save</button>
+        <div class="action-bar">
+            <button class="btn" type="submit" :disabled="first < 0">Save split</button>
+        </div>
     </form>
-    <hr>
-    <a class="button" th:href="@{/transactions/{id}(id=${rows[0].id}, query=${query})}">Done</a>
 
     <script th:inline="javascript">
         document.addEventListener('alpine:init', () => {
@@ -56,12 +58,17 @@
                     return Math.round((this.original - rest) * 100) / 100;
                 },
 
+                money(value) {
+                    return value.toLocaleString('en-US', {style: 'currency', currency: 'USD'});
+                },
+
                 add() {
-                    this.rows.push({id: '', categoryId: this.rows[0].categoryId, amount: 0});
+                    this.rows.push({id: '', categoryId: this.rows[0].categoryId, amount: ''});
                 },
             }));
         });
     </script>
 </main>
+<nav th:replace="~{layout :: tabs('transactions')}"></nav>
 </body>
 </html>

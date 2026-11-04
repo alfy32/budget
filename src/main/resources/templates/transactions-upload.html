@@ -2,28 +2,36 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Upload')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Upload bank CSV', @{/})}"></header>
 <main>
-    <h3>Select export to upload</h3>
     <!-- Picking a file guesses the account from the file name, like the old page did. -->
     <form method="post" enctype="multipart/form-data" th:action="@{/transactions-upload}"
           x-data="{ account: 'SBSU Checking' }">
-        <input type="file" name="file" accept=".csv" required
-               @change="const name = $event.target.files[0]?.name || '';
-                        if (name.startsWith('export_')) account = 'SBSU Checking';
-                        else if (name.startsWith('Transactions')) account = 'Zions Agility Cash Visa';">
+        <div class="card padded">
+            <label class="field">
+                <span class="field-label">Export file</span>
+                <input type="file" name="file" accept=".csv,text/csv" required
+                       @change="const name = $event.target.files[0]?.name || '';
+                                if (name.startsWith('export_')) account = 'SBSU Checking';
+                                else if (name.startsWith('Transactions')) account = 'Zions Agility Cash Visa';">
+            </label>
 
-        <div class="label">Skip this many rows</div>
-        <input type="number" name="skip" value="0" min="0">
+            <label class="field">
+                <span class="field-label">Account</span>
+                <select name="account" x-model="account">
+                    <option th:each="account : ${accounts}" th:value="${account}" th:text="${account}"></option>
+                </select>
+            </label>
 
-        <div class="label">Account</div>
-        <select name="account" x-model="account">
-            <option th:each="account : ${accounts}" th:value="${account}" th:text="${account}"></option>
-        </select>
+            <label class="field">
+                <span class="field-label">Skip this many rows</span>
+                <input type="number" name="skip" value="0" min="0" inputmode="numeric">
+            </label>
+        </div>
 
-        <br><br>
-        <button class="button" type="submit">Upload</button>
+        <div class="buttons"><button class="btn" type="submit">Upload</button></div>
     </form>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

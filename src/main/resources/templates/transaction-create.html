@@ -1,34 +1,44 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{layout :: head('Create Transaction')}"></head>
+<head th:replace="~{layout :: head('Add transaction')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Add transaction', @{/})}"></header>
 <main>
-    <h2>Create Transaction</h2>
     <form method="post" th:action="@{/create-transaction}">
-        <div class="label">Amount</div>
-        <input type="number" step="0.01" inputmode="decimal" name="amount" required autofocus>
+        <div class="card padded">
+            <div class="segmented">
+                <label><input type="radio" name="transactionType" value="debit" checked><span>Debit (spent)</span></label>
+                <label><input type="radio" name="transactionType" value="credit"><span>Credit (in)</span></label>
+            </div>
 
-        <div class="label">Account</div>
-        <select name="account">
-            <option th:each="account : ${accounts}" th:value="${account}" th:text="${account}"></option>
-        </select>
+            <label class="field spaced">
+                <span class="field-label">Amount</span>
+                <input type="number" step="0.01" min="0" inputmode="decimal" name="amount" placeholder="0.00" required>
+            </label>
 
-        <div class="label">Description</div>
-        <input type="text" name="description" required>
+            <label class="field">
+                <span class="field-label">Description</span>
+                <input type="text" name="description" required>
+            </label>
 
-        <div class="label">Date</div>
-        <input type="date" name="date" th:value="${today}" required>
+            <label class="field">
+                <span class="field-label">Account</span>
+                <select name="account">
+                    <option th:each="account : ${accounts}" th:value="${account}" th:text="${account}"></option>
+                </select>
+            </label>
 
-        <div class="label">Transaction Type</div>
-        <select name="transactionType">
-            <option value="debit">debit</option>
-            <option value="credit">credit</option>
-        </select>
+            <label class="field">
+                <span class="field-label">Date</span>
+                <input type="date" name="date" th:value="${today}" required>
+            </label>
+        </div>
 
-        <br><br>
-        <button class="button" type="submit">Create Transaction</button>
+        <div class="buttons">
+            <button class="btn" type="submit">Add transaction</button>
+        </div>
     </form>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

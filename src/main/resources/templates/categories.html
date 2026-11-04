@@ -2,16 +2,32 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Categories')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
-<main>
-    <h2>Categories</h2>
-    <form method="post" th:action="@{/categories}">
-        <input type="text" name="name" placeholder="New category name" required>
-        <button class="button" type="submit">Add Category</button>
+<header th:replace="~{layout :: topbar('Categories', @{/})}"></header>
+<main x-data="{ filter: '' }">
+    <div class="search">
+        <input type="search" placeholder="Filter categories" x-model="filter" autocomplete="off">
+    </div>
+
+    <div class="card spaced">
+        <a class="row" th:each="category : ${categories}" th:href="@{/categories/{id}(id=${category.id})}"
+           th:attr="data-name=${#strings.toLowerCase(category.name)}"
+           x-show="$el.dataset.name.includes(filter.toLowerCase())">
+            <div class="main">
+                <div class="title" th:text="${category.name}">Category</div>
+                <div class="sub"
+                     th:with="budget=${category.budget != null ? budgetsById[category.budget.id] : null}, account=${category.accountId != null ? accountNames[category.accountId] : null}"
+                     th:text="${budget == null and account == null ? 'No budget' : (budget != null ? budget.name : '') + (budget != null and account != null ? ' · ' : '') + (account != null ? 'Account: ' + account : '')}">Budget</div>
+            </div>
+            <svg th:replace="~{layout :: chevron}"></svg>
+        </a>
+    </div>
+
+    <div class="section-title">New category</div>
+    <form class="card padded" method="post" th:action="@{/categories}">
+        <input type="text" name="name" placeholder="Name" required>
+        <div class="buttons"><button class="btn" type="submit">Add category</button></div>
     </form>
-    <br>
-    <a class="list-item" th:each="category : ${categories}" th:href="@{/categories/{id}(id=${category.id})}"
-       th:text="${category.name}">Category</a>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

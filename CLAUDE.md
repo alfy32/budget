@@ -1,0 +1,33 @@
+# Budget app
+
+Personal budget app (Spring Boot + Thymeleaf + htmx + Alpine.js + SQLite). See README.md for running it.
+
+## Design for our phones first
+
+Everything is designed to fit and work best on the two phones we actually use:
+
+| Phone | Screen (CSS pixels) | Notes |
+|---|---|---|
+| **iPhone SE** (2nd/3rd gen) | **375 × 667** | The tightest screen. If it fits here, it fits. Safari. |
+| **Moto G Stylus 2022** | **412 × 915** | Chrome on Android. |
+
+Rules:
+
+- Check every page at **375 × 667** (and 412 × 915) before calling UI work done. No sideways scrolling, nothing cut off,
+  and the important thing (amount, balance, Save button) visible without scrolling where possible.
+- Nothing may break at 320px wide; it just doesn't have to be pretty there.
+- Tap targets at least 44px tall. Inputs use 16px text (smaller makes the iPhone zoom in on tap).
+- Keep the bottom tab bar and iPhone safe areas (`env(safe-area-inset-*)`) in mind: fixed or sticky things must not
+  hide content behind them.
+- Desktop should also be pleasant to use (at 900px+ the tab bar becomes a left sidebar), but phones win any trade-off.
+- Light and dark mode both work: use the color variables in `static/css/style.css`, never hard-coded colors.
+
+## Conventions
+
+- Pages are Thymeleaf templates in `src/main/resources/templates`; shared pieces (head, top bar, tab bar, icons) are in
+  `layout.html`. Reuse the existing building blocks in `style.css` (`card`, `row`, `section-title`, `btn`, `hero`, ...)
+  instead of adding one-off styles.
+- No npm or front-end build. htmx and Alpine come from webjars in `build.gradle`.
+- Money is stored as whole cents; `transaction_type` ('credit' / 'debit') says which way it went.
+- Schema changes go in a new `src/main/resources/db/migration/V<n>__name.sql`; never edit an applied migration.
+- `./gradlew test` renders every page against a throwaway database; keep it passing and add new pages to it.

@@ -2,14 +2,25 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Category')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
-<main>
-    <h3 th:text="${transaction.description}">Description</h3>
-    <form method="post" th:action="@{/transactions/{id}/category(id=${transaction.id})}">
+<header th:replace="~{layout :: topbar('Category', @{/transactions/{id}(id=${transaction.id}, query=${query})})}"></header>
+<main x-data="{ filter: '' }">
+    <div class="hint" style="margin: 0 4px 10px 4px;" th:text="${transaction.description}">Description</div>
+
+    <div class="search">
+        <input type="search" placeholder="Filter categories" x-model="filter" autocomplete="off">
+    </div>
+
+    <form class="card spaced" method="post" th:action="@{/transactions/{id}/category(id=${transaction.id})}">
         <input type="hidden" name="query" th:if="${query}" th:value="${query}">
-        <button class="button" type="submit" name="categoryId"
-                th:each="category : ${categories}" th:value="${category.id}" th:text="${category.name}">Category</button>
+        <button class="row" type="submit" name="categoryId"
+                th:each="category : ${categories}" th:value="${category.id}"
+                th:attr="data-name=${#strings.toLowerCase(category.name)}"
+                x-show="$el.dataset.name.includes(filter.toLowerCase())">
+            <span class="main title" th:text="${category.name}">Category</span>
+            <svg th:if="${transaction.category != null && transaction.category.id == category.id}" th:replace="~{layout :: check}"></svg>
+        </button>
     </form>
 </main>
+<nav th:replace="~{layout :: tabs(${query == 'needsCategorized' ? 'categorize' : 'transactions'})}"></nav>
 </body>
 </html>

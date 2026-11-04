@@ -55,6 +55,7 @@ public class BudgetsController {
         model.addAttribute("end", date.with(TemporalAdjusters.lastDayOfMonth()));
         model.addAttribute("previous", start.minusMonths(1));
         model.addAttribute("next", start.plusMonths(1));
+        model.addAttribute("isCurrent", start.equals(LocalDate.now().withDayOfMonth(1)));
         model.addAttribute("budgets", budgetReportsService.monthly(date));
         return "monthly";
     }
@@ -74,6 +75,7 @@ public class BudgetsController {
         model.addAttribute("end", date.with(TemporalAdjusters.lastDayOfYear()));
         model.addAttribute("previous", start.minusYears(1));
         model.addAttribute("next", start.plusYears(1));
+        model.addAttribute("isCurrent", date.getYear() == LocalDate.now().getYear());
         model.addAttribute("budgets", budgetReportsService.yearly(date));
         return "yearly";
     }

@@ -2,28 +2,29 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Monthly')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Budgets', null)}"></header>
 <main>
-    <h2 th:text="${#temporals.format(date, 'MMMM yyyy')}">Month</h2>
-
-    <div class="period-nav">
-        <a th:href="@{/monthly(date=${previous})}">Previous</a>
-        -
-        <a th:href="@{/monthly}">This Month</a>
-        -
-        <a th:href="@{/monthly(date=${next})}">Next</a>
+    <div class="segmented" style="margin-bottom: 12px;">
+        <a class="seg-link active" th:href="@{/monthly}">Month</a>
+        <a class="seg-link" th:href="@{/yearly}">Year</a>
+        <a class="seg-link" th:href="@{/needs-transferred}">Transfer</a>
     </div>
 
-    <div th:each="b : ${budgets}">
-        <a class="plain" th:href="@{/budgets/{id}(id=${b.budget.id})}">
-            <div class="budget-title" th:text="${b.budget.name}">Budget</div>
-        </a>
-        <progress th:replace="~{budget-fragments :: progress(${b.percent})}"></progress>
-        <div th:text="|${#numbers.formatCurrency(b.total)} of ${#numbers.formatCurrency(b.budget.amount)}|"></div>
-        <a class="plain category-total" th:each="c : ${b.categories}"
-           th:href="@{/transactions(query=|category,${c.category.id},${start},${end}|)}"
-           th:text="|${c.category.name}: ${#numbers.formatCurrency(c.total)}|">Category: $0.00</a>
+    <div class="period">
+        <a class="icon-btn" th:href="@{/monthly(date=${previous})}" aria-label="Previous month"><svg th:replace="~{layout :: left}"></svg></a>
+        <div class="label">
+            <span th:text="${#temporals.format(date, 'MMMM yyyy')}">Month</span>
+            <a th:unless="${isCurrent}" th:href="@{/monthly}">Back to this month</a>
+        </div>
+        <a class="icon-btn" th:href="@{/monthly(date=${next})}" aria-label="Next month"><svg th:replace="~{layout :: right}"></svg></a>
     </div>
+
+    <div class="empty" th:if="${budgets.isEmpty()}">No budgets are set to show monthly. Turn it on in a budget's settings.</div>
+
+    <th:block th:each="b : ${budgets}">
+        <div th:replace="~{budget-fragments :: budget-card(${b}, ${start}, ${end}, false)}"></div>
+    </th:block>
 </main>
+<nav th:replace="~{layout :: tabs('budgets')}"></nav>
 </body>
 </html>

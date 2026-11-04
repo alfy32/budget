@@ -2,17 +2,23 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Tags')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Tags', @{/transactions/{id}(id=${transaction.id}, query=${query})})}"></header>
 <main>
-    <h3 th:text="${transaction.description}">Description</h3>
+    <div class="hint" style="margin: 0 4px 10px 4px;" th:text="${transaction.description}">Description</div>
+
     <form method="post" th:action="@{/transactions/{id}/tags(id=${transaction.id})}">
         <input type="hidden" name="query" th:if="${query}" th:value="${query}">
-        <label class="tag" th:each="tag : ${tags}">
-            <input type="checkbox" name="tag" th:value="${tag}" th:checked="${selected.contains(tag)}">
-            <span th:text="${tag}">Tag</span>
-        </label>
-        <button class="button" type="submit">Save</button>
+        <div class="card">
+            <label class="row tappable" th:each="tag : ${tags}">
+                <span class="main title" th:text="${tag}">Tag</span>
+                <input class="tick" type="checkbox" name="tag" th:value="${tag}" th:checked="${selected.contains(tag)}">
+            </label>
+        </div>
+        <div class="buttons">
+            <button class="btn" type="submit">Save</button>
+        </div>
     </form>
 </main>
+<nav th:replace="~{layout :: tabs('transactions')}"></nav>
 </body>
 </html>

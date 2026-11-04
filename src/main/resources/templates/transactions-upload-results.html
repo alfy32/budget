@@ -1,19 +1,28 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{layout :: head('Upload Results')}"></head>
+<head th:replace="~{layout :: head('Uploaded')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Uploaded', @{/})}"></header>
 <main>
-    <h2>Uploaded</h2>
-    <div class="label" th:text="${account}">Account</div>
-    <div class="field value" th:text="|${results.newTransactions()} new|"></div>
-    <div class="field value" th:text="|${results.autoCategorizedTransactions()} auto-categorized|"></div>
-    <div class="field value" th:text="|${results.existingTransactions()} already uploaded|"></div>
-    <div class="field value" th:classappend="${results.failedTransactions() > 0} ? warning"
-         th:text="|${results.failedTransactions()} failed|"></div>
-    <br>
-    <a class="button" th:href="@{/transactions(query='needsCategorized')}">Categorize</a>
-    <a class="button" th:href="@{/transactions-upload}">Upload Another</a>
+    <div class="card hero">
+        <div class="big" th:text="${results.newTransactions()}">0</div>
+        <div class="title">new transactions</div>
+        <div class="sub" th:text="${account}">Account</div>
+    </div>
+
+    <div class="card spaced">
+        <div class="row"><div class="main">Auto-categorized</div><div class="amount" th:text="${results.autoCategorizedTransactions()}">0</div></div>
+        <div class="row"><div class="main">Already uploaded before</div><div class="amount" th:text="${results.existingTransactions()}">0</div></div>
+        <div class="row" th:classappend="${results.failedTransactions() > 0} ? warning">
+            <div class="main">Failed</div><div class="amount" th:text="${results.failedTransactions()}">0</div>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <a class="btn" th:href="@{/transactions(query='needsCategorized')}">Categorize</a>
+        <a class="btn secondary" th:href="@{/transactions-upload}">Upload another</a>
+    </div>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

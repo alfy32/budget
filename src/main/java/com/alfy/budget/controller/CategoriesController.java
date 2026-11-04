@@ -36,7 +36,12 @@ public class CategoriesController {
 
     @GetMapping("/categories")
     public String categories(Model model) {
+        java.util.Map<UUID, String> accountNames = new java.util.HashMap<>();
+        accountsService.list().forEach(account -> accountNames.put(account.id, account.name));
+
         model.addAttribute("categories", categoriesService.list());
+        model.addAttribute("budgetsById", budgetsService.listBudgetsById());
+        model.addAttribute("accountNames", accountNames);
         return "categories";
     }
 

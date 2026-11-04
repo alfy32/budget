@@ -2,21 +2,56 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Home')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Budget', null)}"></header>
 <main>
-    <h2>Budget App</h2>
+    <div class="tiles">
+        <a class="tile" th:classappend="${needsCategorized > 0} ? attention" th:href="@{/transactions(query='needsCategorized')}">
+            <div class="number" th:text="${needsCategorized}">0</div>
+            <div class="label">to categorize</div>
+        </a>
+        <a class="tile" th:classappend="${needsTransferred > 0} ? attention" th:href="@{/needs-transferred}">
+            <div class="number" th:text="${needsTransferred}">0</div>
+            <div class="label">to transfer</div>
+        </a>
+    </div>
 
-    <a class="button" th:href="@{/create-transaction}">Create Transaction</a>
-    <a class="button" th:href="@{/transactions}">All Transactions</a>
-    <a class="button" th:href="@{/transactions(query='needsCategorized')}">Needs Categorized Transactions</a>
-    <a class="button" th:href="@{/transactions(query='needsTransferred')}">Needs Transferred Transactions</a>
-    <a class="button" th:href="@{/needs-transferred}">Needs Transferred</a>
-    <a class="button" th:href="@{/transactions(query='possibleDuplicates')}">Possible Duplicate Transactions</a>
-    <a class="button" th:href="@{/accounts}">Accounts</a>
-    <a class="button" th:href="@{/budgets}">Budgets</a>
-    <a class="button" th:href="@{/categories}">Categories</a>
-    <a class="button" th:href="@{/rules}">Auto-Categorize Rules</a>
-    <a class="button" th:href="@{/transactions-upload}">Upload Transactions CSV</a>
+    <div class="buttons">
+        <a class="btn" th:href="@{/transactions-upload}">Upload bank CSV</a>
+        <a class="btn secondary" th:href="@{/create-transaction}">Add by hand</a>
+    </div>
+
+    <div class="section-title" th:unless="${accounts.isEmpty()}">Accounts</div>
+    <div class="card" th:unless="${accounts.isEmpty()}">
+        <a class="row" th:each="account : ${accounts}" th:href="@{/accounts/{id}(id=${account.id})}">
+            <div class="main title" th:text="${account.name}">Account</div>
+            <div class="amount" th:classappend="${account.balance.signum() < 0} ? negative"
+                 th:text="${#numbers.formatCurrency(account.balance)}">$0.00</div>
+            <svg th:replace="~{layout :: chevron}"></svg>
+        </a>
+    </div>
+
+    <div class="section-title">Reports</div>
+    <div class="card">
+        <a class="row" th:href="@{/monthly}"><div class="main">This month</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/yearly}"><div class="main">This year</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/needs-transferred}"><div class="main">Needs transferred</div><svg th:replace="~{layout :: chevron}"></svg></a>
+    </div>
+
+    <div class="section-title">Transactions</div>
+    <div class="card">
+        <a class="row" th:href="@{/transactions}"><div class="main">All transactions</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/transactions(query='needsTransferred')}"><div class="main">Needs transferred</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/transactions(query='possibleDuplicates')}"><div class="main">Possible duplicates</div><svg th:replace="~{layout :: chevron}"></svg></a>
+    </div>
+
+    <div class="section-title">Setup</div>
+    <div class="card">
+        <a class="row" th:href="@{/budgets}"><div class="main">Budgets</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/categories}"><div class="main">Categories</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/accounts}"><div class="main">Accounts</div><svg th:replace="~{layout :: chevron}"></svg></a>
+        <a class="row" th:href="@{/rules}"><div class="main">Auto-categorize rules</div><svg th:replace="~{layout :: chevron}"></svg></a>
+    </div>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>

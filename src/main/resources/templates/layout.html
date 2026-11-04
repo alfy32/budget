@@ -1,14 +1,24 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <!--
-  Shared pieces used by every page:
+  Shared pieces used by every page. A page looks like:
+
     <head th:replace="~{layout :: head('Page title')}"></head>
-    <nav th:replace="~{layout :: nav}"></nav>
+    <body>
+    <header th:replace="~{layout :: topbar('Page title', @{/where/back/goes})}"></header>   (back may be null)
+    <main> ... </main>
+    <nav th:replace="~{layout :: tabs('home')}"></nav>   (which tab to highlight)
+    </body>
 -->
 <head th:fragment="head(title)">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title th:text="${title} + ' - Budget'">Budget</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Budget">
+    <title th:text="${title} + ' · Budget'">Budget</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <!-- htmx: send forms / swap parts of the page without a full reload -->
     <script th:src="@{/webjars/htmx.org/dist/htmx.min.js}" defer></script>
@@ -17,12 +27,47 @@
 </head>
 <body>
 
-<nav th:fragment="nav" class="topnav">
-    <a th:href="@{/}">Home</a>
-    <a th:href="@{/transactions(query='needsCategorized')}">Categorize</a>
-    <a th:href="@{/monthly}">Monthly</a>
-    <a th:href="@{/yearly}">Yearly</a>
+<header th:fragment="topbar(title, back)" class="topbar">
+    <a class="back" th:if="${back != null}" th:href="${back}" aria-label="Back">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </a>
+    <h1 th:text="${title}">Title</h1>
+</header>
+
+<nav th:fragment="tabs(active)" class="tabbar">
+    <div class="brand">Budget</div>
+    <a th:href="@{/}" th:classappend="${active == 'home'} ? active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span>Home</span>
+    </a>
+    <a th:href="@{/transactions(query='needsCategorized')}" th:classappend="${active == 'categorize'} ? active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="8" cy="8" r="1.5"/></svg>
+        <span>Categorize</span>
+    </a>
+    <a th:href="@{/transactions}" th:classappend="${active == 'transactions'} ? active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/></svg>
+        <span>Transactions</span>
+    </a>
+    <a th:href="@{/monthly}" th:classappend="${active == 'budgets'} ? active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span>Budgets</span>
+    </a>
+    <a th:href="@{/accounts}" th:classappend="${active == 'accounts'} ? active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="15" rx="2.5"/><path d="M2.5 9.5h19M16 15h2"/></svg>
+        <span>Accounts</span>
+    </a>
 </nav>
+
+<!-- Small icons -->
+<svg th:fragment="chevron" class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+<svg th:fragment="check" class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"/></svg>
+<svg th:fragment="left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+<svg th:fragment="right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+<svg th:fragment="trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+
+<!-- Money with a + for credits, colored green -->
+<span th:fragment="money(t)" th:classappend="${t.credit()} ? credit"
+      th:text="${(t.credit() ? '+' : '') + #numbers.formatCurrency(t.amount)}">$0.00</span>
 
 </body>
 </html>

@@ -2,29 +2,28 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Yearly')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Budgets', null)}"></header>
 <main>
-    <h2 th:text="${date.year}">Year</h2>
-
-    <div class="period-nav">
-        <a th:href="@{/yearly(date=${previous})}">Previous</a>
-        -
-        <a th:href="@{/yearly}">This Year</a>
-        -
-        <a th:href="@{/yearly(date=${next})}">Next</a>
+    <div class="segmented" style="margin-bottom: 12px;">
+        <a class="seg-link" th:href="@{/monthly}">Month</a>
+        <a class="seg-link active" th:href="@{/yearly}">Year</a>
+        <a class="seg-link" th:href="@{/needs-transferred}">Transfer</a>
     </div>
 
-    <div th:each="b : ${budgets}">
-        <a class="plain" th:href="@{/budgets/{id}(id=${b.budget.id})}">
-            <div class="budget-title" th:text="${b.budget.name}">Budget</div>
-        </a>
-        <progress th:replace="~{budget-fragments :: progress(${b.percent})}"></progress>
-        <div th:text="|${#numbers.formatCurrency(b.total)} of ${#numbers.formatCurrency(b.budget.amount)}|"></div>
-        <div th:text="${b.expectedPercent} + '% | ' + ${#numbers.formatCurrency(b.expectedTotal)}"></div>
-        <a class="plain category-total" th:each="c : ${b.categories}"
-           th:href="@{/transactions(query=|category,${c.category.id},${start},${end}|)}"
-           th:text="|${c.category.name}: ${#numbers.formatCurrency(c.total)}|">Category: $0.00</a>
+    <div class="period">
+        <a class="icon-btn" th:href="@{/yearly(date=${previous})}" aria-label="Previous year"><svg th:replace="~{layout :: left}"></svg></a>
+        <div class="label">
+            <span th:text="${date.year}">Year</span>
+            <a th:unless="${isCurrent}" th:href="@{/yearly}">Back to this year</a>
+        </div>
+        <a class="icon-btn" th:href="@{/yearly(date=${next})}" aria-label="Next year"><svg th:replace="~{layout :: right}"></svg></a>
     </div>
+    <p class="hint" style="margin: -4px 4px 12px 4px;">The tick on each bar is where spending would be if it were spread evenly over the year.</p>
+
+    <th:block th:each="b : ${budgets}">
+        <div th:replace="~{budget-fragments :: budget-card(${b}, ${start}, ${end}, true)}"></div>
+    </th:block>
 </main>
+<nav th:replace="~{layout :: tabs('budgets')}"></nav>
 </body>
 </html>

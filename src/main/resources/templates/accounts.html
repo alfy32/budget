@@ -2,23 +2,24 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{layout :: head('Accounts')}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar('Accounts', null)}"></header>
 <main>
-    <h2>Accounts</h2>
+    <div class="card">
+        <div class="row muted" th:if="${accounts.isEmpty()}">No accounts yet</div>
+        <a class="row" th:each="account : ${accounts}" th:href="@{/accounts/{id}(id=${account.id})}">
+            <div class="main title" th:text="${account.name}">Gift Money Alan</div>
+            <div class="amount" th:classappend="${account.balance.signum() < 0} ? negative"
+                 th:text="${#numbers.formatCurrency(account.balance)}">$0.00</div>
+            <svg th:replace="~{layout :: chevron}"></svg>
+        </a>
+    </div>
 
-    <div class="empty" th:if="${accounts.isEmpty()}">No accounts yet</div>
-
-    <a class="account-row" th:each="account : ${accounts}" th:href="@{/accounts/{id}(id=${account.id})}">
-        <span th:text="${account.name}">Gift Money Alan</span>
-        <span th:classappend="${account.balance.signum() < 0} ? negative"
-              th:text="${#numbers.formatCurrency(account.balance)}">$0.00</span>
-    </a>
-
-    <br>
-    <form method="post" th:action="@{/accounts}">
-        <input type="text" name="name" placeholder="New account name" required>
-        <button class="button" type="submit">Add Account</button>
+    <div class="section-title">New account</div>
+    <form class="card padded" method="post" th:action="@{/accounts}">
+        <input type="text" name="name" placeholder="Name" required>
+        <div class="buttons"><button class="btn" type="submit">Add account</button></div>
     </form>
 </main>
+<nav th:replace="~{layout :: tabs('accounts')}"></nav>
 </body>
 </html>

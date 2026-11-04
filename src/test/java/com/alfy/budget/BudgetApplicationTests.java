@@ -177,7 +177,7 @@ class BudgetApplicationTests {
 
         // Its category has a budget, so it still shows on the yearly page.
         categoriesService.setName(category.id, "Account Only Category");
-        mvc.perform(get("/yearly")).andExpect(content().string(org.hamcrest.Matchers.containsString("Account Only Category: ")));
+        mvc.perform(get("/yearly")).andExpect(content().string(org.hamcrest.Matchers.containsString(">Account Only Category<")));
 
         // With no budget, an account's category is left off the yearly page (not even as Not Categorized).
         String notCategorizedBefore = notCategorizedOnYearly();
@@ -193,8 +193,9 @@ class BudgetApplicationTests {
 
     private String notCategorizedOnYearly() throws Exception {
         String html = mvc.perform(get("/yearly")).andReturn().getResponse().getContentAsString();
-        var matcher = java.util.regex.Pattern.compile("Not Categorized: [^<]*").matcher(html);
-        return matcher.find() ? matcher.group() : "";
+        var matcher = java.util.regex.Pattern.compile("Not Categorized</div>\\s*<div class=\"amount small\">[^<]*").matcher(html);
+        assertTrue(matcher.find(), "yearly page shows a Not Categorized row");
+        return matcher.group();
     }
 
     @Test

@@ -1,42 +1,47 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{layout :: head('Edit Category')}"></head>
+<head th:replace="~{layout :: head(${category.name})}"></head>
 <body>
-<nav th:replace="~{layout :: nav}"></nav>
+<header th:replace="~{layout :: topbar(${category.name}, @{/categories})}"></header>
 <main>
-    <h2>Edit Category</h2>
     <!-- Each field saves as soon as it changes, same as the budget page. -->
-    <div x-data="{ saved: '' }" @htmx:after-request="if ($event.detail.successful) { saved = $event.detail.elt.name; setTimeout(() => saved = '', 1500) }">
-        <div class="label">Name <span class="saved" x-show="saved === 'name'" x-cloak>saved</span></div>
-        <input type="text" name="name" th:value="${category.name}" th:hx-post="@{/categories/{id}/name(id=${category.id})}" hx-swap="none">
+    <div class="card padded" x-data="{ saved: '' }"
+         @htmx:after-request="if ($event.detail.successful) { saved = $event.detail.elt.name; setTimeout(() => saved = '', 1500) }">
+        <label class="field">
+            <span class="field-label">Name <span class="saved" x-show="saved === 'name'" x-cloak>Saved</span></span>
+            <input type="text" name="name" th:value="${category.name}" th:hx-post="@{/categories/{id}/name(id=${category.id})}" hx-swap="none">
+        </label>
 
-        <div class="label">Budget <span class="saved" x-show="saved === 'budgetId'" x-cloak>saved</span></div>
-        <select name="budgetId" th:hx-post="@{/categories/{id}/budget(id=${category.id})}" hx-swap="none">
-            <option value="">No Budget</option>
-            <option th:each="budget : ${budgets}" th:value="${budget.id}" th:text="${budget.name}"
-                    th:selected="${category.budget != null && category.budget.id == budget.id}"></option>
-        </select>
+        <label class="field">
+            <span class="field-label">Budget <span class="saved" x-show="saved === 'budgetId'" x-cloak>Saved</span></span>
+            <select name="budgetId" th:hx-post="@{/categories/{id}/budget(id=${category.id})}" hx-swap="none">
+                <option value="">No budget</option>
+                <option th:each="budget : ${budgets}" th:value="${budget.id}" th:text="${budget.name}"
+                        th:selected="${category.budget != null && category.budget.id == budget.id}"></option>
+            </select>
+        </label>
 
-        <div class="label">Account <span class="saved" x-show="saved === 'accountId'" x-cloak>saved</span></div>
-        <select name="accountId" th:hx-post="@{/categories/{id}/account(id=${category.id})}" hx-swap="none">
-            <option value="">No Account</option>
-            <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"
-                    th:selected="${category.accountId == account.id}"></option>
-        </select>
+        <label class="field">
+            <span class="field-label">Account <span class="saved" x-show="saved === 'accountId'" x-cloak>Saved</span></span>
+            <select name="accountId" th:hx-post="@{/categories/{id}/account(id=${category.id})}" hx-swap="none">
+                <option value="">No account</option>
+                <option th:each="account : ${accounts}" th:value="${account.id}" th:text="${account.name}"
+                        th:selected="${category.accountId == account.id}"></option>
+            </select>
+        </label>
     </div>
 
-    <br>
-    <a class="button" th:href="@{/categories}">Done</a>
-
-    <div class="spacer"></div>
-
-    <div x-data="{ sure: false }">
-        <button class="button-red" type="button" x-show="!sure" @click="sure = true">Delete Category</button>
+    <div class="danger-zone" x-data="{ sure: false }">
+        <button class="btn danger" type="button" x-show="!sure" @click="sure = true">Delete category</button>
         <form x-show="sure" x-cloak method="post" th:action="@{/categories/{id}/delete(id=${category.id})}">
-            <p>Transactions in this category will go back to Needs Categorized.</p>
-            <button class="button-red" type="submit">Yes delete for sure</button>
+            <p class="hint">Its transactions go back to needing a category.</p>
+            <div class="buttons">
+                <button class="btn secondary" type="button" @click="sure = false">Keep it</button>
+                <button class="btn danger solid" type="submit">Delete</button>
+            </div>
         </form>
     </div>
 </main>
+<nav th:replace="~{layout :: tabs('home')}"></nav>
 </body>
 </html>
