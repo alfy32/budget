@@ -22,7 +22,7 @@
                     <div class="sub" th:text="${plan.notes != null ? plan.notes : 'Commit it to a month when you agree on it'}"></div>
                 </div>
                 <div class="amount">
-                    <div th:classappend="${plan.savingsTarget != null && t.savings().compareTo(plan.savingsTarget) < 0} ? negative"
+                    <div th:classappend="${t.savings().signum() < 0} ? negative"
                          th:text="|${#numbers.formatCurrency(t.savings())}/mo|">$0/mo</div>
                     <div class="sub">to savings</div>
                 </div>
@@ -47,7 +47,7 @@
                 </div>
             </div>
             <div class="amount">
-                <div th:classappend="${plan.savingsTarget != null && t.savings().compareTo(plan.savingsTarget) < 0} ? negative"
+                <div th:classappend="${t.savings().signum() < 0} ? negative"
                      th:text="|${#numbers.formatCurrency(t.savings())}/mo|">$0/mo</div>
                 <div class="sub">to savings</div>
             </div>

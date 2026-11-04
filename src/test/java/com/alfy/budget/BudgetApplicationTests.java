@@ -387,12 +387,10 @@ class BudgetApplicationTests {
             mvc.perform(post("/plans/" + july)
                             .param("startMonth", lastYear + "-07")
                             .param("takeHome", "5000")
-                            .param("savingsTarget", "1000")
                             .param("line_" + chips.id, "3000"))
                     .andExpect(redirectedUrl("/plans/" + july + "?saved=true"));
             var saved = plansService.get(july);
             assertEquals(new BigDecimal("5000.00"), saved.takeHome);
-            assertEquals(new BigDecimal("1000.00"), saved.savingsTarget);
             // Chips went from $1,200/yr ($100/mo) in January's plan to $3,000/yr ($250/mo): +$150 a month of yearly spending.
             assertEquals(new BigDecimal("150.00"),
                     plansService.totals(saved).yearly().subtract(plansService.totals(plansService.get(january)).yearly()));

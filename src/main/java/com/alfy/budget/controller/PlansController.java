@@ -160,7 +160,8 @@ public class PlansController {
     public String save(@PathVariable UUID id, @RequestParam Map<String, String> form) {
         Plan plan = plansService.get(id);
 
-        plansService.update(plan.id, plan.startMonth, money(form.get("takeHome")), moneyOrNull(form.get("savingsTarget")), blankToNull(form.get("notes")));
+        // The savings target isn't shown any more; keep whatever is stored.
+        plansService.update(plan.id, plan.startMonth, money(form.get("takeHome")), plan.savingsTarget, blankToNull(form.get("notes")));
 
         Map<UUID, BigDecimal> amounts = new HashMap<>();
         Map<UUID, BigDecimal> incomeAmounts = new HashMap<>();

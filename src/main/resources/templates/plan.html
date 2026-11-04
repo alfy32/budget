@@ -25,10 +25,9 @@
         <div class="savings-bar" @click="details = !details">
             <div class="top">
                 <span>Savings</span>
-                <span class="amount" :class="belowTarget ? 'negative' : 'credit'" x-text="money(savings) + '/mo'"></span>
+                <span class="amount" :class="savings < 0 ? 'negative' : 'credit'" x-text="money(savings) + '/mo'"></span>
             </div>
-            <div class="sub" x-show="target > 0" x-text="belowTarget ? money(target - savings) + ' below your ' + money(target) + ' target' : money(savings - target) + ' above your ' + money(target) + ' target'"></div>
-            <div class="sub" x-show="!(target > 0)">Set a target below to check against</div>
+            <div class="sub">Tap for the breakdown</div>
             <div class="breakdown" x-show="details" x-cloak>
                 <div class="line"><span>Take-home pay</span><span x-text="money(takeHome)"></span></div>
                 <div class="line"><span>− From income (donations…)</span><span x-text="money(fromIncome)"></span></div>
@@ -52,10 +51,6 @@
                 <input type="number" step="0.01" min="0" inputmode="decimal" name="takeHome" x-model.number="takeHome">
             </label>
             <label class="field">
-                <span class="field-label">Keep savings at least (per month)</span>
-                <input type="number" step="0.01" min="0" inputmode="decimal" name="savingsTarget" x-model.number="target" placeholder="No target">
-            </label>
-            <label class="field">
                 <span class="field-label">Notes</span>
                 <input type="text" name="notes" th:value="${plan.notes}" placeholder="e.g. Raise in July">
             </label>
@@ -77,8 +72,8 @@
             </div>
             <div class="row">
                 <div class="main"><div class="title">Savings</div><div class="sub">What's left</div></div>
-                <span class="deposit" :class="belowTarget && 'negative'" x-text="money(savings)"></span>
-                <span class="deposit strong" :class="belowTarget && 'negative'" x-text="money(savings / paychecksPerMonth)"></span>
+                <span class="deposit" :class="savings < 0 && 'negative'" x-text="money(savings)"></span>
+                <span class="deposit strong" :class="savings < 0 && 'negative'" x-text="money(savings / paychecksPerMonth)"></span>
             </div>
         </div>
         <p class="hint" style="margin: 6px 4px 0 4px;">Per paycheck assumes 2 paychecks a month (24 a year).</p>
@@ -231,16 +226,11 @@
             Alpine.data('plan', () => ({
                 details: false,
                 takeHome: Number(/*[[${plan.takeHome}]]*/ 0),
-                target: /*[[${plan.savingsTarget}]]*/ null,
                 // category id -> { budget, group, amount per year }
                 lines: Object.fromEntries((/*[[${lineData}]]*/ []).map(line =>
                     [line.id, {budget: line.budget, group: line.group, amount: Number(line.amount)}])),
                 // income item id -> amount per year
                 income: Object.fromEntries((/*[[${incomeData}]]*/ []).map(item => [item.id, Number(item.amount)])),
-
-                init() {
-                    this.target = this.target == null ? null : Number(this.target);
-                },
 
                 groupTotal(group) {
                     let total = Object.values(this.lines).filter(line => line.group === group)
@@ -259,7 +249,6 @@
                 get fromIncome() { return this.groupTotal('income') / 12; },
                 get spending() { return (this.groupTotal('monthly') + this.groupTotal('yearly')) / 12; },
                 get savings() { return (Number(this.takeHome) || 0) - this.fromIncome - this.spending; },
-                get belowTarget() { return this.target > 0 && this.savings < this.target; },
 
                 // Direct deposit split: checking pays monthly budgets and everything from income,
                 // Yearly Savings gets the yearly budgets, savings gets the rest.
