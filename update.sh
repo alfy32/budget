@@ -2,7 +2,7 @@
 # Builds the app and replaces the running "budget" container with the new version.
 set -euxo pipefail
 
-DATA_DIR="/home/alan/budget-data"   # holds budget.db
+DATA_DIR="/home/alan/budget/data"   # holds budget.db
 mkdir -p "$DATA_DIR"
 
 ./gradlew clean bootJar

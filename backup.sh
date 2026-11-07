@@ -3,8 +3,8 @@
 # To restore: stop the app, copy a backup over budget.db (and delete budget.db-wal / budget.db-shm), start the app.
 set -euo pipefail
 
-DB_FILE="/home/alan/budget-data/budget.db"
-BACKUP_DIR="/home/alan/budget-backups"
+DB_FILE="/home/alan/budget/data/budget.db"
+BACKUP_DIR="/home/alan/budget/backup"
 DATE=$(date +"%Y-%m-%d_%H-%M-%S")
 
 mkdir -p "$BACKUP_DIR"
