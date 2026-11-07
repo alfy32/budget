@@ -9,6 +9,8 @@ DATE=$(date +"%Y-%m-%d_%H-%M-%S")
 
 mkdir -p "$BACKUP_DIR"
 sqlite3 "$DB_FILE" ".backup '$BACKUP_DIR/budget-$DATE.db'"
+# Make the copy one self-contained file (the live database uses WAL, which adds -wal/-shm files when opened).
+sqlite3 "$BACKUP_DIR/budget-$DATE.db" "PRAGMA journal_mode=DELETE;" > /dev/null
 
 # Keep 30 days of backups
 find "$BACKUP_DIR" -type f -name "budget-*.db" -mtime +30 -delete
