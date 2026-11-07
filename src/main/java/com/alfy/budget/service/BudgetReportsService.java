@@ -20,199 +20,221 @@ public class BudgetReportsService {
     private final BudgetsService budgetsService;
     private final CategoriesService categoriesService;
     private final TransactionsService transactionsService;
+    private final PlansService plansService;
 
     public BudgetReportsService(
             BudgetsService budgetsService,
             CategoriesService categoriesService,
-            TransactionsService transactionsService
+            TransactionsService transactionsService,
+            PlansService plansService
     ) {
         this.budgetsService = budgetsService;
         this.categoriesService = categoriesService;
         this.transactionsService = transactionsService;
+        this.plansService = plansService;
     }
 
-    public List<BudgetInfo> monthly(
-            LocalDate date
-    ) {
-        if (date == null) {
-            date = LocalDate.now();
-        }
+    /**
+     * The watched budgets (budget.monthly) for the month containing date, measured against the plan in
+     * effect that month.
+     */
+    public List<BudgetInfo> monthly(LocalDate date) {
         LocalDate start = date.with(TemporalAdjusters.firstDayOfMonth());
         LocalDate end = date.with(TemporalAdjusters.lastDayOfMonth());
 
-        Map<UUID, BudgetInfo> budgetInfoById = new HashMap<>();
-        Map<UUID, CategoryInfo> categoryInfoById = new HashMap<>();
-
-
-        List<Budget> budgets = budgetsService.list();
-        for (Budget budget : budgets) {
-            if (budget.monthly) {
-                BudgetInfo budgetInfo = new BudgetInfo();
-                budgetInfo.budget = budget;
-                budgetInfo.categories = new ArrayList<>();
-                budgetInfoById.put(budget.id, budgetInfo);
-            }
+        Map<UUID, Budget> budgetsById = budgetsService.listBudgetsById();
+        Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
+        Plan plan = plansService.forMonth(start);
+        if (plan == null) {
+            return List.of();
         }
 
-        List<Category> categories = categoriesService.list();
-        for (Category category : categories) {
-            if (category.budget != null && category.budget.id != null) {
-                BudgetInfo budgetInfo = budgetInfoById.get(category.budget.id);
-                if (budgetInfo != null) {
-                    CategoryInfo categoryInfo = new CategoryInfo();
-                    categoryInfo.category = category;
-                    categoryInfoById.put(category.id, categoryInfo);
-                    budgetInfo.categories.add(categoryInfo);
-                }
-            }
-        }
-
-        List<Transaction> transactions = transactionsService.listByDate(start, end);
-        for (Transaction transaction : transactions) {
-            if (transaction.category != null && transaction.category.id != null) {
-                CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
-                if (categoryInfo != null) {
-                    addTransactionToTotal(categoryInfo, transaction);
-
-                    if (categoryInfo.transactions == null) {
-                        categoryInfo.transactions = new ArrayList<>();
-                    }
-                    categoryInfo.transactions.add(transaction);
-                }
-            }
-        }
-
-        List<BudgetInfo> budgetInfoList = new ArrayList<>(budgetInfoById.values());
-        budgetInfoList.sort(Comparator.comparing(budgetInfo -> budgetInfo.budget.name));
-
-        for (BudgetInfo budgetInfo : budgetInfoList) {
-            budgetInfo.total = BigDecimal.ZERO;
-            for (CategoryInfo category : budgetInfo.categories) {
-                budgetInfo.total = budgetInfo.total.add(category.total);
-            }
-
-            budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
-        }
-
-        return budgetInfoList;
-    }
-
-    public List<BudgetInfo> yearly(
-            LocalDate date
-    ) {
-        if (date == null) {
-            date = LocalDate.now();
-        }
-        LocalDate start = date.with(TemporalAdjusters.firstDayOfYear());
-        LocalDate end = date.with(TemporalAdjusters.lastDayOfYear());
-
-        Map<UUID, BudgetInfo> budgetInfoById = new HashMap<>();
-        Map<UUID, CategoryInfo> categoryInfoById = new HashMap<>();
-
-        UUID noBudgetId = UUID.randomUUID();
-        BudgetInfo noBudgetInfo = new BudgetInfo();
-        noBudgetInfo.budget = new Budget();
-        noBudgetInfo.budget.id = noBudgetId;
-        noBudgetInfo.budget.name = "No Budget";
-        noBudgetInfo.budget.amount = new BigDecimal(0);
-        noBudgetInfo.categories = new ArrayList<>();
-
-        List<Budget> budgets = budgetsService.list();
-        for (Budget budget : budgets) {
-            BudgetInfo budgetInfo = new BudgetInfo();
-            budgetInfo.budget = budget;
-            budgetInfo.categories = new ArrayList<>();
-            budgetInfoById.put(budget.id, budgetInfo);
-        }
-
-        // Categories with no budget that belong to an account are tracked on the Accounts page instead.
-        Set<UUID> accountOnlyCategoryIds = new HashSet<>();
-
-        boolean foundBudget;
-        List<Category> categories = categoriesService.list();
-        for (Category category : categories) {
-            foundBudget = false;
-
-            if (category.budget != null && category.budget.id != null) {
-                BudgetInfo budgetInfo = budgetInfoById.get(category.budget.id);
-                if (budgetInfo != null) {
-                    CategoryInfo categoryInfo = new CategoryInfo();
-                    categoryInfo.category = category;
-                    categoryInfoById.put(category.id, categoryInfo);
-                    budgetInfo.categories.add(categoryInfo);
-                    foundBudget = true;
-                }
-            }
-
-            if (!foundBudget && category.accountId != null) {
-                accountOnlyCategoryIds.add(category.id);
+        Map<UUID, BudgetInfo> budgetInfos = new LinkedHashMap<>();
+        Map<UUID, CategoryInfo> categoryInfos = new HashMap<>();
+        for (PlanLine line : plansService.lines(plan.id)) {
+            Budget budget = budgetsById.get(line.budgetId);
+            if (budget == null || !budget.monthly) {
                 continue;
             }
-
-            if (!foundBudget) {
-                CategoryInfo categoryInfo = new CategoryInfo();
-                categoryInfo.category = category;
-                categoryInfoById.put(category.id, categoryInfo);
-                noBudgetInfo.categories.add(categoryInfo);
-            }
+            BudgetInfo budgetInfo = budgetInfos.computeIfAbsent(budget.id, id -> newBudgetInfo(budget));
+            CategoryInfo categoryInfo = newCategoryInfo(categoriesById.get(line.categoryId));
+            categoryInfo.amount = perMonth(line.amount);
+            budgetInfo.budget.amount = budgetInfo.budget.amount.add(categoryInfo.amount);
+            budgetInfo.categories.add(categoryInfo);
+            categoryInfos.put(line.categoryId, categoryInfo);
         }
 
-        CategoryInfo noCategoryInfo = new CategoryInfo();
-        noCategoryInfo.category = new Category();
-        noCategoryInfo.category.id = UUID.randomUUID();
-        noCategoryInfo.category.name = NOT_CATEGORIZED;
-        noCategoryInfo.category.budget = noBudgetInfo.budget;
-        noBudgetInfo.categories.add(noCategoryInfo);
-
-        List<Transaction> transactions = transactionsService.listByDate(start, end);
-        for (Transaction transaction : transactions) {
-            if (transaction.category != null && transaction.category.id != null) {
-                if (accountOnlyCategoryIds.contains(transaction.category.id)) {
-                    continue;
-                }
-
-                CategoryInfo categoryInfo = categoryInfoById.get(transaction.category.id);
+        for (Transaction transaction : transactionsService.listByDate(start, end)) {
+            if (transaction.category != null) {
+                CategoryInfo categoryInfo = categoryInfos.get(transaction.category.id);
                 if (categoryInfo != null) {
                     addTransactionToTotal(categoryInfo, transaction);
-
-                    if (categoryInfo.transactions == null) {
-                        categoryInfo.transactions = new ArrayList<>();
-                    }
-                    categoryInfo.transactions.add(transaction);
-                    continue;
                 }
             }
-
-            addTransactionToTotal(noCategoryInfo, transaction);
-            if (noCategoryInfo.transactions == null) {
-                noCategoryInfo.transactions = new ArrayList<>();
-            }
-            noCategoryInfo.transactions.add(transaction);
         }
 
-        List<BudgetInfo> budgetInfoList = new ArrayList<>(budgetInfoById.values());
-        budgetInfoList.sort(Comparator.comparing(budgetInfo -> budgetInfo.budget.name));
-        budgetInfoList.add(noBudgetInfo);
+        List<BudgetInfo> budgets = new ArrayList<>(budgetInfos.values());
+        budgets.sort(Comparator.comparing(budgetInfo -> budgetInfo.budget.name.toLowerCase()));
+        for (BudgetInfo budgetInfo : budgets) {
+            finish(budgetInfo, null);
+        }
+        return budgets;
+    }
 
-        for (BudgetInfo budgetInfo : budgetInfoList) {
-            budgetInfo.total = BigDecimal.ZERO;
-            for (CategoryInfo category : budgetInfo.categories) {
-                budgetInfo.total = budgetInfo.total.add(category.total);
+    /**
+     * Every budget for the year containing date. Each month counts against the plan in effect that month, so a
+     * budget's amount for the year is the sum of its monthly amounts, and spending goes to whichever budget its
+     * category was in that month. Categories in no budget that month show under "No Budget" (except ones that
+     * belong to an account, which the Accounts page tracks).
+     *
+     * expectedTotal is what the plans add up to by today: whole months so far, plus the part of this month gone by.
+     */
+    public List<BudgetInfo> yearly(LocalDate date) {
+        int year = date.getYear();
+        LocalDate today = LocalDate.now();
+
+        Map<UUID, Budget> budgetsById = budgetsService.listBudgetsById();
+        Map<UUID, Category> categoriesById = categoriesService.getCategoriesById();
+        Map<UUID, List<PlanLine>> linesByPlan = new HashMap<>();
+
+        Map<UUID, BudgetInfo> budgetInfos = new HashMap<>();
+        Map<String, CategoryInfo> categoryInfos = new HashMap<>();
+        Map<UUID, BigDecimal> expectedByBudget = new HashMap<>();
+
+        Budget noBudget = new Budget();
+        noBudget.id = UUID.randomUUID();
+        noBudget.name = "No Budget";
+        BudgetInfo noBudgetInfo = newBudgetInfo(noBudget);
+        noBudgetInfo.group = PlanGroup.OTHER;
+        CategoryInfo notCategorized = newCategoryInfo(null);
+        notCategorized.category = new Category();
+        notCategorized.category.id = UUID.randomUUID();
+        notCategorized.category.name = NOT_CATEGORIZED;
+
+        Map<Integer, List<Transaction>> transactionsByMonth = new HashMap<>();
+        for (Transaction transaction : transactionsService.listByDate(LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31))) {
+            transactionsByMonth.computeIfAbsent(transaction.transactionDate.getMonthValue(), m -> new ArrayList<>()).add(transaction);
+        }
+
+        for (int month = 1; month <= 12; month++) {
+            LocalDate first = LocalDate.of(year, month, 1);
+            BigDecimal elapsed = elapsedPart(first, today);
+
+            Plan plan = plansService.forMonth(first);
+            List<PlanLine> lines = plan == null ? List.of() : linesByPlan.computeIfAbsent(plan.id, plansService::lines);
+            Map<UUID, CategoryInfo> thisMonth = new HashMap<>();
+
+            for (PlanLine line : lines) {
+                Budget budget = budgetsById.get(line.budgetId);
+                if (budget == null) {
+                    continue;
+                }
+                BudgetInfo budgetInfo = budgetInfos.computeIfAbsent(budget.id, id -> newBudgetInfo(budget));
+                CategoryInfo categoryInfo = categoryInfos.computeIfAbsent(budget.id + "/" + line.categoryId, key -> {
+                    CategoryInfo info = newCategoryInfo(categoriesById.get(line.categoryId));
+                    info.amount = BigDecimal.ZERO;
+                    budgetInfo.categories.add(info);
+                    return info;
+                });
+
+                BigDecimal perMonth = line.amount.divide(TWELVE, 6, RoundingMode.HALF_UP);
+                categoryInfo.amount = categoryInfo.amount.add(perMonth);
+                budgetInfo.budget.amount = budgetInfo.budget.amount.add(perMonth);
+                expectedByBudget.merge(budget.id, perMonth.multiply(elapsed), BigDecimal::add);
+                thisMonth.put(line.categoryId, categoryInfo);
             }
 
-            budgetInfo.budget.amount = BigDecimal.valueOf(12).multiply(budgetInfo.budget.amount);
+            for (Transaction transaction : transactionsByMonth.getOrDefault(month, List.of())) {
+                Category category = transaction.category == null ? null : categoriesById.get(transaction.category.id);
+                if (category == null) {
+                    addTransactionToTotal(notCategorized, transaction);
+                    continue;
+                }
 
-            BigDecimal dayOfYear = BigDecimal.valueOf(date.getDayOfYear());
-            BigDecimal daysInYear = BigDecimal.valueOf(Year.of(date.getYear()).length());
-            BigDecimal percentOfYear = dayOfYear.divide(daysInYear, 2, RoundingMode.HALF_UP);
+                CategoryInfo categoryInfo = thisMonth.get(category.id);
+                if (categoryInfo == null) {
+                    if (category.accountId != null) {
+                        continue; // tracked on the Accounts page
+                    }
+                    categoryInfo = categoryInfos.computeIfAbsent("none/" + category.id, key -> {
+                        CategoryInfo info = newCategoryInfo(category);
+                        noBudgetInfo.categories.add(info);
+                        return info;
+                    });
+                }
+                addTransactionToTotal(categoryInfo, transaction);
+            }
+        }
 
-            budgetInfo.expectedTotal = percentOfYear.multiply(budgetInfo.budget.amount);
+        List<BudgetInfo> budgets = new ArrayList<>(budgetInfos.values());
+        budgets.sort(Comparator
+                .comparing((BudgetInfo budgetInfo) -> budgetInfo.group.ordinal())
+                .thenComparing(budgetInfo -> budgetInfo.budget.name.toLowerCase()));
+        noBudgetInfo.categories.sort(Comparator.comparing(info -> info.category.name.toLowerCase()));
+        noBudgetInfo.categories.add(notCategorized);
+        budgets.add(noBudgetInfo);
+
+        for (BudgetInfo budgetInfo : budgets) {
+            budgetInfo.categories.sort(Comparator.comparing(info -> info.category == notCategorized.category ? "\uffff" : info.category.name.toLowerCase()));
+            finish(budgetInfo, expectedByBudget.getOrDefault(budgetInfo.budget.id, BigDecimal.ZERO));
+        }
+        return budgets;
+    }
+
+    private static final BigDecimal TWELVE = BigDecimal.valueOf(12);
+
+    private static BigDecimal perMonth(BigDecimal perYear) {
+        return perYear.divide(TWELVE, 6, RoundingMode.HALF_UP);
+    }
+
+    /** How much of a month has gone by: 1 for past months, 0 for future ones, a fraction for this month. */
+    private static BigDecimal elapsedPart(LocalDate firstOfMonth, LocalDate today) {
+        LocalDate thisMonth = today.withDayOfMonth(1);
+        if (firstOfMonth.isBefore(thisMonth)) {
+            return BigDecimal.ONE;
+        }
+        if (firstOfMonth.isAfter(thisMonth)) {
+            return BigDecimal.ZERO;
+        }
+        return BigDecimal.valueOf(today.getDayOfMonth()).divide(BigDecimal.valueOf(today.lengthOfMonth()), 6, RoundingMode.HALF_UP);
+    }
+
+    private static BudgetInfo newBudgetInfo(Budget budget) {
+        BudgetInfo budgetInfo = new BudgetInfo();
+        // A copy, so the amount can be the plan's amount for this report.
+        budgetInfo.budget = new Budget();
+        budgetInfo.budget.id = budget.id;
+        budgetInfo.budget.name = budget.name;
+        budgetInfo.budget.monthly = budget.monthly;
+        budgetInfo.budget.transferAccount = budget.transferAccount;
+        budgetInfo.budget.group = budget.group;
+        budgetInfo.budget.amount = BigDecimal.ZERO;
+        budgetInfo.group = budget.group;
+        budgetInfo.categories = new ArrayList<>();
+        return budgetInfo;
+    }
+
+    private static CategoryInfo newCategoryInfo(Category category) {
+        CategoryInfo categoryInfo = new CategoryInfo();
+        categoryInfo.category = category;
+        return categoryInfo;
+    }
+
+    /** Rounds the amounts to cents and works out the totals and percents. */
+    private static void finish(BudgetInfo budgetInfo, BigDecimal expected) {
+        budgetInfo.total = BigDecimal.ZERO;
+        for (CategoryInfo categoryInfo : budgetInfo.categories) {
+            budgetInfo.total = budgetInfo.total.add(categoryInfo.total);
+            if (categoryInfo.amount != null) {
+                categoryInfo.amount = categoryInfo.amount.setScale(2, RoundingMode.HALF_UP);
+            }
+        }
+        budgetInfo.budget.amount = budgetInfo.budget.amount.setScale(2, RoundingMode.HALF_UP);
+        budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
+        if (expected != null) {
+            budgetInfo.expectedTotal = expected.setScale(2, RoundingMode.HALF_UP);
             budgetInfo.expectedPercent = Tools.percentAsInt(budgetInfo.expectedTotal, budgetInfo.budget.amount);
-
-            budgetInfo.percent = Tools.percentAsInt(budgetInfo.total, budgetInfo.budget.amount);
         }
-
-        return budgetInfoList;
     }
 
     public List<TransferInfo> needsTransferred() {

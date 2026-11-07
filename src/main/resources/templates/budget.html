@@ -15,10 +15,21 @@
             <input type="text" name="name" th:value="${budget.name}" th:hx-post="@{/budgets/{id}/name(id=${budget.id})}" hx-swap="none">
         </label>
 
+        <div class="field">
+            <span class="field-label">In the current plan</span>
+            <a class="row" style="padding: 0; min-height: 0; border: none;" th:href="@{/plans/current}">
+                <span class="main" th:text="|${#numbers.formatCurrency(budget.amount)} per month|">$0.00 per month</span>
+                <span class="small">Edit in plan</span>
+                <svg th:replace="~{layout :: chevron}"></svg>
+            </a>
+        </div>
+
         <label class="field">
-            <span class="field-label">Amount per month <span class="saved" x-show="saved === 'amount'" x-cloak>Saved</span></span>
-            <input type="number" step="0.01" inputmode="decimal" name="amount" th:value="${budget.amount}"
-                   th:hx-post="@{/budgets/{id}/amount(id=${budget.id})}" hx-swap="none">
+            <span class="field-label">Group <span class="saved" x-show="saved === 'group'" x-cloak>Saved</span></span>
+            <select name="group" th:hx-post="@{/budgets/{id}/group(id=${budget.id})}" hx-swap="none">
+                <option th:each="group : ${groups}" th:value="${group.dbValue}" th:text="|${group.label}: ${group.description}|"
+                        th:selected="${budget.group == group}"></option>
+            </select>
         </label>
 
         <label class="field">
@@ -28,7 +39,8 @@
         </label>
 
         <label class="field" style="display: flex; align-items: center; gap: 12px; margin-top: 16px;">
-            <span style="flex: 1;">Show on the monthly page <span class="saved" x-show="saved === 'monthly'" x-cloak>Saved</span></span>
+            <span style="flex: 1;">Watch on the Month page <span class="saved" x-show="saved === 'monthly'" x-cloak>Saved</span>
+                <span class="hint" style="display: block;">For budgets you might act on during the month, not regular bills.</span></span>
             <input class="switch" type="checkbox" name="monthly" value="true" th:checked="${budget.monthly}"
                    th:hx-post="@{/budgets/{id}/monthly(id=${budget.id})}" hx-swap="none">
         </label>
@@ -42,6 +54,8 @@
             <svg th:replace="~{layout :: chevron}"></svg>
         </a>
     </div>
+
+    <div class="card padded warning" th:if="${param.error != null}" th:text="${param.error}" style="margin-top: 24px;">Error</div>
 
     <div class="danger-zone" x-data="{ sure: false }">
         <button class="btn danger" type="button" x-show="!sure" @click="sure = true">Delete budget</button>

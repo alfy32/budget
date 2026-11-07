@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,6 +43,8 @@ class BudgetApplicationTests {
     @Autowired
     AutoCategorizeService autoCategorizeService;
     @Autowired
+    PlansService plansService;
+    @Autowired
     AccountsService accountsService;
 
     Budget budget;
@@ -57,6 +60,8 @@ class BudgetApplicationTests {
 
         category = Category.create("Food", budget);
         categoriesService.add(category);
+        // $700 a month in the current plan
+        plansService.setAmounts(plansService.current().id, Map.of(category.id, new BigDecimal("8400")));
 
         bankTransaction = new BankTransaction();
         bankTransaction.account = "SBSU Checking";
@@ -99,6 +104,8 @@ class BudgetApplicationTests {
                 "/rules/new?description=GUNNISON%20MARKET&categoryId=" + category.id,
                 "/transactions-upload",
                 "/accounts",
+                "/plans",
+                "/plans/" + plansService.current().id,
         };
 
         for (String page : pages) {
@@ -333,6 +340,141 @@ class BudgetApplicationTests {
         int before = transactionsService.transferSummary().count();
         transactionsService.needsTransferred(id, true);
         assertEquals(before + 1, transactionsService.transferSummary().count());
+    }
+
+    @Test
+    void plansChangeTheBudgetFromTheirStartMonth() throws Exception {
+        Budget bingo = budgetsService.add(Budget.create("PlanTest Bingo", BigDecimal.ZERO));
+        budgetsService.setGroup(bingo.id, com.alfy.budget.model.PlanGroup.YEARLY);
+        Category chips = Category.create("PlanTest Chips", bingo);
+        categoriesService.add(chips);
+
+        // A plan for last year with $1,200/yr, and one from July of last year with $2,400/yr.
+        int lastYear = LocalDate.now().getYear() - 1;
+        var base = plansService.forMonth(LocalDate.of(lastYear, 1, 1));
+        UUID july = plansService.copy(base.id, LocalDate.of(lastYear, 7, 1));
+        UUID january = plansService.copy(base.id, LocalDate.of(lastYear, 1, 1));
+        try {
+            plansService.setAmounts(january, Map.of(chips.id, new BigDecimal("1200")));
+            plansService.setAmounts(july, Map.of(chips.id, new BigDecimal("2400")));
+
+            BankTransaction t = new BankTransaction();
+            t.account = "SBSU Checking";
+            t.transactionType = "debit";
+            t.transactionDate = LocalDate.of(lastYear, 8, 10);
+            t.description = "PLANTEST BINGO";
+            t.amount = new BigDecimal("150.00");
+            bankTransactionsService.add(t);
+            transactionsService.updateCategory(transactionsService.addFrom(t), chips.id);
+
+            // Month pages use the plan in effect that month: $100 in March, $200 in August.
+            var reports = new com.alfy.budget.service.BudgetReportsService(budgetsService, categoriesService, transactionsService, plansService);
+            budgetsService.setMonthly(bingo.id, true);
+            var march = reports.monthly(LocalDate.of(lastYear, 3, 1)).stream().filter(b -> b.budget.id.equals(bingo.id)).findFirst().orElseThrow();
+            var august = reports.monthly(LocalDate.of(lastYear, 8, 1)).stream().filter(b -> b.budget.id.equals(bingo.id)).findFirst().orElseThrow();
+            assertEquals(new BigDecimal("100.00"), march.budget.amount);
+            assertEquals(new BigDecimal("200.00"), august.budget.amount);
+            assertEquals(new BigDecimal("150.00"), august.total);
+
+            // The year adds them up: 6 x $100 + 6 x $200 = $1,800, and a past year is fully "on pace".
+            var year = reports.yearly(LocalDate.of(lastYear, 1, 1)).stream().filter(b -> b.budget.id.equals(bingo.id)).findFirst().orElseThrow();
+            assertEquals(new BigDecimal("1800.00"), year.budget.amount);
+            assertEquals(new BigDecimal("1800.00"), year.expectedTotal);
+
+            // The plan page shows last plan's amount and the totals.
+            mvc.perform(get("/plans/" + july)).andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("Last $1,200.00")));
+            mvc.perform(post("/plans/" + july)
+                            .param("startMonth", lastYear + "-07")
+                            .param("line_" + chips.id, "3000"))
+                    .andExpect(redirectedUrl("/plans/" + july + "?saved=true"));
+            var saved = plansService.get(july);
+            // Chips went from $1,200/yr in January's plan to $3,000/yr: +$1,800 a year of yearly spending.
+            assertEquals(new BigDecimal("1800.00"),
+                    plansService.totals(saved).yearly().subtract(plansService.totals(plansService.get(january)).yearly()));
+
+            // Two plans can't start the same month.
+            mvc.perform(post("/plans/" + july).param("startMonth", lastYear + "-01"))
+                    .andExpect(status().is3xxRedirection());
+            assertEquals(LocalDate.of(lastYear, 7, 1), plansService.get(july).startMonth);
+
+            // A budget that's in a plan can't be deleted (it would vanish from past months).
+            mvc.perform(post("/budgets/" + bingo.id + "/delete")).andExpect(status().is3xxRedirection());
+            assertEquals("PlanTest Bingo", budgetsService.get(bingo.id).name);
+        } finally {
+            plansService.delete(july);
+            plansService.delete(january);
+        }
+    }
+
+    @Test
+    void aProposedPlanIsIgnoredUntilItsCommitted() throws Exception {
+        int committedBefore = plansService.list().size();
+        var current = plansService.current();
+
+        String location = mvc.perform(post("/plans")).andExpect(status().is3xxRedirection())
+                .andReturn().getResponse().getRedirectedUrl();
+        UUID proposalId = UUID.fromString(location.substring("/plans/".length()));
+        try {
+            assertTrue(plansService.get(proposalId).isProposed());
+            assertEquals(committedBefore, plansService.list().size());
+            assertEquals(current.id, plansService.current().id, "a proposal doesn't change the current plan");
+            mvc.perform(get(location)).andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString("Proposed")));
+
+            // Each line remembers the unit it's entered in, and a new proposal copies it.
+            mvc.perform(post(location).param("lineUnit_" + category.id, "month"));
+            assertEquals("month", plansService.lines(proposalId).stream()
+                    .filter(line -> line.categoryId.equals(category.id)).findFirst().orElseThrow().unit);
+            UUID copyId = plansService.copy(proposalId, null);
+            assertEquals("month", plansService.lines(copyId).stream()
+                    .filter(line -> line.categoryId.equals(category.id)).findFirst().orElseThrow().unit);
+            plansService.delete(copyId);
+
+            // Editing it doesn't touch the current plan.
+            mvc.perform(post(location).param("line_" + category.id, "99999"));
+            assertEquals(new BigDecimal("8400.00"), plansService.lines(current.id).stream()
+                    .filter(line -> line.categoryId.equals(category.id)).findFirst().orElseThrow().amount);
+
+            // Committing it to a month makes it a real plan.
+            mvc.perform(post(location).param("action", "start").param("startMonth", "2099-01"))
+                    .andExpect(redirectedUrl(location + "?started=true"));
+            assertFalse(plansService.get(proposalId).isProposed());
+            assertEquals(LocalDate.of(2099, 1, 1), plansService.get(proposalId).startMonth);
+            assertEquals(committedBefore + 1, plansService.list().size());
+        } finally {
+            plansService.delete(proposalId);
+        }
+    }
+
+    @Test
+    void aPlanLineCanBeRenamedAndSplit() throws Exception {
+        var current = plansService.current();
+        Budget utilities = budgetsService.add(Budget.create("SplitTest Utilities", BigDecimal.ZERO));
+        Category power = Category.create("SplitTest Power", utilities);
+        categoriesService.add(power);
+        plansService.setAmounts(current.id, Map.of(power.id, new BigDecimal("1800")));
+
+        // Split $600 off into a new "Solar" line in the same budget.
+        mvc.perform(post("/plans/" + current.id)
+                        .param("line_" + power.id, "1800")
+                        .param("action", "split:" + power.id)
+                        .param("splitName_" + power.id, "SplitTest Solar")
+                        .param("splitAmount_" + power.id, "600"))
+                .andExpect(redirectedUrl("/plans/" + current.id));
+        var lines = plansService.lines(current.id);
+        var powerLine = lines.stream().filter(l -> l.categoryId.equals(power.id)).findFirst().orElseThrow();
+        var solarLine = lines.stream().filter(l -> l.categoryName.equals("SplitTest Solar")).findFirst().orElseThrow();
+        assertEquals(new BigDecimal("1200.00"), powerLine.amount);
+        assertEquals(new BigDecimal("600.00"), solarLine.amount);
+        assertEquals(utilities.id, solarLine.budgetId);
+
+        // Rename from the worksheet; it's the same category everywhere.
+        mvc.perform(post("/plans/" + current.id)
+                .param("rename_" + power.id, "SplitTest Electric"));
+        assertEquals("SplitTest Electric", categoriesService.get(power.id).name);
+        assertEquals(new BigDecimal("1200.00"), plansService.lines(current.id).stream()
+                .filter(l -> l.categoryId.equals(power.id)).findFirst().orElseThrow().amount);
     }
 
     @Test

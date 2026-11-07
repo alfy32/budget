@@ -2,6 +2,14 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
+<!-- The Budgets tab's switcher. active: month, year, transfer or plan -->
+<div th:fragment="switcher(active)" class="segmented" style="margin-bottom: 12px;">
+    <a class="seg-link" th:classappend="${active == 'month'} ? active" th:href="@{/monthly}">Month</a>
+    <a class="seg-link" th:classappend="${active == 'year'} ? active" th:href="@{/yearly}">Year</a>
+    <a class="seg-link" th:classappend="${active == 'transfer'} ? active" th:href="@{/needs-transferred}">Transfer</a>
+    <a class="seg-link" th:classappend="${active == 'plan'} ? active" th:href="@{/plans}">Plan</a>
+</div>
+
 <!--
   One budget as a card: name, how much is left (or over), a bar, and its categories.
     b         a BudgetInfo
@@ -31,7 +39,10 @@
     <a class="row" th:each="c : ${b.categories}"
        th:href="@{/transactions(query=|category,${c.category.id},${start.toString()},${end.toString()}|)}">
         <div class="main small" th:text="${c.category.name}">Category</div>
-        <div class="amount small" th:text="${#numbers.formatCurrency(c.total)}">$0.00</div>
+        <div class="amount small">
+            <span th:text="${#numbers.formatCurrency(c.total)}">$0.00</span>
+            <span class="sub" style="display: block;" th:if="${c.amount != null}" th:text="|of ${#numbers.formatCurrency(c.amount)}|">of $0.00</span>
+        </div>
         <svg th:replace="~{layout :: chevron}"></svg>
     </a>
 </div>

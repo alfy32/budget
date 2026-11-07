@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{layout :: head('Budget plans')}"></head>
+<body>
+<header th:replace="~{layout :: topbar('Budgets', null)}"></header>
+<main>
+    <div th:replace="~{budget-fragments :: switcher('plan')}"></div>
+
+    <div class="card padded warning" th:if="${param.error != null}" th:text="${param.error}" style="margin-bottom: 12px;">Error</div>
+
+    <p class="hint" style="margin: 0 4px 10px 4px;">
+        A plan is the budget you agree on, from its start month until the next plan. Each month in the reports
+        uses the plan in effect then.
+    </p>
+
+    <th:block th:unless="${proposals.isEmpty()}">
+        <div class="section-title">Proposed</div>
+        <div class="card">
+            <a class="row" th:each="plan : ${proposals}" th:href="@{/plans/{id}(id=${plan.id})}" th:with="t=${totals[plan.id]}">
+                <div class="main">
+                    <div class="title">Proposed plan <span class="badge">Not started</span></div>
+                    <div class="sub" th:text="${plan.notes != null ? plan.notes : 'Commit it to a month when you agree on it'}"></div>
+                </div>
+                <div class="amount">
+                    <div th:text="|${#numbers.formatCurrency(t.perMonth(t.spending()))}/mo|">$0/mo</div>
+                    <div class="sub">budgeted</div>
+                </div>
+                <svg th:replace="~{layout :: chevron}"></svg>
+            </a>
+        </div>
+        <div class="section-title">Plans</div>
+    </th:block>
+
+    <div class="card">
+        <a class="row" th:each="plan : ${plans}" th:href="@{/plans/{id}(id=${plan.id})}"
+           th:with="t=${totals[plan.id]}">
+            <div class="main">
+                <div class="title">
+                    <span th:text="|From ${#temporals.format(plan.startMonth, 'MMM yyyy')}|">From Oct 2026</span>
+                    <span class="badge" th:if="${plan.id == currentId}">Now</span>
+                    <span class="badge" th:if="${plan.startMonth.isAfter(today)}">Upcoming</span>
+                </div>
+                <div class="sub">
+                    <span th:text="${plan.end == null} ? 'No end' : |to ${#temporals.format(plan.end, 'MMM yyyy')}|">No end</span>
+                    <span th:if="${plan.notes != null}" th:text="| · ${plan.notes}|"></span>
+                </div>
+            </div>
+            <div class="amount">
+                <div th:text="|${#numbers.formatCurrency(t.perMonth(t.spending()))}/mo|">$0/mo</div>
+                <div class="sub">budgeted</div>
+            </div>
+            <svg th:replace="~{layout :: chevron}"></svg>
+        </a>
+    </div>
+
+    <form class="spaced" method="post" th:action="@{/plans}">
+        <button class="btn" type="submit">Propose a new plan</button>
+        <p class="hint" style="margin: 6px 4px;">Starts as a copy of the current plan. Enter the amounts from the planning sheet, then commit it to a month.</p>
+    </form>
+</main>
+<nav th:replace="~{layout :: tabs('budgets')}"></nav>
+</body>
+</html>

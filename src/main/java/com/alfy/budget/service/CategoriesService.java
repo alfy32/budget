@@ -44,11 +44,14 @@ public class CategoriesService {
 
         category.id = UUID.randomUUID();
 
-        jdbc.update("INSERT INTO categories (id, name, budget_id) VALUES (:id, :name, :budgetId)",
+        jdbc.update("INSERT INTO categories (id, name) VALUES (:id, :name)",
                 new MapSqlParameterSource()
                         .addValue("id", Db.id(category.id))
-                        .addValue("name", category.name)
-                        .addValue("budgetId", category.budget == null ? null : Db.id(category.budget.id)));
+                        .addValue("name", category.name));
+
+        if (category.budget != null) {
+            setBudget(category.id, category.budget.id);
+        }
     }
 
     public void setName(UUID id, String name) {
@@ -61,11 +64,27 @@ public class CategoriesService {
                         .addValue("name", name));
     }
 
+    /**
+     * Puts the category under a budget in the current plan (a new line starts at $0), or takes it out of the
+     * current plan when budgetId is null. Earlier plans aren't changed.
+     */
     public void setBudget(UUID id, UUID budgetId) {
-        jdbc.update("UPDATE categories SET budget_id = :budgetId WHERE id = :id",
-                new MapSqlParameterSource()
-                        .addValue("id", Db.id(id))
-                        .addValue("budgetId", Db.id(budgetId)));
+        MapSqlParameterSource params = new MapSqlParameterSource()
+                .addValue("id", Db.id(id))
+                .addValue("budgetId", Db.id(budgetId));
+
+        if (budgetId == null) {
+            jdbc.update("DELETE FROM plan_lines WHERE category_id = :id AND plan_id = " + Db.CURRENT_PLAN_ID, params);
+        } else {
+            jdbc.update("""
+                    INSERT INTO plan_lines (plan_id, category_id, budget_id, amount)
+                    SELECT %s, :id, :budgetId, 0
+                    WHERE EXISTS (SELECT 1 FROM plans)
+                    ON CONFLICT (plan_id, category_id) DO UPDATE SET budget_id = excluded.budget_id
+                    """.formatted(Db.CURRENT_PLAN_ID), params);
+        }
+        // categories.budget_id mirrors the current plan.
+        jdbc.update("UPDATE categories SET budget_id = :budgetId WHERE id = :id", params);
     }
 
     public void setAccount(UUID id, UUID accountId) {

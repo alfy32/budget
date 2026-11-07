@@ -1,6 +1,7 @@
 package com.alfy.budget.service;
 
 import com.alfy.budget.model.Budget;
+import com.alfy.budget.model.PlanGroup;
 import com.alfy.budget.tools.Tools;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -54,6 +55,13 @@ public class BudgetsService {
         return budget;
     }
 
+    /** How many plans have a line in this budget. */
+    public int plansUsing(UUID id) {
+        Integer count = jdbc.queryForObject("SELECT count(DISTINCT plan_id) FROM plan_lines WHERE budget_id = :id",
+                new MapSqlParameterSource("id", Db.id(id)), Integer.class);
+        return count == null ? 0 : count;
+    }
+
     public void delete(UUID id) {
         jdbc.update("DELETE FROM budgets WHERE id = :id", new MapSqlParameterSource("id", Db.id(id)));
     }
@@ -66,8 +74,8 @@ public class BudgetsService {
         update(id, "monthly", monthly ? 1 : 0);
     }
 
-    public void setAmount(UUID id, BigDecimal amount) {
-        update(id, "amount", Tools.toDatabaseInt(amount));
+    public void setGroup(UUID id, PlanGroup group) {
+        update(id, "plan_group", (group == null ? PlanGroup.MONTHLY : group).dbValue);
     }
 
     public void setTransferAccount(UUID id, String transferAccount) {
@@ -88,6 +96,7 @@ public class BudgetsService {
         budget.amount = Tools.fromDatabaseInt(resultSet.getInt("amount"));
         budget.monthly = resultSet.getBoolean("monthly");
         budget.transferAccount = resultSet.getString("transfer_account");
+        budget.group = PlanGroup.fromDb(resultSet.getString("plan_group"));
         return budget;
     }
 }

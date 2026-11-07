@@ -10,6 +10,8 @@ public class BudgetInfo {
     public int percent;
     public int expectedPercent;
     public Budget budget;
+    /** Which part of the plan the budget is in (for grouping the yearly page). */
+    public PlanGroup group = PlanGroup.MONTHLY;
     public List<CategoryInfo> categories;
 
 }

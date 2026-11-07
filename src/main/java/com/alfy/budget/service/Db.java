@@ -13,6 +13,12 @@ final class Db {
     private Db() {
     }
 
+    /** SQL for the id of the plan in effect this month (or the first plan, if they all start later). Proposals don't count. */
+    static final String CURRENT_PLAN_ID = """
+            coalesce(
+                (SELECT id FROM plans WHERE start_month <= date('now', 'localtime', 'start of month') ORDER BY start_month DESC LIMIT 1),
+                (SELECT id FROM plans WHERE start_month IS NOT NULL ORDER BY start_month LIMIT 1))""";
+
     static String id(UUID id) {
         return id == null ? null : id.toString();
     }

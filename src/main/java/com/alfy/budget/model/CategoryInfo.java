@@ -7,6 +7,8 @@ public class CategoryInfo {
 
     public Category category;
     public BigDecimal total;
+    /** What the plan(s) gave this category for the period, or null if it isn't in a plan. */
+    public BigDecimal amount;
     public List<Transaction> transactions;
 
     public CategoryInfo() {
