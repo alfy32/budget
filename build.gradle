@@ -44,12 +44,32 @@ def nativeAccess = '--enable-native-access=ALL-UNNAMED'
 tasks.named('test') {
     useJUnitPlatform()
     jvmArgs nativeAccess
+    // Each test run makes its own throwaway databases here; clear out the last run's.
+    doFirst { delete 'build/test-db' }
 }
+
+// The made-up database for working on the app (see MockData.java).
+def mockDb = 'data/mock.db'
 
 tasks.named('bootRun') {
     jvmArgs nativeAccess
     // Serve templates and CSS straight from src/main/resources, so edits show up on a browser refresh.
     sourceResources sourceSets.main
+    // ./gradlew bootRun -Pmock runs on the mock database instead of data/budget.db.
+    if (project.hasProperty('mock')) {
+        environment 'DB_PATH', mockDb
+    }
+}
+
+// ./gradlew mockDb: (re)makes data/mock.db with two years of made-up data ending today.
+tasks.register('mockDb', JavaExec) {
+    group = 'application'
+    description = "Makes $mockDb with two years of made-up data ending today."
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'com.alfy.budget.tools.MockData'
+    jvmArgs nativeAccess
+    args mockDb
+    doFirst { delete fileTree('data') { include 'mock.db*' } }
 }
 
 // Only build the runnable jar, so the Dockerfile's build/libs/*.jar matches exactly one file.

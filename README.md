@@ -26,6 +26,19 @@ In IntelliJ, start it the same way: run the Gradle task **bootRun** (Gradle tool
 in Debug if you want Java method changes hot-swapped. Running `BudgetApplication` directly also works, but then
 template edits only show up after a build (Ctrl+F9).
 
+## Made-up data to work with
+
+`data/budget.db` is a copy of real data. To work on the app with made-up data instead:
+
+```bash
+./gradlew mockDb          # (re)makes data/mock.db: two years of fake transactions ending today
+./gradlew bootRun -Pmock  # runs the app on it
+```
+
+It has budgets, two committed plans and a proposal, an account, rules, paychecks, bills, everyday and yearly spending,
+split transactions, and some still to categorize or transfer. The amounts are the same every run; only the dates move,
+so it always covers the last 24 months. Change it in `MockData.java`.
+
 ## Where things are
 
 | What | Where |

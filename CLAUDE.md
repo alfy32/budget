@@ -41,3 +41,6 @@ Rules:
   `data/seed_plans.sql`, which is git-ignored like the rest of `data/`.
 - Schema changes go in a new `src/main/resources/db/migration/V<n>__name.sql`; never edit an applied migration.
 - `./gradlew test` renders every page against a throwaway database; keep it passing and add new pages to it.
+- `./gradlew mockDb` makes `data/mock.db` with two years of made-up data (`tools/MockData.java`); `./gradlew bootRun -Pmock`
+  runs on it. Use it for screenshots and trying things, not the real-data copy. When a feature adds tables or columns,
+  give the mock data some rows for it.
